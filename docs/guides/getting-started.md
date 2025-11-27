@@ -1,44 +1,49 @@
 ---
 title: Getting Started with MCP Server Tauri
-description: Learn how to set up MCP Server Tauri with your AI assistant and create your first Tauri application with AI-powered development tools.
+description: Learn how to integrate MCP Server Tauri into your existing Tauri application for AI-powered development.
 head:
   - - meta
     - name: keywords
-      content: tauri setup, mcp server installation, ai assistant configuration, tauri tutorial
+      content: tauri setup, mcp server installation, ai assistant configuration, tauri integration
 ---
 
 # Getting Started with MCP Server Tauri
 
-This guide will walk you through setting up MCP Server Tauri with your AI assistant and creating your first Tauri application.
+This guide will walk you through integrating MCP Server Tauri into your existing Tauri application.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have:
 
+- An existing **Tauri 2.x** application
 - **Node.js** 20+ and npm
 - **Rust** and Cargo
-- **Tauri CLI**: Install with `npm install -g @tauri-apps/cli@next`
 - An MCP-compatible AI Assistant (Claude Code, Cursor, VS Code, etc.)
 
 ## Step 1: Add the MCP Bridge Plugin to Your Tauri App
 
-The MCP Bridge plugin enables communication between the MCP server and your Tauri application. Add it to your Tauri app's `Cargo.toml`:
+The MCP Bridge plugin enables communication between the MCP server and your Tauri application.
+
+### Install the Rust Plugin
+
+Add it to your Tauri app's `src-tauri/Cargo.toml`:
 
 ```toml
 [dependencies]
 tauri-plugin-mcp-bridge = "0.1"
 ```
 
-Then register the plugin in `src-tauri/src/main.rs`:
+Then register the plugin in your app's entry point (e.g., `src-tauri/src/lib.rs` or `src-tauri/src/main.rs`):
 
 ```rust
-fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_mcp_bridge::init())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
+tauri::Builder::default()
+    .plugin(tauri_plugin_mcp_bridge::init())
+    // ... your other plugins and configuration
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
 ```
+
+### Enable Global Tauri
 
 ::: warning Required Configuration
 You **must** enable `withGlobalTauri` in your `tauri.conf.json` for the MCP bridge to work. This exposes `window.__TAURI__` which the plugin uses to communicate with your app:
@@ -93,43 +98,30 @@ Restart your AI Assistant and verify that the MCP server is loaded. You can ask:
 
 The assistant should list the available MCP tools for Tauri development.
 
-## Step 4: Create Your First Tauri App
+## Step 4: Start Developing
 
-Now you can ask your AI Assistant to create a Tauri application:
+With the MCP server configured and the bridge plugin installed, you can now use your AI assistant to help develop your Tauri app. Start the development server:
 
-> "Create a new Tauri application called 'my-app' with React and TypeScript"
-
-Your AI Assistant will use the MCP tools to:
-1. Initialize a new Tauri project
-2. Set up the frontend with React and TypeScript
-3. Configure the Rust backend
-4. Install necessary dependencies
-
-## Step 5: Run the Development Server
-
-Once the app is created, you can start the development server:
-
-> "Start the Tauri development server for my-app"
+> "Start the Tauri development server"
 
 This will launch your application in development mode with hot-reload enabled.
 
-## Step 6: Explore Available Tools
+## Step 5: Explore Available Tools
 
-The MCP server provides many tools for Tauri development:
+The MCP server provides tools across four categories:
 
-- **Project Management**: Create, configure, and build Tauri apps
-- **Mobile Development**: Test on Android and iOS devices
-- **UI Automation**: Automate UI testing
-- **IPC Monitoring**: Debug communication between frontend and backend
-- **Configuration Management**: Modify Tauri configuration files
+- **Project Management**: Run CLI commands, read/write Tauri configs, access documentation
+- **Mobile Development**: List devices, launch Android AVDs or iOS Simulators
+- **UI Automation & WebView Interaction**: Find elements, take screenshots, interact with the UI, execute JavaScript, read logs
+- **IPC & Plugin Tools**: Execute IPC commands, monitor IPC events, emit test events, inspect backend state
 
 Ask your AI Assistant about specific tasks:
 
-> "Show me how to add a new IPC command to my Tauri app"
+> "Take a screenshot of my app and check if the button is visible"
 
-> "Help me configure my app for Android development"
+> "Start IPC monitoring and show me what commands are being called"
 
-> "Create a UI test for the main window"
+> "Launch an iOS Simulator and run my app on it"
 
 ## Next Steps
 
