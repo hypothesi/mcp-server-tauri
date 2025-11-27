@@ -23,6 +23,7 @@ hero:
 
 <script setup>
 import { MousePointer, Target, Zap, Smartphone, Wrench, BookOpen } from 'lucide-vue-next';
+import { withBase } from 'vitepress';
 </script>
 
 <div class="features-section">
@@ -233,5 +234,5 @@ The server exposes tools across 4 categories:
 
 <div class="view-api-link">
   <BookOpen :size="20" :stroke-width="2" class="inline-icon" />
-  <a href="/api/">View Full API Reference →</a>
+  <a :href="withBase('/api/')">View Full API Reference →</a>
 </div>
