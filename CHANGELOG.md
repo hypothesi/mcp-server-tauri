@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-11-26
+
+### Added
+- Changelog page in documentation site with dynamic GitHub releases
+- Version badge in docs navigation bar
+
+### Fixed
+- Add missing system dependencies to Rust release pipeline
+
 ## [0.1.1] - 2025-11-26
 
 ### Fixed
