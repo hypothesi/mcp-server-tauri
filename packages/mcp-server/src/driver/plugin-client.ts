@@ -27,7 +27,8 @@ export class PluginClient extends EventEmitter {
    private _host: string;
    private _port: number;
    private _reconnectAttempts = 0;
-   private _maxReconnectAttempts = 5;
+   private _shouldReconnect = true; // Keep trying forever until explicitly disconnected
+   private _reconnectDelay = 1000; // Start with 1s, max 30s
    private _pendingRequests: Map<string, {
       resolve: (value: PluginResponse) => void;
       reject: (reason: Error) => void;
@@ -44,6 +45,14 @@ export class PluginClient extends EventEmitter {
       this._host = host;
       this._port = port;
       this._url = buildWebSocketURL(host, port);
+
+      // CRITICAL: Attach a default error handler to prevent crashes.
+      // In Node.js, if an EventEmitter emits 'error' with no listeners, it throws
+      // an uncaught exception that crashes the process. This is especially important
+      // during port scanning where connections may fail after the caller has moved on.
+      this.on('error', () => {
+         // Silently ignore - errors are also returned via promise rejections
+      });
    }
 
    /**
@@ -109,7 +118,8 @@ export class PluginClient extends EventEmitter {
          });
 
          this._ws.on('error', (err) => {
-            // WebSocket error
+            // WebSocket error - emit for any listeners, then reject the promise.
+            // Note: The constructor attaches a default error handler to prevent crashes.
             this.emit('error', err);
             reject(err);
          });
@@ -119,14 +129,23 @@ export class PluginClient extends EventEmitter {
             this.emit('disconnected');
             this._ws = null;
 
-            // Auto-reconnect
-            if (this._reconnectAttempts < this._maxReconnectAttempts) {
+            // Reject all pending requests since the connection is gone
+            for (const [ id, pending ] of this._pendingRequests) {
+               clearTimeout(pending.timeout);
+               pending.reject(new Error('Connection closed'));
+               this._pendingRequests.delete(id);
+            }
+
+            // Auto-reconnect with exponential backoff (max 30s)
+            if (this._shouldReconnect) {
                this._reconnectAttempts++;
+               const delay = Math.min(this._reconnectDelay * this._reconnectAttempts, 30000);
+
                setTimeout(() => {
                   this.connect().catch(() => {
-                     // Reconnection failed - silently continue
+                     // Reconnection failed - will retry on next close event
                   });
-               }, 1000 * this._reconnectAttempts);
+               }, delay);
             }
          });
       });
@@ -136,8 +155,8 @@ export class PluginClient extends EventEmitter {
     * Disconnect from the plugin
     */
    public disconnect(): void {
+      this._shouldReconnect = false; // Prevent auto-reconnect
       if (this._ws) {
-         this._reconnectAttempts = this._maxReconnectAttempts; // Prevent auto-reconnect
          this._ws.close();
          this._ws = null;
       }
@@ -147,6 +166,16 @@ export class PluginClient extends EventEmitter {
     * Send a command to the plugin and wait for response
     */
    public async sendCommand(command: PluginCommand, timeoutMs = 5000): Promise<PluginResponse> {
+      // If not connected, try to reconnect first
+      if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+         try {
+            await this.connect();
+         } catch{
+            throw new Error('Not connected to plugin and reconnection failed');
+         }
+      }
+
+      // Double-check connection after reconnect attempt
       if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
          throw new Error('Not connected to plugin');
       }

@@ -35,6 +35,25 @@ const server = new Server(
    }
 );
 
+// Handle connection errors gracefully - don't crash on broken pipe
+server.onerror = (error) => {
+   // Ignore broken pipe errors - they happen when the client disconnects
+   const message = error instanceof Error ? error.message : String(error);
+
+   if (message.includes('broken pipe') || message.includes('EPIPE')) {
+      // Client disconnected, exit gracefully
+      process.exit(0);
+   }
+   // For other errors, log to stderr (will be captured by MCP client)
+
+   console.error('[MCP Server Error]', message);
+};
+
+// Handle connection close - exit gracefully
+server.onclose = () => {
+   process.exit(0);
+};
+
 // Tool list handler - generated from registry
 server.setRequestHandler(ListToolsRequestSchema, async () => {
    return {

@@ -164,9 +164,9 @@ export class AppDiscovery {
     * Check if a port is in use (likely a Tauri app)
     */
    private async _isPortInUse(port: number): Promise<boolean> {
-      try {
-         const client = new PluginClient(this._host, port);
+      const client = new PluginClient(this._host, port);
 
+      try {
          // Try to connect briefly to see if port responds
          await Promise.race([
             client.connect(),
@@ -175,9 +175,13 @@ export class AppDiscovery {
             }),
          ]);
 
-         await client.disconnect();
+         // Connection succeeded - clean up and return true
+         client.disconnect();
          return true;
       } catch{
+         // Connection failed or timed out - always clean up the client
+         // This prevents orphaned WebSocket connections from emitting errors later
+         client.disconnect();
          return false;
       }
    }
