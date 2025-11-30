@@ -59,6 +59,20 @@ You **must** enable `withGlobalTauri` in your `tauri.conf.json` for the MCP brid
 Without this setting, the MCP server will not be able to interact with your application's webview.
 :::
 
+### Add Plugin Permissions
+
+Add the plugin's permission to your capabilities file (e.g., `src-tauri/capabilities/default.json`):
+
+```json
+{
+  "permissions": [
+    "mcp-bridge:default"
+  ]
+}
+```
+
+This grants all permissions required by the MCP server.
+
 ## Step 2: Configure Your AI Assistant
 
 See the [home page](/) for detailed, assistant-specific configuration examples (Claude Code, Cursor, VS Code, Windsurf, Cline, etc.). The configuration snippets there all point to the same command:

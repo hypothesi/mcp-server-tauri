@@ -227,17 +227,17 @@ npm test
 
 ## Permissions
 
-The plugin requires the following permissions to be configured in your Tauri capabilities:
+Add the plugin's default permission to your Tauri capabilities file (`src-tauri/capabilities/default.json`):
 
-- `execute_command`
-- `get_window_info`
-- `get_backend_state`
-- `emit_event`
-- `start_ipc_monitor`
-- `stop_ipc_monitor`
-- `get_ipc_events`
+```json
+{
+  "permissions": [
+    "mcp-bridge:default"
+  ]
+}
+```
 
-These are typically auto-configured when using the plugin.
+This grants all permissions required by the MCP server. The plugin is designed to work as a complete unit—partial permissions are not recommended as the MCP server expects all commands to be available.
 
 ## API Documentation
 
