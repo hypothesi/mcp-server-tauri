@@ -79,6 +79,16 @@ Add the plugin's permission to your capabilities file (e.g., `src-tauri/capabili
 
 This grants all permissions required by the MCP server.
 
+### Optional: TypeScript Bindings
+
+The npm package `@hypothesi/tauri-plugin-mcp-bridge` is **optional**. Install it only if you want to call the plugin from your app's frontend code:
+
+```bash
+npm install --save-exact @hypothesi/tauri-plugin-mcp-bridge
+```
+
+The MCP server communicates with the Rust plugin directly via WebSocket—no npm package needed.
+
 ## Step 2: Configure Your AI Assistant
 
 See the [home page](/) for detailed, assistant-specific configuration examples (Claude Code, Cursor, VS Code, Windsurf, Cline, etc.). The configuration snippets there all point to the same command:

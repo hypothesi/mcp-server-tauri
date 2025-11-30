@@ -93,6 +93,10 @@ You **must** enable `withGlobalTauri` in your `tauri.conf.json`:
 This exposes `window.__TAURI__` which the MCP bridge plugin requires to communicate with your app.
 :::
 
+::: tip Optional: TypeScript Bindings
+The npm package `@hypothesi/tauri-plugin-mcp-bridge` is **optional**. It provides TypeScript bindings if you want to call the plugin from your app's frontend code. The MCP server communicates with the Rust plugin directly via WebSocket—no npm package needed.
+:::
+
 ### 3. Configure Your AI Assistant
 
 Add the MCP server to your assistant's configuration:

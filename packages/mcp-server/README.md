@@ -44,6 +44,8 @@ fn main() {
 }
 ```
 
+> **Note:** The npm package `@hypothesi/tauri-plugin-mcp-bridge` is **optional**—only needed if you want to call the plugin from your app's frontend code. The MCP server communicates with the Rust plugin directly via WebSocket.
+
 ### 2. Configure Your AI Assistant
 
 **Claude Code:**

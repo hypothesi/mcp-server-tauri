@@ -1,10 +1,13 @@
 # Tauri MCP Bridge Plugin
 
 [![Crates.io](https://img.shields.io/crates/v/tauri-plugin-mcp-bridge.svg)](https://crates.io/crates/tauri-plugin-mcp-bridge)
+[![npm](https://img.shields.io/npm/v/@hypothesi/tauri-plugin-mcp-bridge.svg)](https://www.npmjs.com/package/@hypothesi/tauri-plugin-mcp-bridge)
 [![Documentation](https://docs.rs/tauri-plugin-mcp-bridge/badge.svg)](https://docs.rs/tauri-plugin-mcp-bridge)
 [![License](https://img.shields.io/crates/l/tauri-plugin-mcp-bridge.svg)](https://github.com/hypothesi/mcp-server-tauri)
 
 A Tauri plugin that bridges the Model Context Protocol (MCP) with Tauri applications, enabling deep inspection and interaction with Tauri's IPC layer, backend state, and window management.
+
+> **📦 This npm package is optional.** It provides TypeScript bindings for calling the plugin from your app's frontend code. If you're just using the [MCP Server for Tauri](https://github.com/hypothesi/mcp-server-tauri), you only need the **Rust crate** (`tauri-plugin-mcp-bridge`)—the MCP server communicates with it directly via WebSocket.
 
 ## Overview
 
@@ -12,11 +15,19 @@ The MCP Bridge plugin extends MCP servers with direct access to Tauri internals.
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+Add the Rust crate to your `src-tauri/Cargo.toml`:
 
 ```toml
 [dependencies]
 tauri-plugin-mcp-bridge = "0.1"
+```
+
+### Optional: TypeScript Bindings
+
+If you want to call the plugin from your app's frontend code (not required for MCP server functionality):
+
+```bash
+npm install --save-exact @hypothesi/tauri-plugin-mcp-bridge
 ```
 
 ## Usage
