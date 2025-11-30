@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress';
+import llmstxt from 'vitepress-plugin-llms';
 
 // Use /mcp-server-tauri/ for GitHub Pages, / for local dev
 // eslint-disable-next-line no-process-env
@@ -51,6 +52,10 @@ export default defineConfig({
    ],
 
    appearance: 'dark', // Enable theme toggle, default to dark
+
+   vite: {
+      plugins: [ llmstxt() ],
+   },
 
    themeConfig: {
       logo: '/logo.svg',
