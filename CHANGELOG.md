@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-12-01
+
+### Fixed
+- Fix screenshot crash on iOS
+
+### Documentation
+- Add llms.txt integration for AI-friendly documentation
+- Add more convenient installation instructions
+- Improve version number freshness in docs
+
+## [0.2.1] - 2025-11-30
+
+### Fixed
+- Make Tauri APIs a peerDependency in the plugin JS bindings
+
+### Documentation
+- Update tools list
+- Clarify the role of the JS bindings
+- Install plugin only in development in example
+- Encourage use of default permissions
+
 ## [0.2.0] - 2025-11-29
 
 ### Added

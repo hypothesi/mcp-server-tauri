@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-12-01
+
+### Fixed
+- Fix screenshot crash on iOS by properly handling NSRunLoop and avoiding unsafe pointer casts
+
+## [0.2.1] - 2025-11-30
+
+### Fixed
+- Make Tauri APIs a peerDependency instead of a direct dependency
+
 ## [0.2.0] - 2025-11-29
 
 ### Added
