@@ -54,9 +54,11 @@ objc2-web-kit = { version = "0.2", features = ["WKWebView", "WKSnapshotConfigura
 [target.'cfg(all(target_vendor = "apple", not(target_os = "macos")))'.dependencies]
 objc2 = "0.5"
 block2 = "0.5"
-objc2-foundation = { version = "0.2", features = ["NSData", "NSError", "NSString", "NSDictionary"] }
+objc2-foundation = { version = "0.2", features = ["NSData", "NSError", "NSString", "NSDictionary", "NSDate", "NSRunLoop", "NSObjCRuntime"] }
 objc2-ui-kit = { version = "0.2", features = ["UIImage"] }
-objc2-web-kit = { version = "0.2", features = ["WKWebView", "WKSnapshotConfiguration", "block2"] }
+# Note: WKWebView feature requires objc2-app-kit (macOS only), so we only use WKSnapshotConfiguration
+# and call WKWebView methods via raw msg_send! in ios.rs
+objc2-web-kit = { version = "0.2", features = ["WKSnapshotConfiguration", "block2"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 webview2-com = "0.38"
