@@ -37,9 +37,9 @@
 
    if (element) {
       const outerHTML = element.outerHTML;
-      // Truncate long HTML to avoid overwhelming output
-      const truncated = outerHTML.length > 200
-         ? outerHTML.substring(0, 200) + '...'
+      // Truncate very long HTML to avoid overwhelming output
+      const truncated = outerHTML.length > 5000
+         ? outerHTML.substring(0, 5000) + '...'
          : outerHTML;
       return 'Found element: ' + truncated;
    }
