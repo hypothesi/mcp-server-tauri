@@ -71,7 +71,11 @@ export const GetStylesSchema = WindowTargetSchema.extend({
 });
 
 export const ExecuteJavaScriptSchema = WindowTargetSchema.extend({
-   script: z.string().describe('JavaScript code to execute in the webview context'),
+   script: z.string().describe(
+      'JavaScript code to execute in the webview context. ' +
+      'If returning a value, it must be JSON-serializable. ' +
+      'For functions that return values, use IIFE syntax: "(() => { return value; })()" not "() => { return value; }"'
+   ),
    args: z.array(z.unknown()).optional().describe('Arguments to pass to the script'),
 });
 

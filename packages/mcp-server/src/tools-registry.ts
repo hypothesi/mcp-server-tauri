@@ -332,6 +332,8 @@ export const TOOLS: ToolDefinition[] = [
       description:
          '[Tauri Apps Only] Execute JavaScript in a Tauri app\'s webview context. ' +
          'Requires active tauri_driver_session. Has access to window.__TAURI__. ' +
+         'If you need a return value, it must be JSON-serializable. ' +
+         'For functions that return values, use an IIFE: "(() => { return 5; })()" not "() => { return 5; }". ' +
          'For browser JS execution, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
       schema: ExecuteJavaScriptSchema,

@@ -191,10 +191,24 @@ Execute JavaScript code in the webview context.
 | `script` | string | Yes | JavaScript code to execute |
 | `args` | array | No | Arguments to pass to the script |
 
+### Script Format
+
+Scripts can be any valid JavaScript. If you need a return value, it must be JSON-serializable:
+
+- **Side effects only**: `console.log('hello')`, `document.body.classList.add('dark')`
+- **Simple expressions**: `document.title`, `5 + 3`, `window.location.href`
+- **Statements with return**: `const x = 5; return x * 2;`
+- **Async operations**: `const res = await fetch('/api'); return await res.json();`
+- **IIFE (Immediately Invoked Function Expression)**: `(() => { return 5; })()`
+
+::: warning Returning Values from Functions
+If you want to return a value from a function, use an IIFE: `(() => { return 5; })()` not `() => { return 5; }`. Bare function definitions are not JSON-serializable and will return `null`.
+:::
+
 ### Example
 
 ```javascript
-// Get page data
+// Get page data (simple expression)
 {
   "tool": "tauri_webview_execute_js",
   "script": "document.title + ' - ' + window.location.href"
@@ -205,11 +219,17 @@ Execute JavaScript code in the webview context.
   "tool": "tauri_webview_execute_js",
   "script": "const res = await fetch('/api/data'); return await res.json();"
 }
+
+// IIFE for complex logic
+{
+  "tool": "tauri_webview_execute_js",
+  "script": "(() => { const items = document.querySelectorAll('li'); return items.length; })()"
+}
 ```
 
 ### Response
 
-Returns the result of the JavaScript execution as a string.
+Returns the result of the JavaScript execution as a JSON string. Non-serializable values (like functions or DOM elements) will return `null`.
 
 ## tauri_webview_get_styles
 
