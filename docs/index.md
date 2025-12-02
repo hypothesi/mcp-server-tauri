@@ -142,7 +142,7 @@ The MCP server communicates with your Tauri application through:
 
 ## Slash Commands (Prompts)
 
-The server provides **slash commands** for guided workflows:
+The server provides **slash commands** ([prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)) for guided workflows:
 
 <div class="tool-categories">
    <div class="tool-category">

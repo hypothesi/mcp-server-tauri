@@ -17,7 +17,7 @@ Once configured, your AI assistant has **16 powerful tools** plus **slash comman
 
 ## <MessageSquareCode :size="24" :stroke-width="2" class="heading-icon" /> Slash Commands
 
-For guided, multi-step workflows, use **slash commands** (prompts):
+For guided, multi-step workflows, use **slash commands** ([prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)):
 
 | Command | What It Does |
 |---------|--------------|

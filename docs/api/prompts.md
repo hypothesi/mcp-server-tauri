@@ -13,7 +13,11 @@ import { MessageSquareCode, Bug, Zap, Settings } from 'lucide-vue-next';
 
 # <MessageSquareCode :size="28" :stroke-width="2" class="heading-icon" /> Prompts (Slash Commands)
 
-Prompts are pre-built templates that guide your AI assistant through common Tauri development tasks. In MCP clients like Windsurf, Claude Desktop, and others, these appear as **slash commands** that you can invoke directly.
+[Prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts) are pre-built templates that guide your AI assistant through common Tauri development tasks. In MCP clients like Claude Desktop, Cursor, and others, these appear as **slash commands** that you can invoke directly.
+
+::: warning Prompts Not Supported Everywhere
+Some MCP clients don't support prompts yet (e.g., [Windsurf](https://codeium.mintlify.app/windsurf/cascade/mcp#general-information)). If slash commands don't work in your editor, see the [Getting Started guide](/guides/getting-started#manual-prompt-instructions) for a workaround.
+:::
 
 ## What Are Prompts?
 

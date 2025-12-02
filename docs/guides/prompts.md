@@ -9,7 +9,11 @@ head:
 
 # Using Prompts (Slash Commands)
 
-Prompts are pre-built templates that guide your AI assistant through multi-step workflows. In MCP clients like Windsurf, Claude Desktop, Cursor, and VS Code, these appear as **slash commands** you can invoke directly.
+[Prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts) are pre-built templates that guide your AI assistant through multi-step workflows. In MCP clients like Claude Desktop, Cursor, and VS Code, these appear as **slash commands** you can invoke directly.
+
+::: warning Prompts Not Supported Everywhere
+Some MCP clients don't support prompts yet (e.g., [Windsurf](https://codeium.mintlify.app/windsurf/cascade/mcp#general-information)). If slash commands don't work in your editor, see the [Getting Started guide](/guides/getting-started#manual-prompt-instructions) for a workaround.
+:::
 
 ## What Are Prompts?
 
@@ -75,14 +79,6 @@ AI: I'll help you find and fix JavaScript errors in your Tauri app.
 ```
 
 ## How to Use Prompts
-
-### In Windsurf
-
-Type the slash command directly in the Cascade chat:
-
-```
-/fix-webview-errors
-```
 
 ### In Claude Desktop
 

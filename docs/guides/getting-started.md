@@ -9,6 +9,97 @@ head:
 
 <script setup>
 import { data as versions } from '../.vitepress/versions.data';
+
+const SETUP_INSTRUCTIONS = `Help me set up the MCP Bridge plugin in my Tauri project so I can use these AI development tools.
+
+## Prerequisites
+
+- This is a **Tauri v2** project (check for \`src-tauri/\` directory and \`tauri.conf.json\`)
+- If this is NOT a Tauri project, stop and let the user know this setup only applies to Tauri apps
+
+## Setup Steps
+
+### Step 1: Add the Rust Plugin
+
+Add the plugin to \`src-tauri/Cargo.toml\` dependencies:
+
+\`\`\`toml
+[dependencies]
+tauri-plugin-mcp-bridge = "0.2"
+\`\`\`
+
+Or run from the \`src-tauri\` directory:
+\`\`\`bash
+cargo add tauri-plugin-mcp-bridge
+\`\`\`
+
+### Step 2: Register the Plugin
+
+In the Tauri app's entry point (usually \`src-tauri/src/lib.rs\` or \`src-tauri/src/main.rs\`), register the plugin.
+
+Find the \`tauri::Builder\` and add the plugin (only in debug builds):
+
+\`\`\`rust
+let mut builder = tauri::Builder::default();
+// ... existing plugins ...
+
+#[cfg(debug_assertions)]
+{
+    builder = builder.plugin(tauri_plugin_mcp_bridge::init());
+}
+
+builder
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
+\`\`\`
+
+### Step 3: Enable Global Tauri (REQUIRED)
+
+In \`src-tauri/tauri.conf.json\`, ensure \`withGlobalTauri\` is enabled:
+
+\`\`\`json
+{
+  "app": {
+    "withGlobalTauri": true
+  }
+}
+\`\`\`
+
+**This is required** - without it, the MCP bridge cannot communicate with the webview.
+
+### Step 4: Add Plugin Permissions
+
+Add the plugin permission to \`src-tauri/capabilities/default.json\` (create the file if it doesn't exist):
+
+\`\`\`json
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "mcp-bridge:default"
+  ]
+}
+\`\`\`
+
+If the file already exists, just add \`"mcp-bridge:default"\` to the existing permissions array.
+
+## Verification
+
+After setup:
+1. Run the Tauri app in development mode (\`cargo tauri dev\` or \`npm run tauri dev\`)
+2. The MCP bridge will start a WebSocket server on port 9223
+3. Use \`tauri_driver_session\` with action "start" to connect
+4. Use \`tauri_driver_session\` with action "status" to verify the connection
+
+## Notes
+
+- The plugin only runs in debug builds (\`#[cfg(debug_assertions)]\`) so it won't affect production
+- The WebSocket server binds to \`0.0.0.0\` by default to support mobile device testing
+- For localhost-only access, use \`Builder::new().bind_address("127.0.0.1").build()\` instead of \`init()\`
+
+Please examine the project structure and make the necessary changes to set up the MCP bridge plugin.`;
 </script>
 
 # Getting Started with MCP Server Tauri
@@ -69,7 +160,7 @@ Now add the MCP Bridge plugin to your Tauri app. Pick your path:
 
 ### ⚡ Quick Setup (Recommended)
 
-Just type this in your AI assistant:
+If your editor supports MCP prompts, just type this in your AI assistant:
 
 ```
 /setup
@@ -84,6 +175,23 @@ Just type this in your AI assistant:
 ::: tip Zero manual configuration
 The `/setup` command examines your project and makes all the right changes. It adapts to your specific setup—no copy-pasting required.
 :::
+
+#### If Your Editor Doesn't Support Prompts {#manual-prompt-instructions}
+
+Some MCP clients don't support [prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts) yet (e.g., [Windsurf](https://codeium.mintlify.app/windsurf/cascade/mcp#general-information)). If the `/setup` slash command doesn't work in your editor, copy the setup instructions below and paste them into your AI assistant:
+
+<CopyButton :text="SETUP_INSTRUCTIONS" label="Copy setup instructions" />
+
+<details>
+<summary>Preview instructions</summary>
+
+The copied text contains step-by-step instructions for:
+1. Adding the Rust plugin to `Cargo.toml`
+2. Registering the plugin in your app's entry point
+3. Enabling `withGlobalTauri` in `tauri.conf.json`
+4. Adding plugin permissions to capabilities
+
+</details>
 
 ---
 
@@ -182,6 +290,10 @@ The AI connects to your running app and can see, click, type, and debug—just l
 | `/fix-webview-errors` | Find and fix JavaScript errors automatically |
 
 See the [Prompts documentation](/api/prompts) for details.
+
+::: info Prompts Not Working?
+Some MCP clients don't support slash commands yet. See the [manual prompt instructions](#manual-prompt-instructions) section above for a workaround.
+:::
 
 ## Next Steps
 
