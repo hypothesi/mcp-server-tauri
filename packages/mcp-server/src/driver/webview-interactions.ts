@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import {
    executeInWebview,
    executeInWebviewWithContext,
@@ -43,6 +45,7 @@ export const InteractSchema = WindowTargetSchema.extend({
 export const ScreenshotSchema = WindowTargetSchema.extend({
    format: z.enum([ 'png', 'jpeg' ]).optional().default('png').describe('Image format'),
    quality: z.number().min(0).max(100).optional().describe('JPEG quality (0-100, only for jpeg format)'),
+   filePath: z.string().optional().describe('File path to save the screenshot to instead of returning as base64'),
 });
 
 export const KeyboardSchema = WindowTargetSchema.extend({
@@ -169,13 +172,40 @@ export interface ScreenshotOptions {
    quality?: number;
    format?: 'png' | 'jpeg';
    windowId?: string;
+   filePath?: string;
 }
 
-export async function screenshot(options: ScreenshotOptions = {}): Promise<ScreenshotResult> {
-   const { quality, format = 'png', windowId } = options;
+export interface ScreenshotFileResult {
+   filePath: string;
+   format: 'png' | 'jpeg';
+}
+
+export async function screenshot(options: ScreenshotOptions = {}): Promise<ScreenshotResult | ScreenshotFileResult> {
+   const { quality, format = 'png', windowId, filePath } = options;
 
    // Use the native screenshot function from webview-executor
-   return captureScreenshot({ format, quality, windowId });
+   const result = await captureScreenshot({ format, quality, windowId });
+
+   // If filePath is provided, write to file instead of returning base64
+   if (filePath) {
+      // Find the image content in the result
+      const imageContent = result.content.find((c) => { return c.type === 'image'; });
+
+      if (!imageContent || imageContent.type !== 'image') {
+         throw new Error('Screenshot capture failed: no image data');
+      }
+
+      // Decode base64 and write to file
+      const buffer = Buffer.from(imageContent.data, 'base64');
+
+      const resolvedPath = resolve(filePath);
+
+      await writeFile(resolvedPath, buffer);
+
+      return { filePath: resolvedPath, format };
+   }
+
+   return result;
 }
 
 export interface KeyboardOptions {

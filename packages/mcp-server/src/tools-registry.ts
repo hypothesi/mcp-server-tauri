@@ -230,7 +230,13 @@ export const TOOLS: ToolDefinition[] = [
             quality: parsed.quality,
             format: parsed.format,
             windowId: parsed.windowId,
+            filePath: parsed.filePath,
          });
+
+         // If saved to file, return text confirmation
+         if ('filePath' in result) {
+            return `Screenshot saved to: ${result.filePath}`;
+         }
 
          // Return the content array directly for proper image handling
          return result.content;

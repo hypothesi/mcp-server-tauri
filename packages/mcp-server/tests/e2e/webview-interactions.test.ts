@@ -75,13 +75,18 @@ describe('Webview Interactions E2E Tests', () => {
       it('should take full webview screenshot with valid data', async () => {
          const result = await screenshot({});
 
-         // Result is now a ScreenshotResult with content array
-         expect(result).toHaveProperty('content');
+         // Result should be a ScreenshotResult with content array (not a file result)
+         expect('content' in result).toBe(true);
+         if (!('content' in result)) {
+            throw new Error('Expected ScreenshotResult with content');
+         }
+
          expect(Array.isArray(result.content)).toBe(true);
          expect(result.content.length).toBeGreaterThanOrEqual(2);
 
          // First item should be text context
-         const textContent = result.content.find((c) => { return c.type === 'text'; });
+         type ContentItem = { type: string; text?: string; data?: string; mimeType?: string };
+         const textContent = result.content.find((c: ContentItem) => { return c.type === 'text'; }) as ContentItem | undefined;
 
          expect(textContent).toBeDefined();
          expect(textContent?.type).toBe('text');
@@ -90,11 +95,11 @@ describe('Webview Interactions E2E Tests', () => {
          }
 
          // Second item should be image content
-         const imageContent = result.content.find((c) => { return c.type === 'image'; });
+         const imageContent = result.content.find((c: ContentItem) => { return c.type === 'image'; }) as ContentItem | undefined;
 
          expect(imageContent).toBeDefined();
          expect(imageContent?.type).toBe('image');
-         if (imageContent?.type === 'image') {
+         if (imageContent?.type === 'image' && imageContent.data) {
             expect(imageContent.mimeType).toMatch(/^image\/(png|jpeg)$/);
             expect(imageContent.data).toBeTruthy();
 
@@ -104,7 +109,9 @@ describe('Webview Interactions E2E Tests', () => {
             expect(imageContent.data.length).toBeGreaterThan(100);
 
             // Verify it's valid base64 (will throw if invalid)
-            expect(() => { return Buffer.from(imageContent.data, 'base64'); }).not.toThrow();
+            const data = imageContent.data;
+
+            expect(() => { return Buffer.from(data, 'base64'); }).not.toThrow();
          }
       }, TIMEOUT);
    });

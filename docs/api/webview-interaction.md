@@ -87,20 +87,29 @@ Capture a screenshot of the current viewport (visible area) of the webview.
 |------|------|----------|-------------|
 | `format` | string | No | Image format: 'png', 'jpeg' (default: 'png') |
 | `quality` | number | No | JPEG quality 0-100 (only for jpeg format) |
+| `filePath` | string | No | File path to save the screenshot to instead of returning base64 |
+| `windowId` | string | No | Window label to target (defaults to 'main') |
 
 ### Example
 
 ```javascript
-// Take a PNG screenshot
+// Take a PNG screenshot (returns base64)
 {
   "tool": "tauri_webview_screenshot",
   "format": "png"
+}
+
+// Save screenshot to a file
+{
+  "tool": "tauri_webview_screenshot",
+  "format": "png",
+  "filePath": "/path/to/screenshot.png"
 }
 ```
 
 ### Response
 
-Returns a base64-encoded image data URL.
+Returns a base64-encoded image, or if `filePath` is provided, returns the path where the screenshot was saved.
 
 ::: tip
 This only captures what is currently visible. Scroll content into view before taking screenshots if you need to capture specific elements.
