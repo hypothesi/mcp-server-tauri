@@ -47,96 +47,72 @@ If no errors are found, let me know the app is running cleanly.
 
 If the session fails to start, help me troubleshoot the connection (is the app running? is the MCP bridge plugin installed?).`;
 
-const SETUP_PROMPT = `Help me set up the MCP Bridge plugin in my Tauri project so I can use these AI development tools.
+const SETUP_PROMPT = `Help me set up or update the MCP Bridge plugin in my Tauri project.
 
-## Prerequisites
+## IMPORTANT: Do Not Act Without Permission
 
-- This is a **Tauri v2** project (check for \`src-tauri/\` directory and \`tauri.conf.json\`)
-- If this is NOT a Tauri project, stop and let the user know this setup only applies to Tauri apps
+**You must NOT make any changes to files without my explicit approval.**
 
-## Setup Steps
+1. First, examine my project to understand its current state
+2. Then, present a clear summary of what changes are needed
+3. Wait for my approval before making ANY modifications
+4. Only proceed with changes after I confirm
 
-### Step 1: Add the Rust Plugin
+## Prerequisites Check
 
-Add the plugin to \`src-tauri/Cargo.toml\` dependencies:
+First, verify this is a Tauri v2 project:
+- Look for \`src-tauri/\` directory and \`tauri.conf.json\`
+- If this is NOT a Tauri project, stop and let me know this setup only applies to Tauri apps
 
+## What to Check
+
+Examine these files and report what needs to be added or updated:
+
+### 1. Rust Plugin Dependency
+Check \`src-tauri/Cargo.toml\` for \`tauri-plugin-mcp-bridge\`. If missing or outdated, note that it needs:
 \`\`\`toml
 [dependencies]
-tauri-plugin-mcp-bridge = "0.2"
+tauri-plugin-mcp-bridge = "0.4"
 \`\`\`
 
-Or run from the \`src-tauri\` directory:
-\`\`\`bash
-cargo add tauri-plugin-mcp-bridge
-\`\`\`
-
-### Step 2: Register the Plugin
-
-In the Tauri app's entry point (usually \`src-tauri/src/lib.rs\` or \`src-tauri/src/main.rs\`), register the plugin.
-
-Find the \`tauri::Builder\` and add the plugin (only in debug builds):
-
+### 2. Plugin Registration
+Check \`src-tauri/src/lib.rs\` or \`src-tauri/src/main.rs\` for plugin registration. It should have:
 \`\`\`rust
-let mut builder = tauri::Builder::default();
-// ... existing plugins ...
-
 #[cfg(debug_assertions)]
 {
     builder = builder.plugin(tauri_plugin_mcp_bridge::init());
 }
-
-builder
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
 \`\`\`
 
-### Step 3: Enable Global Tauri (REQUIRED)
-
-In \`src-tauri/tauri.conf.json\`, ensure \`withGlobalTauri\` is enabled:
-
-\`\`\`json
-{
-  "app": {
-    "withGlobalTauri": true
-  }
-}
-\`\`\`
-
+### 3. Global Tauri Setting
+Check \`src-tauri/tauri.conf.json\` for \`withGlobalTauri: true\` under the \`app\` section.
 **This is required** - without it, the MCP bridge cannot communicate with the webview.
 
-### Step 4: Add Plugin Permissions
+### 4. Plugin Permissions
+Check \`src-tauri/capabilities/default.json\` (or similar) for \`"mcp-bridge:default"\` permission.
 
-Add the plugin permission to \`src-tauri/capabilities/default.json\` (create the file if it doesn't exist):
+## Your Response Format
 
-\`\`\`json
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Default capabilities",
-  "windows": ["main"],
-  "permissions": [
-    "mcp-bridge:default"
-  ]
-}
-\`\`\`
+After examining the project, respond with:
 
-If the file already exists, just add \`"mcp-bridge:default"\` to the existing permissions array.
+1. **Current State**: What's already configured correctly
+2. **Changes Needed**: A numbered list of specific changes required
+3. **Ask for Permission**: "May I proceed with these changes?"
 
-## Verification
+Only after I say yes should you make any modifications.
 
-After setup:
-1. Run the Tauri app in development mode (\`cargo tauri dev\` or \`npm run tauri dev\`)
-2. The MCP bridge will start a WebSocket server on port 9223
-3. Use \`tauri_driver_session\` with action "start" to connect
-4. Use \`tauri_driver_session\` with action "status" to verify the connection
+## After Setup
+
+Once changes are approved and made:
+1. Run the Tauri app in development mode (\`cargo tauri dev\`)
+2. Use \`tauri_driver_session\` with action "start" to connect
+3. Use \`tauri_driver_session\` with action "status" to verify
 
 ## Notes
 
-- The plugin only runs in debug builds (\`#[cfg(debug_assertions)]\`) so it won't affect production
-- The WebSocket server binds to \`0.0.0.0\` by default to support mobile device testing
-- For localhost-only access, use \`Builder::new().bind_address("127.0.0.1").build()\` instead of \`init()\`
-
-Please examine the project structure and make the necessary changes to set up the MCP bridge plugin.`;
+- The plugin only runs in debug builds so it won't affect production
+- The WebSocket server binds to \`0.0.0.0:9223\` by default
+- For localhost-only access, use \`Builder::new().bind_address("127.0.0.1").build()\``;
 
 /**
  * Complete registry of all available prompts
@@ -166,9 +142,9 @@ export const PROMPTS: PromptDefinition[] = [
    {
       name: 'setup',
       description:
-         'Set up the MCP Bridge plugin in a Tauri project. ' +
-         'Guides through adding the Rust crate, registering the plugin, enabling withGlobalTauri, ' +
-         'and adding permissions. Use this when starting with a new Tauri project.',
+         'Set up or update the MCP Bridge plugin in a Tauri project. ' +
+         'Examines the project, reports what changes are needed, and asks for permission before ' +
+         'making any modifications. Use for initial setup or to update to the latest version.',
       arguments: [],
       handler: () => {
          return [

@@ -84,16 +84,112 @@ export interface ToolDefinition {
  * Tool categories for organization
  */
 export const TOOL_CATEGORIES = {
+   SETUP: 'Setup & Configuration',
    MOBILE_DEVELOPMENT: 'Mobile Development',
    UI_AUTOMATION: 'UI Automation & WebView Interaction',
    IPC_PLUGIN: 'IPC & Plugin Tools (via MCP Bridge)',
 } as const;
+
+// Setup instructions for the MCP Bridge plugin
+const SETUP_INSTRUCTIONS = `# MCP Bridge Plugin Setup Instructions
+
+Use these instructions to set up or update the MCP Bridge plugin in a Tauri v2 project.
+
+## IMPORTANT: Do Not Act Without Permission
+
+**You must NOT make any changes to files without the user's explicit approval.**
+
+1. First, examine the project to understand its current state
+2. Then, present a clear summary of what changes are needed
+3. Wait for user approval before making ANY modifications
+4. Only proceed with changes after they confirm
+
+## Prerequisites Check
+
+First, verify this is a Tauri v2 project:
+- Look for \`src-tauri/\` directory and \`tauri.conf.json\`
+- If this is NOT a Tauri project, stop and let the user know this setup only applies to Tauri apps
+
+## What to Check
+
+Examine these files and report what needs to be added or updated:
+
+### 1. Rust Plugin Dependency
+Check \`src-tauri/Cargo.toml\` for \`tauri-plugin-mcp-bridge\`. If missing or outdated, note that it needs:
+\`\`\`toml
+[dependencies]
+tauri-plugin-mcp-bridge = "0.4"
+\`\`\`
+
+### 2. Plugin Registration
+Check \`src-tauri/src/lib.rs\` or \`src-tauri/src/main.rs\` for plugin registration. It should have:
+\`\`\`rust
+#[cfg(debug_assertions)]
+{
+    builder = builder.plugin(tauri_plugin_mcp_bridge::init());
+}
+\`\`\`
+
+### 3. Global Tauri Setting
+Check \`src-tauri/tauri.conf.json\` for \`withGlobalTauri: true\` under the \`app\` section.
+**This is required** - without it, the MCP bridge cannot communicate with the webview.
+
+### 4. Plugin Permissions
+Check \`src-tauri/capabilities/default.json\` (or similar) for \`"mcp-bridge:default"\` permission.
+
+## Response Format
+
+After examining the project, respond with:
+
+1. **Current State**: What's already configured correctly
+2. **Changes Needed**: A numbered list of specific changes required
+3. **Ask for Permission**: "May I proceed with these changes?"
+
+Only after the user says yes should you make any modifications.
+
+## After Setup
+
+Once changes are approved and made:
+1. Run the Tauri app in development mode (\`cargo tauri dev\`)
+2. Use \`tauri_driver_session\` with action "start" to connect
+3. Use \`tauri_driver_session\` with action "status" to verify
+
+## Notes
+
+- The plugin only runs in debug builds so it won't affect production
+- The WebSocket server binds to \`0.0.0.0:9223\` by default
+- For localhost-only access, use \`Builder::new().bind_address("127.0.0.1").build()\`
+`;
 
 /**
  * Complete registry of all available tools
  * This is the single source of truth for tool definitions
  */
 export const TOOLS: ToolDefinition[] = [
+   // Setup & Configuration Tools
+   {
+      name: 'tauri_get_setup_instructions',
+      description:
+         'Get instructions for setting up or updating the MCP Bridge plugin in a Tauri project. ' +
+         'Call this tool when: (1) tauri_driver_session fails to connect, (2) you detect the plugin ' +
+         'is not installed or outdated, or (3) the user asks about setup. ' +
+         'Returns step-by-step guidance that you should follow to help the user configure their project. ' +
+         'IMPORTANT: The instructions require you to examine the project first and ask for permission ' +
+         'before making any changes.',
+      category: TOOL_CATEGORIES.SETUP,
+      schema: z.object({}),
+      annotations: {
+         title: 'Get Setup Instructions',
+         readOnlyHint: true,
+         destructiveHint: false,
+         idempotentHint: true,
+         openWorldHint: false,
+      },
+      handler: async () => {
+         return SETUP_INSTRUCTIONS;
+      },
+   },
+
    // Mobile Development Tools
    {
       name: 'tauri_list_devices',

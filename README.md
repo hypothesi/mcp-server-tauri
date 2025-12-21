@@ -41,46 +41,7 @@ A **Model Context Protocol (MCP) server** that enables AI assistants like Claude
 - **Tauri CLI**: `npm install -g @tauri-apps/cli@next`
 - For mobile: Xcode (macOS) or Android SDK
 
-### 1. Add the MCP Bridge Plugin to Your Tauri App
-
-**Add the Rust crate:**
-
-```bash
-cargo add tauri-plugin-mcp-bridge
-```
-
-**Register in `src-tauri/src/main.rs`:**
-
-```rust
-fn main() {
-    let mut builder = tauri::Builder::default();
-
-    #[cfg(debug_assertions)]
-    {
-        builder = builder.plugin(tauri_plugin_mcp_bridge::init());
-    }
-
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-**Enable Global Tauri in `tauri.conf.json`:**
-
-```json
-{
-  "app": {
-    "withGlobalTauri": true
-  }
-}
-```
-
-> ⚠️ **Required:** Without `withGlobalTauri`, the MCP server cannot interact with your application's webview.
-
-> **Note:** The npm package `@hypothesi/tauri-plugin-mcp-bridge` is **optional**. It provides TypeScript bindings if you want to call the plugin from your app's frontend code. The MCP server communicates with the Rust plugin directly via WebSocket.
-
-### 2. Configure Your AI Assistant
+### 1. Configure Your AI Assistant
 
 Use [install-mcp](https://www.npmjs.com/package/install-mcp) to add the server to your AI assistant:
 
@@ -130,26 +91,51 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client cline
 ```
 </details>
 
-That's it! Restart your AI assistant and you're ready to build Tauri apps. 🎉
+**Restart your AI assistant** after adding the configuration.
 
-> **Note:** See the [plugin documentation](./packages/tauri-plugin-mcp-bridge/README.md) for advanced configuration options.
+### 2. Set Up the MCP Bridge Plugin
+
+Ask your AI assistant to help configure your Tauri app:
+
+> "Help me set up the Tauri MCP Bridge plugin"
+
+Your AI will:
+1. **Examine your project** to see what's already configured
+2. **Show you what changes are needed** (Cargo.toml, plugin registration, etc.)
+3. **Ask for your permission** before making any modifications
+
+That's it! The AI handles all the setup details while keeping you in control. 🎉
+
+<details>
+<summary><strong>Manual Setup</strong></summary>
+
+If you prefer to set up manually, see the [Getting Started guide](https://hypothesi.github.io/mcp-server-tauri/guides/getting-started.html) or the [plugin documentation](./packages/tauri-plugin-mcp-bridge/README.md).
+
+</details>
 
 ---
 
 ## 💬 Slash Commands (Prompts)
 
-The server provides **slash commands** for guided, multi-step workflows:
-
 | Command | Description |
 |---------|-------------|
-| `/setup` | Set up the MCP bridge plugin in your Tauri project. Adds the crate, registers the plugin, and configures permissions. |
-| `/fix-webview-errors` | Find and fix JavaScript errors in your webview. Connects to your app, retrieves console errors, analyzes them, and helps you fix the issues. |
+| `/setup` | Set up or update the MCP bridge plugin in your Tauri project |
+| `/fix-webview-errors` | Find and fix JavaScript errors in your webview |
 
 Just type the command in your AI assistant to start a guided workflow.
 
 ---
 
-## 🧰 Available Tools (16 total)
+## 🧰 Available Tools (17 total)
+
+<details>
+<summary><strong>Setup & Configuration</strong></summary>
+
+| Tool | Description |
+|------|-------------|
+| `tauri_get_setup_instructions` | Get setup/update instructions for the MCP Bridge plugin |
+
+</details>
 
 <details>
 <summary><strong>UI Automation</strong> — Screenshots, clicks, typing, and more</summary>
