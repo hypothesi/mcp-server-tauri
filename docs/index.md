@@ -38,13 +38,13 @@ import { data as versions } from './.vitepress/versions.data';
   </div>
 </div>
 
-::: tip Community Project
-This is an unofficial community project, independently developed to enhance [Tauri](https://tauri.app) development through AI assistance.
+::: warning Community Project
+This is an **unofficial** community project, independently developed to enhance [Tauri<sup>&reg;</sup>](https://tauri.app) development through AI assistance. **Please note that this project is not affiliated with, endorsed by, or sponsored by The Tauri Programme within the Commons Conservancy.**
 :::
 
 ## What Is This?
 
-**MCP Server for [Tauri](https://tauri.app)** bridges AI assistants with your Tauri development environment via the Model Context Protocol. Control your entire dev workflow through natural language - test UI, debug issues, monitor IPC calls, and inspect your app's state.
+**MCP Server for [Tauri<sup>&reg;</sup>](https://tauri.app)** bridges AI assistants with your Tauri development environment via the Model Context Protocol. Control your entire dev workflow through natural language - test UI, debug issues, monitor IPC calls, and inspect your app's state.
 
 ## Quick Start
 

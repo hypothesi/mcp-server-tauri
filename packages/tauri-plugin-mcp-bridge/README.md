@@ -5,7 +5,7 @@
 [![Documentation](https://docs.rs/tauri-plugin-mcp-bridge/badge.svg)](https://docs.rs/tauri-plugin-mcp-bridge)
 [![License](https://img.shields.io/crates/l/tauri-plugin-mcp-bridge.svg)](https://github.com/hypothesi/mcp-server-tauri)
 
-A Tauri plugin that bridges the Model Context Protocol (MCP) with Tauri applications, enabling deep inspection and interaction with Tauri's IPC layer, backend state, and window management.
+A Tauri® plugin that bridges the Model Context Protocol (MCP) with Tauri applications, enabling deep inspection and interaction with Tauri's IPC layer, backend state, and window management.
 
 > **📦 This npm package is optional.** It provides TypeScript bindings for calling the plugin from your app's frontend code. If you're just using the [MCP Server for Tauri](https://github.com/hypothesi/mcp-server-tauri), you only need the **Rust crate** (`tauri-plugin-mcp-bridge`)—the MCP server communicates with it directly via WebSocket.
 
@@ -262,3 +262,11 @@ Visit the [docs.rs documentation](https://docs.rs/tauri-plugin-mcp-bridge) or bu
 ## License
 
 MIT © [hypothesi](https://github.com/hypothesi)
+
+---
+
+## Trademark Notice
+
+TAURI® is a registered trademark of The Tauri Programme within the Commons Conservancy. [https://tauri.app/](https://tauri.app/)
+
+This project is not affiliated with, endorsed by, or sponsored by The Tauri Programme within the Commons Conservancy.

@@ -17,7 +17,7 @@
 
 ---
 
-A **Model Context Protocol (MCP) server** that enables AI assistants like Claude, Cursor, and Windsurf to build, test, and debug [Tauri](https://tauri.app) v2 applications. Screenshots, DOM state, and console logs from your running app give the AI rich context to understand what's happening—and tools to interact with it.
+A **Model Context Protocol (MCP) server** that enables AI assistants like Claude, Cursor, and Windsurf to build, test, and debug [Tauri®](https://tauri.app) v2 applications. Screenshots, DOM state, and console logs from your running app give the AI rich context to understand what's happening—and tools to interact with it.
 
 ## ✨ Features
 
@@ -292,3 +292,11 @@ Contributions are welcome! Please:
 ## 📄 License
 
 MIT © [hypothesi](https://github.com/hypothesi)
+
+---
+
+## Trademark Notice
+
+TAURI® is a registered trademark of The Tauri Programme within the Commons Conservancy. [https://tauri.app/](https://tauri.app/)
+
+This project is not affiliated with, endorsed by, or sponsored by The Tauri Programme within the Commons Conservancy.

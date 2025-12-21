@@ -1,7 +1,7 @@
 {
   "name": "@hypothesi/tauri-mcp-server",
   "version": "0.5.1",
-  "description": "A Model Context Protocol server for Tauri v2 development",
+  "description": "A Model Context Protocol server for use with Tauri v2 applications",
   "type": "module",
   "bin": {
     "mcp-server-tauri": "./dist/index.js"

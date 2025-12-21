@@ -1,7 +1,7 @@
 {
   "name": "@hypothesi/tauri-plugin-mcp-bridge",
   "version": "0.5.1",
-  "description": "JavaScript bindings for @hypothesi/tauri-plugin-mcp-bridge - MCP Bridge plugin for Tauri",
+  "description": "JavaScript bindings for @hypothesi/tauri-plugin-mcp-bridge - MCP Bridge plugin for use with Tauri applications",
   "type": "module",
   "main": "./dist-js/index.js",
   "types": "./dist-js/index.d.ts",
