@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-12-23
+
 ### Added
 - Multi-app support: Connect to multiple Tauri apps simultaneously
 - Default app concept: Most recently connected app is used when no identifier specified

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-12-23
+
+### Added
+- Multi-app support: connect to multiple Tauri apps simultaneously and select targets via `appIdentifier`
+- Add `appIdentifier` support to console log reads
+
+### Changed
+- `tauri_driver_session` stop without identifier stops all sessions
+
 ## [0.5.1] - 2025-12-21
 
 ### Fixed
