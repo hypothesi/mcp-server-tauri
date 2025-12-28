@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.hypothesi/tauri",
+  "name": "io.github.hypothesi/mcp-server-tauri",
   "description": "A Model Context Protocol server for use with Tauri v2 applications",
   "repository": {
     "url": "https://github.com/hypothesi/mcp-server-tauri",
     "source": "github",
     "subfolder": "packages/mcp-server"
   },
-  "version": "0.6.1",
+  "version": "0.6.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@hypothesi/tauri-mcp-server",
-      "version": "0.6.1",
+      "version": "0.6.4",
       "transport": {
         "type": "stdio"
       }
