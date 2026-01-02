@@ -212,13 +212,19 @@ async fn handle_invoke_tauri<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Va
             }
         }
         "plugin:mcp-bridge|start_ipc_monitor" => {
-            match commands::start_ipc_monitor(app.state()).await {
+            let Some(window) = app.webview_windows().values().next().cloned() else {
+                return error_response(id, "No window available");
+            };
+            match commands::start_ipc_monitor(window, app.state()).await {
                 Ok(data) => success_response(id, data),
                 Err(e) => error_response(id, e),
             }
         }
         "plugin:mcp-bridge|stop_ipc_monitor" => {
-            match commands::stop_ipc_monitor(app.state()).await {
+            let Some(window) = app.webview_windows().values().next().cloned() else {
+                return error_response(id, "No window available");
+            };
+            match commands::stop_ipc_monitor(window, app.state()).await {
                 Ok(data) => success_response(id, data),
                 Err(e) => error_response(id, e),
             }

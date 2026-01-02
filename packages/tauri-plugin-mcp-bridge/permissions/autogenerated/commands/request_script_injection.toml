@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-request-script-injection"
+description = "Enables the request_script_injection command without any pre-configured scope."
+commands.allow = ["request_script_injection"]
+
+[[permission]]
+identifier = "deny-request-script-injection"
+description = "Denies the request_script_injection command without any pre-configured scope."
+commands.deny = ["request_script_injection"]

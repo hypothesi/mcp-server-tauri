@@ -2,20 +2,18 @@
 
 [default]
 description = "Default permissions for MCP Bridge plugin"
-permissions = ["allow-all"]
-
-[[permission]]
-identifier = "allow-all"
-description = "Allow all MCP Bridge commands"
-commands.allow = [
-  "execute_command",
-  "get_window_info",
-  "get_backend_state",
-  "emit_event",
-  "start_ipc_monitor",
-  "stop_ipc_monitor",
-  "get_ipc_events",
-  "execute_js",
-  "script_result",
-  "capture_native_screenshot"
+permissions = [
+  "allow-capture-native-screenshot",
+  "allow-emit-event",
+  "allow-execute-command",
+  "allow-execute-js",
+  "allow-get-backend-state",
+  "allow-get-ipc-events",
+  "allow-get-window-info",
+  "allow-list-windows",
+  "allow-report-ipc-event",
+  "allow-request-script-injection",
+  "allow-script-result",
+  "allow-start-ipc-monitor",
+  "allow-stop-ipc-monitor"
 ]

@@ -5,7 +5,9 @@
 (function() {
    'use strict';
 
-   var origLog, origDebug, origInfo, origWarn, origError, bridgeLogger;
+   var ipcMonitorEnabled = false,
+       originalInvoke = null,
+       origLog, origDebug, origInfo, origWarn, origError, bridgeLogger;
 
    // MCP bridge logger - scoped with levels and tags
    function createMcpLogger(scope) {
@@ -96,6 +98,90 @@
          }, 50);
       }
    }
+
+   // =========================================================================
+   // IPC Monitoring
+   // =========================================================================
+
+   /**
+    * Enables IPC monitoring by replacing the Tauri core object.
+    * Called from Rust via execute_js when start_ipc_monitor is invoked.
+    *
+    * Note: window.__TAURI__.core.invoke is read-only in Tauri v2, so we replace
+    * the entire core object with a new one that wraps invoke.
+    */
+   window.__MCP_START_IPC_MONITOR__ = function() {
+      var originalCore, wrappedInvoke;
+
+      if (ipcMonitorEnabled) {
+         return;
+      }
+
+      if (!window.__TAURI__ || !window.__TAURI__.core || !window.__TAURI__.core.invoke) {
+         bridgeLogger.error('Cannot start IPC monitor: Tauri API not available');
+         return;
+      }
+
+      originalCore = window.__TAURI__.core;
+      originalInvoke = originalCore.invoke;
+      ipcMonitorEnabled = true;
+
+      wrappedInvoke = function(cmd, args) {
+         var startTime = Date.now();
+
+         function reportEvent(result, error, duration) {
+            var reportPromise;
+
+            if (!originalInvoke) {
+               return;
+            }
+
+            reportPromise = originalInvoke('plugin:mcp-bridge|report_ipc_event', {
+               command: cmd,
+               args: args || {},
+               result: result,
+               error: error,
+               durationMs: duration,
+            });
+
+            reportPromise.catch(function() {
+               // Ignore errors from reporting
+            });
+         }
+
+         return originalInvoke(cmd, args)
+            .then(function(result) {
+               reportEvent(result, null, Date.now() - startTime);
+               return result;
+            })
+            .catch(function(error) {
+               reportEvent(null, error.message || String(error), Date.now() - startTime);
+               throw error;
+            });
+      };
+
+      // Create a new core object with all original properties plus wrapped invoke
+      window.__TAURI__.core = Object.assign({}, originalCore, { invoke: wrappedInvoke });
+
+      bridgeLogger.info('IPC monitoring started');
+   };
+
+   /**
+    * Disables IPC monitoring and restores the original core object.
+    * Called from Rust via execute_js when stop_ipc_monitor is invoked.
+    */
+   window.__MCP_STOP_IPC_MONITOR__ = function() {
+      if (!ipcMonitorEnabled || !originalInvoke) {
+         return;
+      }
+
+      // Restore original invoke by creating a new core object
+      window.__TAURI__.core = Object.assign({}, window.__TAURI__.core, { invoke: originalInvoke });
+      originalInvoke = null;
+      ipcMonitorEnabled = false;
+
+      bridgeLogger.info('IPC monitoring stopped');
+   };
 
    waitForTauri(function() {
       bridgeLogger.info('Tauri API available, initializing bridge');

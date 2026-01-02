@@ -295,16 +295,16 @@
       "type": "string",
       "oneOf": [
         {
-          "description": "Allows the plugin to capture screenshots using native platform APIs",
+          "description": "Enables the capture_native_screenshot command without any pre-configured scope.",
           "type": "string",
           "const": "allow-capture-native-screenshot",
-          "markdownDescription": "Allows the plugin to capture screenshots using native platform APIs"
+          "markdownDescription": "Enables the capture_native_screenshot command without any pre-configured scope."
         },
         {
-          "description": "Denies the plugin from capturing screenshots",
+          "description": "Denies the capture_native_screenshot command without any pre-configured scope.",
           "type": "string",
           "const": "deny-capture-native-screenshot",
-          "markdownDescription": "Denies the plugin from capturing screenshots"
+          "markdownDescription": "Denies the capture_native_screenshot command without any pre-configured scope."
         },
         {
           "description": "Enables the emit_event command without any pre-configured scope.",
@@ -379,6 +379,42 @@
           "markdownDescription": "Denies the get_window_info command without any pre-configured scope."
         },
         {
+          "description": "Enables the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-windows",
+          "markdownDescription": "Enables the list_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-windows",
+          "markdownDescription": "Denies the list_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the report_ipc_event command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-report-ipc-event",
+          "markdownDescription": "Enables the report_ipc_event command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the report_ipc_event command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-report-ipc-event",
+          "markdownDescription": "Denies the report_ipc_event command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the request_script_injection command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-request-script-injection",
+          "markdownDescription": "Enables the request_script_injection command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the request_script_injection command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-request-script-injection",
+          "markdownDescription": "Denies the request_script_injection command without any pre-configured scope."
+        },
+        {
           "description": "Enables the script_result command without any pre-configured scope.",
           "type": "string",
           "const": "allow-script-result",
@@ -415,16 +451,10 @@
           "markdownDescription": "Denies the stop_ipc_monitor command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for MCP Bridge plugin\n#### This default permission set includes:\n\n- `allow-all`",
+          "description": "Default permissions for MCP Bridge plugin\n#### This default permission set includes:\n\n- `allow-capture-native-screenshot`\n- `allow-emit-event`\n- `allow-execute-command`\n- `allow-execute-js`\n- `allow-get-backend-state`\n- `allow-get-ipc-events`\n- `allow-get-window-info`\n- `allow-list-windows`\n- `allow-report-ipc-event`\n- `allow-request-script-injection`\n- `allow-script-result`\n- `allow-start-ipc-monitor`\n- `allow-stop-ipc-monitor`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for MCP Bridge plugin\n#### This default permission set includes:\n\n- `allow-all`"
-        },
-        {
-          "description": "Allow all MCP Bridge commands",
-          "type": "string",
-          "const": "allow-all",
-          "markdownDescription": "Allow all MCP Bridge commands"
+          "markdownDescription": "Default permissions for MCP Bridge plugin\n#### This default permission set includes:\n\n- `allow-capture-native-screenshot`\n- `allow-emit-event`\n- `allow-execute-command`\n- `allow-execute-js`\n- `allow-get-backend-state`\n- `allow-get-ipc-events`\n- `allow-get-window-info`\n- `allow-list-windows`\n- `allow-report-ipc-event`\n- `allow-request-script-injection`\n- `allow-script-result`\n- `allow-start-ipc-monitor`\n- `allow-stop-ipc-monitor`"
         }
       ]
     }

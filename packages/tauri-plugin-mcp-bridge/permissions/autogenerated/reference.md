@@ -4,7 +4,19 @@ Default permissions for MCP Bridge plugin
 
 #### This default permission set includes the following:
 
-- `allow-all`
+- `allow-capture-native-screenshot`
+- `allow-emit-event`
+- `allow-execute-command`
+- `allow-execute-js`
+- `allow-get-backend-state`
+- `allow-get-ipc-events`
+- `allow-get-window-info`
+- `allow-list-windows`
+- `allow-report-ipc-event`
+- `allow-request-script-injection`
+- `allow-script-result`
+- `allow-start-ipc-monitor`
+- `allow-stop-ipc-monitor`
 
 ## Permission Table
 
@@ -23,7 +35,7 @@ Default permissions for MCP Bridge plugin
 </td>
 <td>
 
-Allows the plugin to capture screenshots using native platform APIs
+Enables the capture_native_screenshot command without any pre-configured scope.
 
 </td>
 </tr>
@@ -36,7 +48,7 @@ Allows the plugin to capture screenshots using native platform APIs
 </td>
 <td>
 
-Denies the plugin from capturing screenshots
+Denies the capture_native_screenshot command without any pre-configured scope.
 
 </td>
 </tr>
@@ -200,6 +212,84 @@ Denies the get_window_info command without any pre-configured scope.
 <tr>
 <td>
 
+`mcp-bridge:allow-list-windows`
+
+</td>
+<td>
+
+Enables the list_windows command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mcp-bridge:deny-list-windows`
+
+</td>
+<td>
+
+Denies the list_windows command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mcp-bridge:allow-report-ipc-event`
+
+</td>
+<td>
+
+Enables the report_ipc_event command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mcp-bridge:deny-report-ipc-event`
+
+</td>
+<td>
+
+Denies the report_ipc_event command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mcp-bridge:allow-request-script-injection`
+
+</td>
+<td>
+
+Enables the request_script_injection command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mcp-bridge:deny-request-script-injection`
+
+</td>
+<td>
+
+Denies the request_script_injection command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `mcp-bridge:allow-script-result`
 
 </td>
@@ -271,19 +361,6 @@ Enables the stop_ipc_monitor command without any pre-configured scope.
 <td>
 
 Denies the stop_ipc_monitor command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`mcp-bridge:allow-all`
-
-</td>
-<td>
-
-Allow all MCP Bridge commands
 
 </td>
 </tr>

@@ -59,12 +59,29 @@ export async function manageIPCMonitoring(action: 'start' | 'stop', appIdentifie
 
 export async function startIPCMonitoring(appIdentifier?: string | number): Promise<string> {
    try {
+      // Start the Rust-side monitor state
       const result = await executeIPCCommand({ command: 'plugin:mcp-bridge|start_ipc_monitor', appIdentifier });
 
       const parsed = JSON.parse(result);
 
       if (!parsed.success) {
          throw new Error(parsed.error || 'Unknown error');
+      }
+
+      // Start the JS-side IPC interception
+      const client = await ensureSessionAndConnect(appIdentifier);
+
+      const jsResponse = await client.sendCommand({
+         command: 'execute_js',
+         args: {
+            script: 'window.__MCP_START_IPC_MONITOR__ && window.__MCP_START_IPC_MONITOR__(); true;',
+            windowLabel: 'main',
+         },
+      }, 5000);
+
+      if (!jsResponse.success) {
+         // Log but don't fail - Rust-side monitoring is still active
+         console.error('Failed to start JS-side IPC interception:', jsResponse.error);
       }
 
       return JSON.stringify(parsed.result);
@@ -77,6 +94,23 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
 
 export async function stopIPCMonitoring(appIdentifier?: string | number): Promise<string> {
    try {
+      // Stop the JS-side IPC interception first
+      const client = await ensureSessionAndConnect(appIdentifier);
+
+      const jsResponse = await client.sendCommand({
+         command: 'execute_js',
+         args: {
+            script: 'window.__MCP_STOP_IPC_MONITOR__ && window.__MCP_STOP_IPC_MONITOR__(); true;',
+            windowLabel: 'main',
+         },
+      }, 5000);
+
+      if (!jsResponse.success) {
+         // Log but don't fail - continue to stop Rust-side monitoring
+         console.error('Failed to stop JS-side IPC interception:', jsResponse.error);
+      }
+
+      // Stop the Rust-side monitor state
       const result = await executeIPCCommand({ command: 'plugin:mcp-bridge|stop_ipc_monitor', appIdentifier });
 
       const parsed = JSON.parse(result);
