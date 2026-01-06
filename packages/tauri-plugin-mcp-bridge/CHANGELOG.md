@@ -7,9 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-06
+
+### Added
+- Implement IPC monitoring with JS-side interception via `report_ipc_event` command
+- Add `list_windows` and `request_script_injection` commands to default permissions
+
 ### Fixed
 - Fixed compilation error on Android and iOS caused by desktop-only `set_size()` and `is_resizable()` APIs
 - Window resize requests on mobile now return a graceful error message instead of failing to compile
+
+### Breaking Changes
+
+#### Permission Identifier Renamed
+
+The `mcp-bridge:allow-all` permission has been replaced with `mcp-bridge:default`.
+
+**Migration:** Update your `src-tauri/capabilities/default.json` (or similar capabilities file):
+
+```diff
+  "permissions": [
+    "core:default",
+-   "mcp-bridge:allow-all"
++   "mcp-bridge:default"
+  ]
+```
 
 ## [0.6.5] - 2025-12-31
 

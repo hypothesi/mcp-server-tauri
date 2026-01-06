@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-06
+
+### Added
+- Implement IPC monitoring with JS-side interception for capturing `invoke()` calls
+- Derive plugin version programmatically from package.json
+
+### Fixed
+- Fixed compilation error on Android and iOS caused by desktop-only window resize APIs
+
+### Breaking Changes
+
+#### Permission Identifier Renamed
+
+The `mcp-bridge:allow-all` permission has been replaced with `mcp-bridge:default`.
+
+**Migration:** Update your `src-tauri/capabilities/default.json` (or similar capabilities file):
+
+```diff
+  "permissions": [
+    "core:default",
+-   "mcp-bridge:allow-all"
++   "mcp-bridge:default"
+  ]
+```
+
 ## [0.6.5] - 2025-12-31
 
 ### Added

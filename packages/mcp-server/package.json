@@ -1,6 +1,6 @@
 {
   "name": "@hypothesi/tauri-mcp-server",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "mcpName": "io.github.hypothesi/mcp-server-tauri",
   "description": "A Model Context Protocol server for use with Tauri v2 applications",
   "type": "module",

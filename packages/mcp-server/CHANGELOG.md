@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-06
+
+### Added
+- Implement IPC monitoring with JS-side interception for capturing `invoke()` calls
+- Derive plugin version programmatically from package.json
+
 ## [0.6.5] - 2025-12-31
 
 ### Added
