@@ -20,10 +20,10 @@ import {
 } from './driver/plugin-commands.js';
 import {
    interact, screenshot, keyboard, waitFor, getStyles,
-   executeJavaScript, findElement,
+   executeJavaScript, findElement, domSnapshot,
    InteractSchema, ScreenshotSchema, KeyboardSchema,
    WaitForSchema, GetStylesSchema, ExecuteJavaScriptSchema,
-   FindElementSchema,
+   FindElementSchema, DomSnapshotSchema,
 } from './driver/webview-interactions.js';
 import { PLUGIN_VERSION_CARGO } from './version.js';
 
@@ -470,6 +470,35 @@ export const TOOLS: ToolDefinition[] = [
          return await executeJavaScript({
             script: parsed.script,
             args: parsed.args,
+            windowId: parsed.windowId,
+            appIdentifier: parsed.appIdentifier,
+         });
+      },
+   },
+
+   {
+      name: 'webview_dom_snapshot',
+      description:
+         '[Tauri Apps Only] Get a structured DOM snapshot of a Tauri app\'s webview. ' +
+         'Supports different snapshot types for AI consumption. ' +
+         'The "accessibility" type returns a YAML representation of the accessibility tree ' +
+         'similar to Playwright\'s aria snapshots, including roles, names, states, and element refs. ' +
+         'Use the optional selector parameter to scope the snapshot to a subtree. ' +
+         'Requires active driver_session. ' +
+         MULTI_APP_DESC,
+      category: TOOL_CATEGORIES.UI_AUTOMATION,
+      schema: DomSnapshotSchema,
+      annotations: {
+         title: 'DOM Snapshot',
+         readOnlyHint: true,
+         openWorldHint: false,
+      },
+      handler: async (args) => {
+         const parsed = DomSnapshotSchema.parse(args);
+
+         return await domSnapshot({
+            type: parsed.type,
+            selector: parsed.selector,
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
          });

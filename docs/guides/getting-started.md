@@ -278,7 +278,7 @@ Some MCP clients don't support slash commands yet. See the [manual prompt instru
 
 ## Next Steps
 
-- **[API Reference](/api/)** — Learn about all 17 available tools
+- **[API Reference](/api/)** — Learn about all 18 available tools
 - **[IPC & Plugin Tools](/api/ipc-plugin)** — Debug your app's IPC layer
 - **[UI Automation](/api/ui-automation)** — Automate webview interactions
 

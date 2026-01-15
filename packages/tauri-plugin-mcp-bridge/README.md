@@ -117,13 +117,13 @@ await invoke('plugin:mcp-bridge|emit_event', {
 
 ## MCP Server Integration
 
-This plugin is part of the larger MCP Server for Tauri, which provides **16 total MCP tools** for comprehensive Tauri development and testing. The plugin specifically enables the following tools:
+This plugin is part of the larger MCP Server for Tauri, which provides **18 total MCP tools** for comprehensive Tauri development and testing. The plugin specifically enables the following tools:
 
 ### Mobile Development Tools (1)
 
 1. **list_devices** - List connected Android devices and iOS simulators
 
-### UI Automation & WebView Tools (10)
+### UI Automation & WebView Tools (11)
 
 Tools for UI automation and webview interaction via the plugin's WebSocket connection:
 
@@ -137,6 +137,7 @@ Tools for UI automation and webview interaction via the plugin's WebSocket conne
 8. **webview_wait_for** - Wait for element selectors, text content, or IPC events
 9. **webview_get_styles** - Get computed CSS styles for element(s)
 10. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
+11. **webview_dom_snapshot** - Get structured accessibility tree snapshot for AI consumption
 
 ### IPC Tools (5)
 

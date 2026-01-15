@@ -8,6 +8,7 @@
     "mcp-server-tauri": "./dist/index.js"
   },
   "scripts": {
+    "prebuild": "tsx scripts/bundle-aria-api.ts",
     "build": "tsc && cp -r src/driver/scripts/*.js dist/driver/scripts/ && chmod +x dist/index.js",
     "start": "node dist/index.js",
     "test": "vitest run",
@@ -46,6 +47,7 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.1",
+    "aria-api": "0.8.0",
     "execa": "9.6.0",
     "html2canvas": "1.4.1",
     "ws": "8.18.3",
@@ -56,6 +58,7 @@
     "@types/html2canvas": "0.5.35",
     "@types/node": "22.19.1",
     "@types/ws": "8.18.1",
+    "esbuild": "0.25.12",
     "vitest": "4.0.13"
   },
   "publishConfig": {

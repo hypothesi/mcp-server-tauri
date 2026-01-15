@@ -24,6 +24,7 @@ export const SCRIPTS = {
    getStyles: loadScript('get-styles'),
    focus: loadScript('focus'),
    findElement: loadScript('find-element'),
+   domSnapshot: loadScript('dom-snapshot'),
 } as const;
 
 /**

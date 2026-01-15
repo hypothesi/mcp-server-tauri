@@ -100,6 +100,13 @@ export const GetConsoleLogsSchema = WindowTargetSchema.extend({
    since: z.string().optional().describe('ISO timestamp to filter logs since'),
 });
 
+export const DomSnapshotSchema = WindowTargetSchema.extend({
+   type: z.enum([ 'accessibility' ]).describe('Snapshot type'),
+   selector: z.string().optional().describe(
+      'CSS selector to scope the snapshot. If omitted, snapshots entire document.'
+   ),
+});
+
 // ============================================================================
 // Implementation Functions
 // ============================================================================
@@ -429,4 +436,49 @@ export async function getConsoleLogs(options: GetConsoleLogsOptions = {}): Promi
 
       throw new Error(`Failed to get console logs: ${message}`);
    }
+}
+
+export interface DomSnapshotOptions {
+   type: 'accessibility';
+   selector?: string;
+   windowId?: string;
+   appIdentifier?: string | number;
+}
+
+/**
+ * Generate a structured DOM snapshot for AI consumption.
+ * Uses aria-api for comprehensive, spec-compliant accessibility computation.
+ */
+export async function domSnapshot(options: DomSnapshotOptions): Promise<string> {
+   const { type, selector, windowId, appIdentifier } = options;
+
+   // First, ensure aria-api is loaded in the webview
+   await ensureAriaApiLoaded(windowId);
+
+   // Then execute the snapshot script
+   const script = buildScript(SCRIPTS.domSnapshot, { type, selector: selector ?? null });
+
+   try {
+      return await executeInWebview(script, windowId, appIdentifier);
+   } catch(error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      throw new Error(`DOM snapshot failed: ${message}`);
+   }
+}
+
+/**
+ * Ensure aria-api library is loaded in the webview.
+ * Uses the script manager to inject the library if not already present.
+ */
+async function ensureAriaApiLoaded(windowId?: string): Promise<void> {
+   const { getAriaApiSource, ARIA_API_SCRIPT_ID: ariaApiScriptId } = await import('./scripts/aria-api-loader.js');
+
+   const { registerScript, isScriptRegistered } = await import('./script-manager.js');
+
+   if (await isScriptRegistered(ariaApiScriptId)) {
+      return;
+   }
+
+   await registerScript(ariaApiScriptId, 'inline', getAriaApiSource(), windowId);
 }

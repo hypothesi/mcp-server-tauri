@@ -312,3 +312,67 @@ Read logs from various sources: webview console logs, Android logcat, iOS simula
 ### Response
 
 Returns log entries from the specified source with timestamps and log levels.
+
+## webview_dom_snapshot
+
+Get a structured DOM snapshot of a Tauri app's webview for AI consumption.
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `type` | `'accessibility'` | Yes | Snapshot type |
+| `selector` | string | No | CSS selector to scope the snapshot |
+| `windowId` | string | No | Window label to target |
+| `appIdentifier` | string \| number | No | App identifier |
+
+### Accessibility Snapshot Format
+
+The accessibility snapshot uses YAML format similar to Playwright's aria snapshots:
+
+```yaml
+- heading "Page Title" [level=1 ref=e0]:
+- navigation [ref=e1]:
+  - list [ref=e2]:
+    - listitem [ref=e3]:
+      - link "Home" [ref=e4]
+    - listitem [ref=e5]:
+      - link "About" [ref=e6]
+- main [ref=e7]:
+  - button "Submit" [disabled ref=e8]
+  - textbox "Enter name" [ref=e9]
+```
+
+### Element References
+
+Each element includes a `ref` attribute (e.g., `[ref=e0]`) that can be used with other tools to target that specific element. The refs are stored in `window.__MCP_ARIA_REFS__` and persist until the next snapshot.
+
+### Example
+
+```javascript
+// Snapshot entire page
+{
+  "tool": "webview_dom_snapshot",
+  "type": "accessibility"
+}
+
+// Snapshot only the navigation
+{
+  "tool": "webview_dom_snapshot",
+  "type": "accessibility",
+  "selector": "nav"
+}
+```
+
+### Scoped Snapshots
+
+Use the `selector` parameter to snapshot a subtree. If the selector matches multiple elements, each match is returned as a separate labeled snapshot.
+
+### Response
+
+Returns a YAML-formatted accessibility tree with:
+- Element roles (button, textbox, heading, link, etc.)
+- Accessible names
+- ARIA states (disabled, expanded, checked, etc.)
+- Ref IDs for element targeting
+- Metadata footer with generation timestamp and element count

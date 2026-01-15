@@ -1,6 +1,6 @@
 ---
 title: API Reference - What Your AI Can Do
-description: Explore 17 powerful MCP tools for Tauri development including setup, mobile development, UI automation, and IPC debugging.
+description: Explore 18 powerful MCP tools for Tauri development including setup, mobile development, UI automation, and IPC debugging.
 head:
   - - meta
     - name: keywords
@@ -13,7 +13,7 @@ import { Wrench, Smartphone, Target, Zap, Rocket, Bug, FlaskConical, Activity, M
 
 # What Your AI Can Do
 
-Once configured, your AI assistant has **17 powerful tools** plus **slash commands** to help you build, test, and debug your Tauri application. Just ask in natural language!
+Once configured, your AI assistant has **18 powerful tools** plus **slash commands** to help you build, test, and debug your Tauri application. Just ask in natural language!
 
 ## <Wrench :size="24" :stroke-width="2" class="heading-icon" /> Setup & Configuration
 

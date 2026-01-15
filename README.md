@@ -126,7 +126,7 @@ Just type the command in your AI assistant to start a guided workflow.
 
 ---
 
-## 🧰 Available Tools (17 total)
+## 🧰 Available Tools (18 total)
 
 <details>
 <summary><strong>Setup & Configuration</strong></summary>
@@ -151,6 +151,7 @@ Just type the command in your AI assistant to start a guided workflow.
 | `webview_wait_for` | Wait for elements, text, or events |
 | `webview_get_styles` | Get computed CSS styles |
 | `webview_execute_js` | Execute JavaScript in webview |
+| `webview_dom_snapshot` | Get structured accessibility tree snapshot |
 | `manage_window` | List windows, get info, or resize |
 
 > **Multi-Window Support**: All webview tools accept an optional `windowId` parameter to target specific windows. Use `manage_window` with `action: "list"` to discover available windows.
