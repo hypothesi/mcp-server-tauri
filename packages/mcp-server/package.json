@@ -35,11 +35,14 @@
     "model-context-protocol",
     "tauri",
     "automation",
+    "screenshot",
+    "verification",
     "testing",
     "debugging",
     "cursor",
     "windsurf",
-    "vscode"
+    "vscode",
+    "claude-code"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.1",
