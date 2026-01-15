@@ -101,7 +101,7 @@ export const GetConsoleLogsSchema = WindowTargetSchema.extend({
 });
 
 export const DomSnapshotSchema = WindowTargetSchema.extend({
-   type: z.enum([ 'accessibility' ]).describe('Snapshot type'),
+   type: z.enum([ 'accessibility', 'structure' ]).describe('Snapshot type'),
    selector: z.string().optional().describe(
       'CSS selector to scope the snapshot. If omitted, snapshots entire document.'
    ),
@@ -439,7 +439,7 @@ export async function getConsoleLogs(options: GetConsoleLogsOptions = {}): Promi
 }
 
 export interface DomSnapshotOptions {
-   type: 'accessibility';
+   type: 'accessibility' | 'structure';
    selector?: string;
    windowId?: string;
    appIdentifier?: string | number;
@@ -452,8 +452,10 @@ export interface DomSnapshotOptions {
 export async function domSnapshot(options: DomSnapshotOptions): Promise<string> {
    const { type, selector, windowId, appIdentifier } = options;
 
-   // First, ensure aria-api is loaded in the webview
-   await ensureAriaApiLoaded(windowId);
+   // Only load aria-api for accessibility snapshots
+   if (type === 'accessibility') {
+      await ensureAriaApiLoaded(windowId);
+   }
 
    // Then execute the snapshot script
    const script = buildScript(SCRIPTS.domSnapshot, { type, selector: selector ?? null });

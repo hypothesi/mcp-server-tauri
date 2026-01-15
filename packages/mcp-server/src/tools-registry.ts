@@ -483,6 +483,10 @@ export const TOOLS: ToolDefinition[] = [
          'Supports different snapshot types for AI consumption. ' +
          'The "accessibility" type returns a YAML representation of the accessibility tree ' +
          'similar to Playwright\'s aria snapshots, including roles, names, states, and element refs. ' +
+         'Use this for understanding UI semantics, finding interactive elements, or accessibility testing. ' +
+         'The "structure" type returns a YAML representation of the DOM hierarchy ' +
+         'with element tag names, IDs, CSS classes, and data-testid attributes (if present). ' +
+         'Use this for understanding page layout, debugging CSS selectors, or locating elements by class/ID. ' +
          'Use the optional selector parameter to scope the snapshot to a subtree. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC,

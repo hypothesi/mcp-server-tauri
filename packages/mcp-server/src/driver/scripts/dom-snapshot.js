@@ -1,15 +1,23 @@
 /**
  * DOM Snapshot - Generates structured DOM representations for AI consumption
  *
- * Uses aria-api for comprehensive, spec-compliant accessibility computation:
- * - WAI-ARIA 1.3 role computation
- * - HTML-AAM 1.0 implicit role mappings
- * - Accessible Name and Description Computation 1.2
- * - aria-owns relationship handling
- * - Shadow DOM traversal
+ * Supports two snapshot types:
+ *
+ * 'accessibility' - Uses aria-api for comprehensive, spec-compliant accessibility computation:
+ *   - WAI-ARIA 1.3 role computation
+ *   - HTML-AAM 1.0 implicit role mappings
+ *   - Accessible Name and Description Computation 1.2
+ *   - aria-owns relationship handling
+ *   - Shadow DOM traversal
+ *
+ * 'structure' - DOM structure tree with:
+ *   - Element tag names
+ *   - Element IDs (if present)
+ *   - CSS classes (if present)
+ *   - data-testid attribute (if present)
  *
  * @param {Object} params
- * @param {string} params.type - Snapshot type ('accessibility')
+ * @param {string} params.type - Snapshot type ('accessibility' or 'structure')
  * @param {string|null} params.selector - Optional CSS selector to scope snapshot
  */
 (function(params) {
@@ -17,13 +25,7 @@
 
    const { type, selector } = params;
 
-   // Validate aria-api is available
-   const ariaApi = window.ariaApi;
-   if (!ariaApi) {
-      throw new Error('aria-api library not loaded');
-   }
-
-   // ARIA states to include in snapshot
+   // ARIA states to include in snapshot (used by accessibility type)
    const ARIA_STATES = [
       'checked', 'disabled', 'expanded', 'pressed', 'selected',
       'hidden', 'invalid', 'required', 'readonly', 'busy',
@@ -42,8 +44,8 @@
    // ========================================================================
 
    let refCounter = 0;
-   const refMap = new Map();
-   const reverseRefMap = new Map();
+   const refMap = new Map(),
+         reverseRefMap = new Map();
 
    function getOrCreateRef(element) {
       if (!refMap.has(element)) {
@@ -163,6 +165,15 @@
    // Tree Building (using aria-api for aria-owns aware traversal)
    // ========================================================================
 
+   // Roles to skip (filter out like Chrome DevTools does)
+   const SKIP_ROLES = new Set(['generic', 'none', 'presentation']);
+
+   // Roles that are structural landmarks (keep even without name)
+   const LANDMARK_ROLES = new Set([
+      'banner', 'main', 'contentinfo', 'navigation', 'complementary',
+      'region', 'search', 'form', 'application', 'document'
+   ]);
+
    function buildAriaTree(element, depth, maxDepth) {
       depth = depth || 0;
       maxDepth = maxDepth || 100;
@@ -185,7 +196,31 @@
       const ref = getOrCreateRef(element);
       const children = getAccessibleChildren(element, depth, maxDepth);
 
+      // Skip generic/none roles (like Chrome DevTools) - just return children
+      if (SKIP_ROLES.has(role) && !name) {
+         if (children.length === 0) return null;
+         if (children.length === 1) return children[0];
+         return { type: 'fragment', children: children };
+      }
+
       if (!role && !name && children.length === 0) return null;
+
+      // Get URL for links (like Playwright)
+      var url;
+      if (role === 'link' && element.href) {
+         url = element.href;
+      }
+
+      // Check cursor style for interactive elements (like Playwright's [cursor=pointer])
+      var cursor;
+      try {
+         var computedStyle = window.getComputedStyle(element);
+         if (computedStyle.cursor === 'pointer') {
+            cursor = 'pointer';
+         }
+      } catch (e) {
+         // Ignore style errors
+      }
 
       return {
          type: 'element',
@@ -193,6 +228,8 @@
          name: name || undefined,
          description: description || undefined,
          states: Object.keys(states).length > 0 ? states : undefined,
+         url: url,
+         cursor: cursor,
          ref: ref,
          children: children.length > 0 ? children : undefined
       };
@@ -215,6 +252,7 @@
             }
          } else if (child.nodeType === Node.TEXT_NODE) {
             const text = child.textContent ? child.textContent.trim() : '';
+            // Use text type like Playwright
             if (text) children.push({ type: 'text', content: text });
          }
       }
@@ -223,7 +261,7 @@
    }
 
    // ========================================================================
-   // YAML Rendering (Playwright-compatible format)
+   // Playwright-compatible YAML Rendering
    // ========================================================================
 
    function yamlEscape(str) {
@@ -241,6 +279,7 @@
       var prefix = '  '.repeat(indent);
       if (!node) return '';
 
+      // Text nodes (like Playwright)
       if (node.type === 'text') {
          return prefix + '- text: ' + yamlEscape(node.content) + '\n';
       }
@@ -253,26 +292,58 @@
          return prefix + '# ERROR: ' + node.message + '\n';
       }
 
+      // Build line: - role "name" [attrs] [ref=X]
       var line = prefix + '- ' + node.role;
       if (node.name) line += ' ' + yamlEscape(node.name);
 
-      var stateEntries = [];
+      // Build attributes in brackets like Playwright
+      var attrs = [];
       if (node.states) {
          for (var key in node.states) {
             if (Object.prototype.hasOwnProperty.call(node.states, key)) {
                var value = node.states[key];
-               if (value === true) stateEntries.push(key);
-               else if (value === false) stateEntries.push(key + '=false');
-               else if (typeof value === 'number') stateEntries.push(key + '=' + value);
-               else stateEntries.push(key + '=' + yamlEscape(String(value)));
+               // Skip false values (cleaner output)
+               if (value === false) continue;
+               if (value === true) {
+                  attrs.push(key);
+               } else if (typeof value === 'number') {
+                  attrs.push(key + '=' + value);
+               } else {
+                  attrs.push(key + '=' + yamlEscape(String(value)));
+               }
             }
          }
       }
-      stateEntries.push('ref=' + node.ref);
-      line += ' [' + stateEntries.join(' ') + ']';
+      attrs.push('ref=' + node.ref);
 
-      if (node.children && node.children.length > 0) {
-         line += ':\n' + node.children.map(function(c) { return renderYaml(c, indent + 1); }).join('');
+      // Add cursor style like Playwright
+      if (node.cursor) {
+         attrs.push('cursor=' + node.cursor);
+      }
+
+      if (attrs.length > 0) {
+         line += ' [' + attrs.join('] [') + ']';
+      }
+
+      // Check if we have children or URL/description to add
+      var hasChildren = node.children && node.children.length > 0;
+      var hasUrl = !!node.url;
+      var hasDescription = !!node.description;
+
+      if (hasChildren || hasUrl || hasDescription) {
+         line += ':\n';
+         // Add URL as child like Playwright
+         if (hasUrl) {
+            line += prefix + '  - /url: ' + node.url + '\n';
+         }
+         // Add description as child if present
+         if (hasDescription) {
+            line += prefix + '  - /description: ' + yamlEscape(node.description) + '\n';
+         }
+         // Render children
+         if (hasChildren) {
+            line += node.children.map(function(c) { return renderYaml(c, indent + 1); }).join('');
+         }
       } else {
          line += '\n';
       }
@@ -284,8 +355,141 @@
    // Main Execution
    // ========================================================================
 
-   if (type !== 'accessibility') {
-      throw new Error('Unsupported snapshot type: "' + type + '". Supported: \'accessibility\'');
+   if (type !== 'accessibility' && type !== 'structure') {
+      throw new Error('Unsupported snapshot type: "' + type + '". Supported: \'accessibility\', \'structure\'');
+   }
+
+   // ========================================================================
+   // Structure Snapshot (DOM structure tree)
+   // ========================================================================
+
+   function isStructureVisible(element) {
+      if (element.hidden) return false;
+      try {
+         var style = window.getComputedStyle(element);
+         if (style.display === 'none') return false;
+         if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      } catch (e) {
+         return false;
+      }
+      return true;
+   }
+
+   function buildStructureTree(element, depth, maxDepth) {
+      depth = depth || 0;
+      maxDepth = maxDepth || 100;
+
+      if (depth > maxDepth) return { type: 'error', message: 'Max depth exceeded' };
+      if (!isStructureVisible(element)) return null;
+
+      var tag = element.tagName.toLowerCase();
+      var id = element.id || undefined;
+      var classes = element.classList.length > 0
+         ? Array.from(element.classList)
+         : undefined;
+      var testId = element.getAttribute('data-testid') || undefined;
+      var ref = getOrCreateRef(element);
+
+      var children = [];
+      for (var i = 0; i < element.children.length; i++) {
+         var childTree = buildStructureTree(element.children[i], depth + 1, maxDepth);
+         if (childTree) children.push(childTree);
+      }
+
+      return {
+         type: 'element',
+         tag: tag,
+         id: id,
+         classes: classes,
+         testId: testId,
+         ref: ref,
+         children: children.length > 0 ? children : undefined
+      };
+   }
+
+   function renderStructureYaml(node, indent) {
+      indent = indent || 0;
+      var prefix = '  '.repeat(indent);
+      if (!node) return '';
+
+      if (node.type === 'error') {
+         return prefix + '# ERROR: ' + node.message + '\n';
+      }
+
+      // Build element descriptor: tag#id.class1.class2
+      var descriptor = node.tag;
+      if (node.id) descriptor += '#' + node.id;
+      if (node.classes) descriptor += '.' + node.classes.join('.');
+
+      var attrs = ['ref=' + node.ref];
+      if (node.testId) attrs.push('data-testid=' + yamlEscape(node.testId));
+
+      var line = prefix + '- ' + descriptor + ' [' + attrs.join(' ') + ']';
+
+      if (node.children && node.children.length > 0) {
+         line += ':\n' + node.children.map(function(c) {
+            return renderStructureYaml(c, indent + 1);
+         }).join('');
+      } else {
+         line += '\n';
+      }
+
+      return line;
+   }
+
+   // For structure type, we don't need aria-api
+   if (type === 'structure') {
+      var structureRoots = [];
+      var structureScopeInfo = '';
+
+      if (selector) {
+         try {
+            document.querySelector(selector);
+         } catch (e) {
+            return 'Error: Invalid CSS selector "' + selector + '": ' + e.message;
+         }
+
+         var structureElements = document.querySelectorAll(selector);
+         if (structureElements.length === 0) {
+            return 'Error: No elements found matching selector "' + selector + '"';
+         }
+
+         structureRoots = Array.from(structureElements);
+         structureScopeInfo = '# Scoped to: ' + selector + '\n';
+         if (structureRoots.length > 1) structureScopeInfo += '# ' + structureRoots.length + ' elements matched\n';
+      } else {
+         structureRoots = [document.body];
+      }
+
+      var structureOutput = structureScopeInfo;
+
+      structureRoots.forEach(function(root, index) {
+         if (structureRoots.length > 1) structureOutput += '\n# ─── Match ' + (index + 1) + ' of ' + structureRoots.length + ' ───\n';
+
+         try {
+            var tree = buildStructureTree(root);
+            structureOutput += tree ? renderStructureYaml(tree) : '# (empty or hidden)\n';
+         } catch (e) {
+            structureOutput += '# ERROR: ' + e.message + '\n';
+         }
+      });
+
+      structureOutput += '\n# ───────────────────────────────────────\n';
+      structureOutput += '# Generated: ' + new Date().toISOString() + '\n';
+      structureOutput += '# Elements indexed: ' + refCounter + '\n';
+      structureOutput += '# Use [ref=eN] with other webview tools\n';
+
+      return structureOutput.trim();
+   }
+
+   // ========================================================================
+   // Accessibility Snapshot (requires aria-api)
+   // ========================================================================
+
+   // Validate aria-api is available
+   var ariaApi = window.ariaApi;
+   if (!ariaApi) {
+      throw new Error('aria-api library not loaded');
    }
 
    var roots = [];
