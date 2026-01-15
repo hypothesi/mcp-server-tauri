@@ -7,12 +7,10 @@
     "source": "github",
     "subfolder": "packages/mcp-server"
   },
-  "version": "0.6.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@hypothesi/tauri-mcp-server",
-      "version": "0.6.4",
       "transport": {
         "type": "stdio"
       }

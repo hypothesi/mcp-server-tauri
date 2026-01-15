@@ -21,6 +21,17 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Update server.json version from package.json
+        working-directory: packages/mcp-server
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          node scripts/update-server-json-version.js "$VERSION"
+
       - name: Install mcp-publisher
         working-directory: packages/mcp-server
         run: |
