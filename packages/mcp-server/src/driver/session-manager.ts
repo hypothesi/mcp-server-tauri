@@ -110,7 +110,7 @@ function getAppDiscovery(host: string): AppDiscovery {
 export function resolveTargetApp(portOrIdentifier?: string | number): SessionInfo {
    if (activeSessions.size === 0) {
       throw new Error(
-         'No active session. Call tauri_driver_session with action "start" first to connect to a Tauri app.'
+         'No active session. Call driver_session with action "start" first to connect to a Tauri app.'
       );
    }
 
@@ -178,7 +178,7 @@ function formatAppNotFoundError(identifier: string | number): string {
    return (
       `App "${identifier}" not found.\n\n` +
       `Connected apps:\n${appList}\n\n` +
-      'Use tauri_driver_session with action "status" to list all connected apps.'
+      'Use driver_session with action "status" to list all connected apps.'
    );
 }
 

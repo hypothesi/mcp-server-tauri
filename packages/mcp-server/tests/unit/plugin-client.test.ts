@@ -118,7 +118,7 @@ describe('Plugin Client Unit Tests', () => {
          resetPluginClient();
 
          await expect(ensureSessionAndConnect()).rejects.toThrow(
-            'No active session. Call tauri_driver_session with action "start" first'
+            'No active session. Call driver_session with action "start" first'
          );
       });
    });

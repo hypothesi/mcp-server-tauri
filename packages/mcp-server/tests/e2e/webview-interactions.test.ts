@@ -231,7 +231,7 @@ describe('Webview Interactions E2E Tests', () => {
       }, TIMEOUT);
 
       it('should wait for text content', async () => {
-         const result = await waitFor({ type: 'text', value: 'Welcome to Tauri', timeout: 5000 });
+         const result = await waitFor({ type: 'text', value: 'Tauri MCP', timeout: 5000 });
 
          expect(result).toBeDefined();
          expect(result).toContain('Text found');

@@ -68,8 +68,8 @@ Only after I say yes should you make any modifications.
 
 Once changes are approved and made:
 1. Run the Tauri app in development mode (\`cargo tauri dev\`)
-2. Use \`tauri_driver_session\` with action "start" to connect
-3. Use \`tauri_driver_session\` with action "status" to verify
+2. Use \`driver_session\` with action "start" to connect
+3. Use \`driver_session\` with action "status" to verify
 
 ## Notes
 
@@ -140,7 +140,7 @@ Just ask your AI assistant to help set up the MCP Bridge plugin:
 
 > "Help me set up the Tauri MCP Bridge plugin"
 
-Your AI will use the `tauri_get_setup_instructions` tool to get the latest setup steps, then:
+Your AI will use the `get_setup_instructions` tool to get the latest setup steps, then:
 1. **Examine your project** to see what's already configured
 2. **Show you what changes are needed** (Cargo.toml, plugin registration, etc.)
 3. **Ask for your permission** before making any modifications

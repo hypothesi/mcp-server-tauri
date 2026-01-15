@@ -133,7 +133,7 @@ Just type the command in your AI assistant to start a guided workflow.
 
 | Tool | Description |
 |------|-------------|
-| `tauri_get_setup_instructions` | Get setup/update instructions for the MCP Bridge plugin |
+| `get_setup_instructions` | Get setup/update instructions for the MCP Bridge plugin |
 
 </details>
 
@@ -142,18 +142,18 @@ Just type the command in your AI assistant to start a guided workflow.
 
 | Tool | Description |
 |------|-------------|
-| `tauri_driver_session` | Start/stop/status automation session |
-| `tauri_webview_find_element` | Find elements by selector |
-| `tauri_read_logs` | Read console, Android, iOS, or system logs |
-| `tauri_webview_interact` | Click, scroll, swipe, focus, long-press |
-| `tauri_webview_screenshot` | Capture webview screenshots |
-| `tauri_webview_keyboard` | Type text or send key events |
-| `tauri_webview_wait_for` | Wait for elements, text, or events |
-| `tauri_webview_get_styles` | Get computed CSS styles |
-| `tauri_webview_execute_js` | Execute JavaScript in webview |
-| `tauri_manage_window` | List windows, get info, or resize |
+| `driver_session` | Start/stop/status automation session |
+| `webview_find_element` | Find elements by selector |
+| `read_logs` | Read console, Android, iOS, or system logs |
+| `webview_interact` | Click, scroll, swipe, focus, long-press |
+| `webview_screenshot` | Capture webview screenshots |
+| `webview_keyboard` | Type text or send key events |
+| `webview_wait_for` | Wait for elements, text, or events |
+| `webview_get_styles` | Get computed CSS styles |
+| `webview_execute_js` | Execute JavaScript in webview |
+| `manage_window` | List windows, get info, or resize |
 
-> **Multi-Window Support**: All webview tools accept an optional `windowId` parameter to target specific windows. Use `tauri_manage_window` with `action: "list"` to discover available windows.
+> **Multi-Window Support**: All webview tools accept an optional `windowId` parameter to target specific windows. Use `manage_window` with `action: "list"` to discover available windows.
 
 </details>
 
@@ -162,11 +162,11 @@ Just type the command in your AI assistant to start a guided workflow.
 
 | Tool | Description |
 |------|-------------|
-| `tauri_ipc_execute_command` | Execute Tauri IPC commands |
-| `tauri_ipc_get_backend_state` | Get app metadata and state |
-| `tauri_ipc_monitor` | Start/stop IPC monitoring |
-| `tauri_ipc_get_captured` | Get captured IPC traffic |
-| `tauri_ipc_emit_event` | Emit custom events |
+| `ipc_execute_command` | Execute Tauri IPC commands |
+| `ipc_get_backend_state` | Get app metadata and state |
+| `ipc_monitor` | Start/stop IPC monitoring |
+| `ipc_get_captured` | Get captured IPC traffic |
+| `ipc_emit_event` | Emit custom events |
 
 </details>
 
@@ -175,7 +175,7 @@ Just type the command in your AI assistant to start a guided workflow.
 
 | Tool | Description |
 |------|-------------|
-| `tauri_list_devices` | List Android devices and iOS simulators |
+| `list_devices` | List Android devices and iOS simulators |
 
 </details>
 

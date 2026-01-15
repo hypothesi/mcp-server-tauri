@@ -11,7 +11,7 @@ head:
 
 Tools for managing mobile development environments for Tauri apps.
 
-## tauri_list_devices
+## list_devices
 
 List available Android devices and iOS simulators for mobile development.
 
@@ -23,7 +23,7 @@ None.
 
 ```json
 {
-  "tool": "tauri_list_devices"
+  "tool": "list_devices"
 }
 ```
 
@@ -47,13 +47,13 @@ Before running your app on mobile, check what devices are available:
 
 ```json
 {
-  "tool": "tauri_list_devices"
+  "tool": "list_devices"
 }
 ```
 
 ### Mobile Development Workflow
 
-1. Use `tauri_list_devices` to see available emulators/simulators
+1. Use `list_devices` to see available emulators/simulators
 2. Use your terminal or IDE to run `tauri android dev` or `tauri ios dev`
-3. Use `tauri_driver_session` to connect to the running app
-4. Use `tauri_read_logs` with source `android` or `ios` to debug issues
+3. Use `driver_session` to connect to the running app
+4. Use `read_logs` with source `android` or `ios` to debug issues

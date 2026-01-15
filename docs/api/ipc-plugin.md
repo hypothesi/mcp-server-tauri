@@ -11,7 +11,7 @@ head:
 
 Access Tauri's Inter-Process Communication (IPC) layer directly through the MCP Bridge plugin. These tools provide deep integration with your Tauri backend, window management, and event system.
 
-## tauri_ipc_execute_command
+## ipc_execute_command
 
 Execute any Tauri IPC command directly.
 
@@ -27,7 +27,7 @@ Execute any Tauri IPC command directly.
 ```javascript
 // Call a custom Tauri command
 {
-  "tool": "tauri_ipc_execute_command",
+  "tool": "ipc_execute_command",
   "command": "greet",
   "args": {
     "name": "World"
@@ -39,7 +39,7 @@ Execute any Tauri IPC command directly.
 
 Returns the result of the IPC command execution.
 
-## tauri_ipc_monitor
+## ipc_monitor
 
 Start or stop IPC event monitoring for debugging and analysis.
 
@@ -54,18 +54,18 @@ Start or stop IPC event monitoring for debugging and analysis.
 ```javascript
 // Start monitoring IPC events
 {
-  "tool": "tauri_ipc_monitor",
+  "tool": "ipc_monitor",
   "action": "start"
 }
 
 // Stop monitoring
 {
-  "tool": "tauri_ipc_monitor",
+  "tool": "ipc_monitor",
   "action": "stop"
 }
 ```
 
-## tauri_ipc_get_captured
+## ipc_get_captured
 
 Retrieve captured IPC traffic (commands and events) from the monitor.
 
@@ -80,12 +80,12 @@ Retrieve captured IPC traffic (commands and events) from the monitor.
 ```javascript
 // Get all captured IPC traffic
 {
-  "tool": "tauri_ipc_get_captured"
+  "tool": "ipc_get_captured"
 }
 
 // Get traffic matching a filter
 {
-  "tool": "tauri_ipc_get_captured",
+  "tool": "ipc_get_captured",
   "filter": "greet"
 }
 ```
@@ -94,7 +94,7 @@ Retrieve captured IPC traffic (commands and events) from the monitor.
 
 Returns an array of captured IPC traffic with timestamps, command/event names, arguments, and responses.
 
-## tauri_ipc_emit_event
+## ipc_emit_event
 
 Emit custom events to the Tauri event system for testing event handlers.
 
@@ -110,7 +110,7 @@ Emit custom events to the Tauri event system for testing event handlers.
 ```javascript
 // Emit a custom event
 {
-  "tool": "tauri_ipc_emit_event",
+  "tool": "ipc_emit_event",
   "eventName": "user-action",
   "payload": {
     "action": "button-clicked"
@@ -118,7 +118,7 @@ Emit custom events to the Tauri event system for testing event handlers.
 }
 ```
 
-## tauri_ipc_get_backend_state
+## ipc_get_backend_state
 
 Get comprehensive backend application state and metadata.
 
@@ -130,7 +130,7 @@ None.
 
 ```javascript
 {
-  "tool": "tauri_ipc_get_backend_state"
+  "tool": "ipc_get_backend_state"
 }
 ```
 

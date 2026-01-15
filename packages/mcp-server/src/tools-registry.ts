@@ -158,8 +158,8 @@ Only after the user says yes should you make any modifications.
 
 Once changes are approved and made:
 1. Run the Tauri app in development mode (\`cargo tauri dev\`)
-2. Use \`tauri_driver_session\` with action "start" to connect
-3. Use \`tauri_driver_session\` with action "status" to verify
+2. Use \`driver_session\` with action "start" to connect
+3. Use \`driver_session\` with action "status" to verify
 
 ## Notes
 
@@ -175,10 +175,10 @@ Once changes are approved and made:
 export const TOOLS: ToolDefinition[] = [
    // Setup & Configuration Tools
    {
-      name: 'tauri_get_setup_instructions',
+      name: 'get_setup_instructions',
       description:
          'Get instructions for setting up or updating the MCP Bridge plugin in a Tauri project. ' +
-         'Call this tool when: (1) tauri_driver_session fails to connect, (2) you detect the plugin ' +
+         'Call this tool when: (1) driver_session fails to connect, (2) you detect the plugin ' +
          'is not installed or outdated, or (3) the user asks about setup. ' +
          'Returns step-by-step guidance that you should follow to help the user configure their project. ' +
          'IMPORTANT: The instructions require you to examine the project first and ask for permission ' +
@@ -199,7 +199,7 @@ export const TOOLS: ToolDefinition[] = [
 
    // Mobile Development Tools
    {
-      name: 'tauri_list_devices',
+      name: 'list_devices',
       description:
          '[Tauri Mobile Apps Only] List Android emulators/devices and iOS simulators. ' +
          'Use for Tauri mobile development (tauri android dev, tauri ios dev). ' +
@@ -220,7 +220,7 @@ export const TOOLS: ToolDefinition[] = [
 
    // UI Automation Tools
    {
-      name: 'tauri_driver_session',
+      name: 'driver_session',
       description:
          '[Tauri Apps Only] Start/stop automation session to connect to a RUNNING Tauri app. ' +
          'Supports multiple concurrent app connections - each app runs on a unique port. ' +
@@ -229,7 +229,7 @@ export const TOOLS: ToolDefinition[] = [
          'or array format with "isDefault" indicator when multiple apps connected. ' +
          'Action "stop" without appIdentifier stops ALL sessions; with appIdentifier stops only that app. ' +
          'The identifier field (e.g., "com.example.myapp") uniquely identifies each app. ' +
-         'REQUIRED before using other tauri_webview_* or tauri_plugin_* tools. ' +
+         'REQUIRED before using other webview_* or ipc_* tools. ' +
          'Connects via WebSocket to the MCP Bridge plugin in the Tauri app. ' +
          'For browser automation, use Chrome DevTools MCP instead. ' +
          'For Electron apps, this tool will NOT work.',
@@ -250,10 +250,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_webview_find_element',
+      name: 'webview_find_element',
       description:
          '[Tauri Apps Only] Find DOM elements in a running Tauri app\'s webview. ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser pages or documentation sites, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -276,11 +276,11 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_read_logs',
+      name: 'read_logs',
       description:
          '[Tauri Apps Only] Read logs from various sources: "console" for webview JS logs, ' +
          '"android" for logcat, "ios" for simulator logs, "system" for desktop logs. ' +
-         'Requires active tauri_driver_session for console logs. ' +
+         'Requires active driver_session for console logs. ' +
          'Use for debugging Tauri app issues at any level.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
       schema: ReadLogsSchema,
@@ -298,11 +298,11 @@ export const TOOLS: ToolDefinition[] = [
 
    // WebView Interaction Tools
    {
-      name: 'tauri_webview_interact',
+      name: 'webview_interact',
       description:
          '[Tauri Apps Only] Click, scroll, swipe, focus, or perform gestures in a Tauri app webview. ' +
          'Supported actions: click, double-click, long-press, scroll, swipe, focus. ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          'For browser interaction, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
       schema: InteractSchema,
@@ -320,10 +320,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_webview_screenshot',
+      name: 'webview_screenshot',
       description:
          '[Tauri Apps Only] Screenshot a running Tauri app\'s webview. ' +
-         'Requires active tauri_driver_session. Captures only visible viewport. ' +
+         'Requires active driver_session. Captures only visible viewport. ' +
          MULTI_APP_DESC + ' ' +
          'For browser screenshots, use Chrome DevTools MCP instead. ' +
          'For Electron apps, this will NOT work.',
@@ -357,10 +357,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_webview_keyboard',
+      name: 'webview_keyboard',
       description:
          '[Tauri Apps Only] Type text or send keyboard events in a Tauri app. ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser keyboard input, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -394,10 +394,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_webview_wait_for',
+      name: 'webview_wait_for',
       description:
          '[Tauri Apps Only] Wait for elements, text, or IPC events in a Tauri app. ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser waits, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -421,10 +421,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_webview_get_styles',
+      name: 'webview_get_styles',
       description:
          '[Tauri Apps Only] Get computed CSS styles from elements in a Tauri app. ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser style inspection, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -448,10 +448,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_webview_execute_js',
+      name: 'webview_execute_js',
       description:
          '[Tauri Apps Only] Execute JavaScript in a Tauri app\'s webview context. ' +
-         'Requires active tauri_driver_session. Has access to window.__TAURI__. ' +
+         'Requires active driver_session. Has access to window.__TAURI__. ' +
          'If you need a return value, it must be JSON-serializable. ' +
          'For functions that return values, use an IIFE: "(() => { return 5; })()" not "() => { return 5; }". ' +
          MULTI_APP_DESC + ' ' +
@@ -478,10 +478,10 @@ export const TOOLS: ToolDefinition[] = [
 
    // IPC & Plugin Tools
    {
-      name: 'tauri_ipc_execute_command',
+      name: 'ipc_execute_command',
       description:
          '[Tauri Apps Only] Execute Tauri IPC commands (invoke Rust backend functions). ' +
-         'Requires active tauri_driver_session. This is Tauri-specific IPC, not browser APIs. ' +
+         'Requires active driver_session. This is Tauri-specific IPC, not browser APIs. ' +
          'For Electron IPC or browser APIs, use appropriate tools for those frameworks.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
       schema: ExecuteIPCCommandSchema,
@@ -503,10 +503,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_ipc_monitor',
+      name: 'ipc_monitor',
       description:
          '[Tauri Apps Only] Monitor Tauri IPC calls between frontend and Rust backend. ' +
-         'Requires active tauri_driver_session. Captures invoke() calls and responses. ' +
+         'Requires active driver_session. Captures invoke() calls and responses. ' +
          'This is Tauri-specific; for browser network monitoring, use Chrome DevTools MCP.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
       schema: ManageIPCMonitoringSchema,
@@ -525,7 +525,7 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_ipc_get_captured',
+      name: 'ipc_get_captured',
       description:
          '[Tauri Apps Only] Get captured Tauri IPC traffic (requires ipc_monitor started). ' +
          'Shows captured commands (invoke calls) and events with arguments and responses. ' +
@@ -545,10 +545,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_ipc_emit_event',
+      name: 'ipc_emit_event',
       description:
          '[Tauri Apps Only] Emit a Tauri event to test event handlers. ' +
-         'Requires active tauri_driver_session. Events are Tauri-specific (not DOM events). ' +
+         'Requires active driver_session. Events are Tauri-specific (not DOM events). ' +
          'For browser DOM events, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
       schema: EmitTestEventSchema,
@@ -566,10 +566,10 @@ export const TOOLS: ToolDefinition[] = [
    },
 
    {
-      name: 'tauri_ipc_get_backend_state',
+      name: 'ipc_get_backend_state',
       description:
          '[Tauri Apps Only] Get Tauri backend state: app metadata, Tauri version, environment. ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          'Use to verify you\'re connected to a Tauri app and get app info.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
       schema: GetBackendStateSchema,
@@ -587,13 +587,13 @@ export const TOOLS: ToolDefinition[] = [
 
    // Window Management Tools
    {
-      name: 'tauri_manage_window',
+      name: 'manage_window',
       description:
          '[Tauri Apps Only] Manage Tauri windows. Actions: ' +
          '"list" - List all windows with labels, titles, URLs, and state. ' +
          '"info" - Get detailed info for a window (size, position, title, focus, visibility). ' +
          '"resize" - Resize a window (requires width/height, uses logical pixels by default). ' +
-         'Requires active tauri_driver_session. ' +
+         'Requires active driver_session. ' +
          'For browser windows, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
       schema: ManageWindowSchema,

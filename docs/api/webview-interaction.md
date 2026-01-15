@@ -11,7 +11,7 @@ head:
 
 Comprehensive tools for interacting with your Tauri application's webview, including gestures, keyboard input, screenshots, and JavaScript execution.
 
-## tauri_webview_interact
+## webview_interact
 
 Perform various interaction gestures on webview elements.
 
@@ -36,14 +36,14 @@ Perform various interaction gestures on webview elements.
 ```javascript
 // Click an element by selector
 {
-  "tool": "tauri_webview_interact",
+  "tool": "webview_interact",
   "action": "click",
   "selector": "#submit-button"
 }
 
 // Long press at coordinates
 {
-  "tool": "tauri_webview_interact",
+  "tool": "webview_interact",
   "action": "long-press",
   "x": 100,
   "y": 200,
@@ -52,7 +52,7 @@ Perform various interaction gestures on webview elements.
 
 // Scroll an element
 {
-  "tool": "tauri_webview_interact",
+  "tool": "webview_interact",
   "action": "scroll",
   "selector": ".content-area",
   "scrollY": 200
@@ -60,7 +60,7 @@ Perform various interaction gestures on webview elements.
 
 // Swipe gesture
 {
-  "tool": "tauri_webview_interact",
+  "tool": "webview_interact",
   "action": "swipe",
   "fromX": 200,
   "fromY": 100,
@@ -71,13 +71,13 @@ Perform various interaction gestures on webview elements.
 
 // Focus an element
 {
-  "tool": "tauri_webview_interact",
+  "tool": "webview_interact",
   "action": "focus",
   "selector": "#username-input"
 }
 ```
 
-## tauri_webview_screenshot
+## webview_screenshot
 
 Capture a screenshot of the current viewport (visible area) of the webview.
 
@@ -96,20 +96,20 @@ Capture a screenshot of the current viewport (visible area) of the webview.
 ```javascript
 // Take a PNG screenshot (returns base64)
 {
-  "tool": "tauri_webview_screenshot",
+  "tool": "webview_screenshot",
   "format": "png"
 }
 
 // Save screenshot to a file
 {
-  "tool": "tauri_webview_screenshot",
+  "tool": "webview_screenshot",
   "format": "png",
   "filePath": "/path/to/screenshot.png"
 }
 
 // Take a screenshot with max width constraint (useful for reducing token usage)
 {
-  "tool": "tauri_webview_screenshot",
+  "tool": "webview_screenshot",
   "maxWidth": 800
 }
 ```
@@ -131,7 +131,7 @@ export TAURI_MCP_SCREENSHOT_MAX_WIDTH=800
 This only captures what is currently visible. Scroll content into view before taking screenshots if you need to capture specific elements.
 :::
 
-## tauri_webview_keyboard
+## webview_keyboard
 
 Type text or send keyboard events to the webview.
 
@@ -150,7 +150,7 @@ Type text or send keyboard events to the webview.
 ```javascript
 // Type text into an input
 {
-  "tool": "tauri_webview_keyboard",
+  "tool": "webview_keyboard",
   "action": "type",
   "selector": "#username",
   "text": "Hello World"
@@ -158,14 +158,14 @@ Type text or send keyboard events to the webview.
 
 // Send keyboard shortcut
 {
-  "tool": "tauri_webview_keyboard",
+  "tool": "webview_keyboard",
   "action": "press",
   "key": "s",
   "modifiers": ["Control"]
 }
 ```
 
-## tauri_webview_wait_for
+## webview_wait_for
 
 Wait for specific conditions in the webview.
 
@@ -182,7 +182,7 @@ Wait for specific conditions in the webview.
 ```javascript
 // Wait for element to appear
 {
-  "tool": "tauri_webview_wait_for",
+  "tool": "webview_wait_for",
   "type": "selector",
   "value": "#loading-complete",
   "timeout": 10000
@@ -190,13 +190,13 @@ Wait for specific conditions in the webview.
 
 // Wait for text to appear
 {
-  "tool": "tauri_webview_wait_for",
+  "tool": "webview_wait_for",
   "type": "text",
   "value": "Success!"
 }
 ```
 
-## tauri_webview_execute_js
+## webview_execute_js
 
 Execute JavaScript code in the webview context.
 
@@ -226,19 +226,19 @@ If you want to return a value from a function, use an IIFE: `(() => { return 5; 
 ```javascript
 // Get page data (simple expression)
 {
-  "tool": "tauri_webview_execute_js",
+  "tool": "webview_execute_js",
   "script": "document.title + ' - ' + window.location.href"
 }
 
 // Async operation
 {
-  "tool": "tauri_webview_execute_js",
+  "tool": "webview_execute_js",
   "script": "const res = await fetch('/api/data'); return await res.json();"
 }
 
 // IIFE for complex logic
 {
-  "tool": "tauri_webview_execute_js",
+  "tool": "webview_execute_js",
   "script": "(() => { const items = document.querySelectorAll('li'); return items.length; })()"
 }
 ```
@@ -247,7 +247,7 @@ If you want to return a value from a function, use an IIFE: `(() => { return 5; 
 
 Returns the result of the JavaScript execution as a JSON string. Non-serializable values (like functions or DOM elements) will return `null`.
 
-## tauri_webview_get_styles
+## webview_get_styles
 
 Get computed CSS styles for elements.
 
@@ -264,7 +264,7 @@ Get computed CSS styles for elements.
 ```javascript
 // Get specific styles
 {
-  "tool": "tauri_webview_get_styles",
+  "tool": "webview_get_styles",
   "selector": "#my-element",
   "properties": ["color", "background-color", "font-size"]
 }
@@ -278,11 +278,11 @@ Returns a JSON string with the computed styles.
 
 ### Dismissing the Keyboard
 
-To dismiss the on-screen keyboard, use `tauri_webview_execute_js`:
+To dismiss the on-screen keyboard, use `webview_execute_js`:
 
 ```javascript
 {
-  "tool": "tauri_webview_execute_js",
+  "tool": "webview_execute_js",
   "script": "document.activeElement?.blur()"
 }
 ```

@@ -121,32 +121,32 @@ This plugin is part of the larger MCP Server for Tauri, which provides **16 tota
 
 ### Mobile Development Tools (1)
 
-1. **tauri_list_devices** - List connected Android devices and iOS simulators
+1. **list_devices** - List connected Android devices and iOS simulators
 
 ### UI Automation & WebView Tools (10)
 
 Tools for UI automation and webview interaction via the plugin's WebSocket connection:
 
-1. **tauri_driver_session** - Manage automation session (start, stop, or status)
-2. **tauri_manage_window** - List windows, get window info, or resize windows
-3. **tauri_webview_find_element** - Find an element in the webview
-4. **tauri_read_logs** - Read logs (console, Android logcat, iOS, system)
-5. **tauri_webview_interact** - Perform gestures (click, double-click, long-press, swipe, scroll, focus)
-6. **tauri_webview_screenshot** - Take screenshots of the entire webview
-7. **tauri_webview_keyboard** - Type text or simulate keyboard events with optional modifiers
-8. **tauri_webview_wait_for** - Wait for element selectors, text content, or IPC events
-9. **tauri_webview_get_styles** - Get computed CSS styles for element(s)
-10. **tauri_webview_execute_js** - Execute arbitrary JavaScript code in the webview context
+1. **driver_session** - Manage automation session (start, stop, or status)
+2. **manage_window** - List windows, get window info, or resize windows
+3. **webview_find_element** - Find an element in the webview
+4. **read_logs** - Read logs (console, Android logcat, iOS, system)
+5. **webview_interact** - Perform gestures (click, double-click, long-press, swipe, scroll, focus)
+6. **webview_screenshot** - Take screenshots of the entire webview
+7. **webview_keyboard** - Type text or simulate keyboard events with optional modifiers
+8. **webview_wait_for** - Wait for element selectors, text content, or IPC events
+9. **webview_get_styles** - Get computed CSS styles for element(s)
+10. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
 
 ### IPC Tools (5)
 
 Tools that directly use the MCP Bridge plugin's Rust backend:
 
-1. **tauri_ipc_execute_command** - Execute any Tauri IPC command
-2. **tauri_ipc_monitor** - Manage IPC monitoring (start or stop)
-3. **tauri_ipc_get_captured** - Retrieve captured IPC traffic with optional filtering
-4. **tauri_ipc_emit_event** - Emit custom Tauri events for testing event handlers
-5. **tauri_ipc_get_backend_state** - Get backend application state and metadata
+1. **ipc_execute_command** - Execute any Tauri IPC command
+2. **ipc_monitor** - Manage IPC monitoring (start or stop)
+3. **ipc_get_captured** - Retrieve captured IPC traffic with optional filtering
+4. **ipc_emit_event** - Emit custom Tauri events for testing event handlers
+5. **ipc_get_backend_state** - Get backend application state and metadata
 
 ## Architecture
 
@@ -176,11 +176,11 @@ By default, the WebSocket server binds to `0.0.0.0` (all network interfaces), en
 
 #### Connecting from MCP Server
 
-The MCP server supports connecting to remote Tauri apps via the `tauri_driver_session` tool:
+The MCP server supports connecting to remote Tauri apps via the `driver_session` tool:
 
 ```typescript
 // Connect to a Tauri app on a remote device
-tauri_driver_session({ action: 'start', host: '192.168.1.100' })
+driver_session({ action: 'start', host: '192.168.1.100' })
 
 // Or use environment variables:
 // MCP_BRIDGE_HOST=192.168.1.100 npx mcp-server-tauri

@@ -49,7 +49,7 @@ Tool categories: `PROJECT_MANAGEMENT`, `MOBILE_DEVELOPMENT`, `UI_AUTOMATION`, `I
 
 ## Session Management
 
-- Call `tauri_driver_session` with `action: 'start'` before using driver tools
+- Call `driver_session` with `action: 'start'` before using driver tools
 - Always call with `action: 'stop'` to clean up
 - WebSocket port range: 9223-9322
 

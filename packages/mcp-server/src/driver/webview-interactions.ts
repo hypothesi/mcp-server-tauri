@@ -46,8 +46,8 @@ export const InteractSchema = WindowTargetSchema.extend({
 });
 
 export const ScreenshotSchema = WindowTargetSchema.extend({
-   format: z.enum([ 'png', 'jpeg' ]).optional().default('png').describe('Image format'),
-   quality: z.number().min(0).max(100).optional().describe('JPEG quality (0-100, only for jpeg format)'),
+   format: z.enum([ 'png', 'jpeg' ]).optional().default('jpeg').describe('Image format'),
+   quality: z.number().min(0).max(100).optional().default(80).describe('JPEG quality (0-100, only for jpeg format)'),
    filePath: z.string().optional().describe('File path to save the screenshot to instead of returning as base64'),
    maxWidth: z.number().int().positive().optional().describe(
       'Maximum width in pixels. Images wider than this will be scaled down proportionally. ' +
@@ -196,7 +196,7 @@ export interface ScreenshotFileResult {
 }
 
 export async function screenshot(options: ScreenshotOptions = {}): Promise<ScreenshotResult | ScreenshotFileResult> {
-   const { quality, format = 'png', windowId, filePath, appIdentifier, maxWidth } = options;
+   const { quality, format = 'jpeg', windowId, filePath, appIdentifier, maxWidth } = options;
 
    // Use the native screenshot function from webview-executor
    const result = await captureScreenshot({ format, quality, windowId, appIdentifier, maxWidth });

@@ -30,9 +30,9 @@ const FIX_WEBVIEW_ERRORS_PROMPT = `I need help finding and fixing JavaScript err
 
 Please follow these steps:
 
-1. **Start a session** - Use \`tauri_driver_session\` with action "start" to connect to the running Tauri app
+1. **Start a session** - Use \`driver_session\` with action "start" to connect to the running Tauri app
 
-2. **Get console logs** - Use \`tauri_read_logs\` with source "console" to retrieve JavaScript errors or warnings
+2. **Get console logs** - Use \`read_logs\` with source "console" to retrieve JavaScript errors or warnings
 
 3. **Analyze the errors** - Look at the error messages, stack traces, and identify:
    - What type of error it is (TypeError, ReferenceError, SyntaxError, etc.)
@@ -43,7 +43,7 @@ Please follow these steps:
 
 5. **Propose a fix** - Explain what's wrong and suggest a concrete fix for each error found
 
-6. **Stop the session** - Use \`tauri_driver_session\` with action "stop" to clean up
+6. **Stop the session** - Use \`driver_session\` with action "stop" to clean up
 
 If no errors are found, let me know the app is running cleanly.
 
@@ -107,8 +107,8 @@ Only after I say yes should you make any modifications.
 
 Once changes are approved and made:
 1. Run the Tauri app in development mode (\`cargo tauri dev\`)
-2. Use \`tauri_driver_session\` with action "start" to connect
-3. Use \`tauri_driver_session\` with action "status" to verify
+2. Use \`driver_session\` with action "start" to connect
+3. Use \`driver_session\` with action "status" to verify
 
 ## Notes
 

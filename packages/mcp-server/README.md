@@ -65,25 +65,25 @@ The MCP server supports connecting to multiple Tauri apps simultaneously. Each a
 **Example Usage:**
 ```javascript
 // Connect to first app
-await tauri_driver_session({ action: "start", port: 9223 })
+await driver_session({ action: "start", port: 9223 })
 
 // Connect to second app
-await tauri_driver_session({ action: "start", port: 9224 })
+await driver_session({ action: "start", port: 9224 })
 
 // Check status - shows both apps with default indicator
-await tauri_driver_session({ action: "status" })
+await driver_session({ action: "status" })
 
 // Use default app (most recent - port 9224)
-await tauri_webview_screenshot()
+await webview_screenshot()
 
 // Target specific app by port
-await tauri_webview_screenshot({ appIdentifier: 9223 })
+await webview_screenshot({ appIdentifier: 9223 })
 
 // Stop specific app
-await tauri_driver_session({ action: "stop", appIdentifier: 9223 })
+await driver_session({ action: "stop", appIdentifier: 9223 })
 
 // Stop all apps
-await tauri_driver_session({ action: "stop" })
+await driver_session({ action: "stop" })
 ```
 
 ## Available Tools (16 total)
@@ -92,32 +92,32 @@ await tauri_driver_session({ action: "stop" })
 
 | Tool | Description |
 |------|-------------|
-| `tauri_driver_session` | Start/stop/status automation session |
-| `tauri_webview_find_element` | Find elements by selector |
-| `tauri_read_logs` | Read console, Android, iOS, or system logs |
-| `tauri_webview_interact` | Click, scroll, swipe, focus, long-press |
-| `tauri_webview_screenshot` | Capture webview screenshots |
-| `tauri_webview_keyboard` | Type text or send key events |
-| `tauri_webview_wait_for` | Wait for elements, text, or events |
-| `tauri_webview_get_styles` | Get computed CSS styles |
-| `tauri_webview_execute_js` | Execute JavaScript in webview |
-| `tauri_manage_window` | List windows, get info, or resize |
+| `driver_session` | Start/stop/status automation session |
+| `webview_find_element` | Find elements by selector |
+| `read_logs` | Read console, Android, iOS, or system logs |
+| `webview_interact` | Click, scroll, swipe, focus, long-press |
+| `webview_screenshot` | Capture webview screenshots |
+| `webview_keyboard` | Type text or send key events |
+| `webview_wait_for` | Wait for elements, text, or events |
+| `webview_get_styles` | Get computed CSS styles |
+| `webview_execute_js` | Execute JavaScript in webview |
+| `manage_window` | List windows, get info, or resize |
 
 ### IPC & Plugin
 
 | Tool | Description |
 |------|-------------|
-| `tauri_ipc_execute_command` | Execute Tauri IPC commands |
-| `tauri_ipc_get_backend_state` | Get app metadata and state |
-| `tauri_ipc_monitor` | Start/stop IPC monitoring |
-| `tauri_ipc_get_captured` | Get captured IPC traffic |
-| `tauri_ipc_emit_event` | Emit custom events |
+| `ipc_execute_command` | Execute Tauri IPC commands |
+| `ipc_get_backend_state` | Get app metadata and state |
+| `ipc_monitor` | Start/stop IPC monitoring |
+| `ipc_get_captured` | Get captured IPC traffic |
+| `ipc_emit_event` | Emit custom events |
 
 ### Mobile Development
 
 | Tool | Description |
 |------|-------------|
-| `tauri_list_devices` | List Android devices and iOS simulators |
+| `list_devices` | List Android devices and iOS simulators |
 
 ## Links
 

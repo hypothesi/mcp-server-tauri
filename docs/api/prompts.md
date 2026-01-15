@@ -87,10 +87,10 @@ The AI will then:
 
 | Step | Tool Used | Purpose |
 |------|-----------|---------|
-| 1 | `tauri_driver_session` | Connect to the running app |
-| 2 | `tauri_read_logs` | Retrieve JS errors and warnings |
+| 1 | `driver_session` | Connect to the running app |
+| 2 | `read_logs` | Retrieve JS errors and warnings |
 | 3 | Code search tools | Find source code locations |
-| 4 | `tauri_driver_session` | Clean up connection |
+| 4 | `driver_session` | Clean up connection |
 
 ## How Prompts Work
 
@@ -117,9 +117,9 @@ This achieves the same result as `/fix-webview-errors` but gives you more contro
 |----------|--------|------|
 | Set up MCP bridge in a project | `/setup` | - |
 | Debug JS errors in webview | `/fix-webview-errors` | - |
-| Take a single screenshot | - | `tauri_webview_screenshot` |
+| Take a single screenshot | - | `webview_screenshot` |
 | Multi-step testing workflow | Ask AI to create one | - |
-| Check a specific element | - | `tauri_webview_find_element` |
+| Check a specific element | - | `webview_find_element` |
 | Guided debugging session | Use a prompt | - |
 | Quick one-off action | - | Let AI choose the tool |
 

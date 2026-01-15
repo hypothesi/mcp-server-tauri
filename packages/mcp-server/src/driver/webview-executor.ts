@@ -33,13 +33,13 @@ const driverLogger = createMcpLogger('DRIVER');
  * This is called automatically by all tool functions.
  *
  * Initialization includes:
- * - Verifying an active session exists (via tauri_driver_session)
+ * - Verifying an active session exists (via driver_session)
  * - Connecting to the plugin WebSocket using session config
  * - Console capture is already initialized by bridge.js in the Tauri app
  *
  * This function is idempotent - calling it multiple times is safe.
  *
- * @throws Error if no session is active (tauri_driver_session must be called first)
+ * @throws Error if no session is active (driver_session must be called first)
  */
 export async function ensureReady(): Promise<void> {
    if (isInitialized) {
@@ -49,7 +49,7 @@ export async function ensureReady(): Promise<void> {
    // Require an active session to prevent connecting to wrong app
    if (!hasActiveSession()) {
       throw new Error(
-         'No active session. Call tauri_driver_session with action "start" first to connect to a Tauri app.'
+         'No active session. Call driver_session with action "start" first to connect to a Tauri app.'
       );
    }
 
@@ -386,7 +386,7 @@ async function prepareHtml2canvasScript(format: 'png' | 'jpeg', quality: number)
  * @returns Screenshot result with image content
  */
 export async function captureScreenshot(options: CaptureScreenshotOptions = {}): Promise<ScreenshotResult> {
-   const { format = 'png', quality = 90, windowId, appIdentifier, maxWidth } = options;
+   const { format = 'jpeg', quality = 80, windowId, appIdentifier, maxWidth } = options;
 
    // Primary implementation: Use native platform-specific APIs
    // - macOS: WKWebView takeSnapshot
@@ -543,6 +543,6 @@ export const GetConsoleLogsSchema = z.object({
 });
 
 export const CaptureScreenshotSchema = z.object({
-   format: z.enum([ 'png', 'jpeg' ]).optional().default('png').describe('Image format'),
+   format: z.enum([ 'png', 'jpeg' ]).optional().default('jpeg').describe('Image format'),
    quality: z.number().min(0).max(100).optional().describe('JPEG quality (0-100)'),
 });

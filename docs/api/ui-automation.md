@@ -17,11 +17,11 @@ All webview tools support targeting specific windows in multi-window application
 
 ### Discovering Windows
 
-Use `tauri_manage_window` with `action: "list"` to discover all available windows:
+Use `manage_window` with `action: "list"` to discover all available windows:
 
 ```javascript
 {
-  "tool": "tauri_manage_window",
+  "tool": "manage_window",
   "action": "list"
 }
 ```
@@ -59,7 +59,7 @@ Use `action: "info"` to get detailed information about a specific window:
 
 ```javascript
 {
-  "tool": "tauri_manage_window",
+  "tool": "manage_window",
   "action": "info",
   "windowId": "main"
 }
@@ -85,7 +85,7 @@ Use `action: "resize"` to resize a window to specific dimensions:
 
 ```javascript
 {
-  "tool": "tauri_manage_window",
+  "tool": "manage_window",
   "action": "resize",
   "width": 1024,
   "height": 768
@@ -113,19 +113,19 @@ Add `windowId` to any webview tool to target a specific window:
 ```javascript
 // Execute JavaScript in the settings window
 {
-  "tool": "tauri_webview_execute_js",
+  "tool": "webview_execute_js",
   "script": "document.title",
   "windowId": "settings"
 }
 
 // Take a screenshot of the main window (explicit)
 {
-  "tool": "tauri_webview_screenshot",
+  "tool": "webview_screenshot",
   "windowId": "main"
 }
 ```
 
-## tauri_driver_session
+## driver_session
 
 Manage UI automation session lifecycle. Initializes console log capture and prepares the webview for automation. Supports remote device connections via the `host` parameter.
 
@@ -222,7 +222,7 @@ For real iOS/Android devices on the network:
 
 **Note**: No external driver process required.
 
-## tauri_webview_find_element
+## webview_find_element
 
 Find UI elements using CSS, XPath, or text selectors.
 
@@ -239,14 +239,14 @@ Find UI elements using CSS, XPath, or text selectors.
 ```javascript
 // Find a button by CSS selector
 {
-  "tool": "tauri_webview_find_element",
+  "tool": "webview_find_element",
   "selector": "#submit-button",
   "strategy": "css"
 }
 
 // Find by text content
 {
-  "tool": "tauri_webview_find_element",
+  "tool": "webview_find_element",
   "selector": "Submit",
   "strategy": "text"
 }
@@ -256,7 +256,7 @@ Find UI elements using CSS, XPath, or text selectors.
 
 Returns element information including tag name, text content, and attributes.
 
-## tauri_read_logs
+## read_logs
 
 Read logs from various sources: webview console logs, Android logcat, iOS simulator logs, or desktop system logs.
 
@@ -282,20 +282,20 @@ Read logs from various sources: webview console logs, Android logcat, iOS simula
 ```javascript
 // Get webview console logs
 {
-  "tool": "tauri_read_logs",
+  "tool": "read_logs",
   "source": "console"
 }
 
 // Get console logs matching a pattern
 {
-  "tool": "tauri_read_logs",
+  "tool": "read_logs",
   "source": "console",
   "filter": "error|warning"
 }
 
 // Read Android logcat
 {
-  "tool": "tauri_read_logs",
+  "tool": "read_logs",
   "source": "android",
   "filter": "com.myapp",
   "lines": 100
@@ -303,7 +303,7 @@ Read logs from various sources: webview console logs, Android logcat, iOS simula
 
 // Read system logs
 {
-  "tool": "tauri_read_logs",
+  "tool": "read_logs",
   "source": "system",
   "lines": 50
 }
