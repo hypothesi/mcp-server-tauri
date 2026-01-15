@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-01-15
+
+### Fixed
+- Convert PNG to JPEG in screenshots when requested format is JPEG
+
 ## [0.7.0] - 2026-01-06
 
 ### Added

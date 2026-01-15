@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-01-15
+
+### Added
+- Add `webview_dom_snapshot` tool for accessibility tree snapshots (YAML format with roles, names, states, and element refs)
+- Add `structure` snapshot type to `webview_dom_snapshot` for DOM hierarchy inspection
+- Enable ref IDs from `dom_snapshot` to work with other webview tools (`webview_interact`, `webview_keyboard`, etc.)
+
+### Changed
+- Remove `tauri_` prefix from all tool names (e.g., `tauri_driver_session` → `driver_session`)
+
+### Fixed
+- Convert PNG to JPEG in screenshots when requested format is JPEG
+- Update server.json version dynamically in publish workflow
+
 ## [0.7.0] - 2026-01-06
 
 ### Added
