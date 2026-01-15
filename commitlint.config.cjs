@@ -19,5 +19,6 @@ module.exports = {
             'tauri-plugin-mcp-bridge',
          ]),
       ],
+      'header-max-length': [ 2, 'always', 100 ],
    },
 };
