@@ -2,14 +2,22 @@
  * Find an element using various selector strategies
  *
  * @param {Object} params
- * @param {string} params.selector - Element selector
+ * @param {string} params.selector - Element selector, ref ID (e.g., "ref=e3"), or text
  * @param {string} params.strategy - Selector strategy: 'css', 'xpath', or 'text'
  */
 (function(params) {
    const { selector, strategy } = params;
    let element;
 
-   if (strategy === 'text') {
+   // Check if it's a ref ID first (works with any strategy)
+   const refMatch = selector.match(/^(?:ref=)?(e\d+)$/);
+   if (refMatch) {
+      const refId = refMatch[1],
+            refMap = window.__MCP_ARIA_REFS_REVERSE__;
+      if (refMap) {
+         element = refMap.get(refId);
+      }
+   } else if (strategy === 'text') {
       // Find element containing text
       const xpath = "//*[contains(text(), '" + selector + "')]";
       const result = document.evaluate(

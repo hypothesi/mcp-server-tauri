@@ -4,7 +4,7 @@
  *
  * @param {Object} params
  * @param {string} params.action - The action to perform
- * @param {string|null} params.selector - CSS selector for the element
+ * @param {string|null} params.selector - CSS selector or ref ID (e.g., "ref=e3") for the element
  * @param {number|null} params.x - X coordinate
  * @param {number|null} params.y - Y coordinate
  * @param {number} params.duration - Duration for long-press
@@ -14,24 +14,35 @@
 (function(params) {
    const { action, selector, x, y, duration, scrollX, scrollY } = params;
 
+   // Resolve element from CSS selector or ref ID (e.g., "ref=e3" or "e3")
+   function resolveElement(selectorOrRef) {
+      if (!selectorOrRef) return null;
+      var refMatch = selectorOrRef.match(/^(?:ref=)?(e\d+)$/);
+      if (refMatch) {
+         var refId = refMatch[1],
+             refMap = window.__MCP_ARIA_REFS_REVERSE__;
+         if (!refMap) throw new Error('Ref "' + refId + '" not found. Run webview_dom_snapshot first to index elements.');
+         var el = refMap.get(refId);
+         if (!el) throw new Error('Ref "' + refId + '" not found. The DOM may have changed since the snapshot.');
+         return el;
+      }
+      var el = document.querySelector(selectorOrRef);
+      if (!el) throw new Error('Element not found: ' + selectorOrRef);
+      return el;
+   }
+
    let element = null;
    let targetX, targetY;
 
    // For scroll action, we don't necessarily need a selector or coordinates
    if (action === 'scroll') {
       if (selector) {
-         element = document.querySelector(selector);
-         if (!element) {
-            throw new Error(`Element not found: ${selector}`);
-         }
+         element = resolveElement(selector);
       }
    } else {
       // For other actions, we need either selector or coordinates
       if (selector) {
-         element = document.querySelector(selector);
-         if (!element) {
-            throw new Error(`Element not found: ${selector}`);
-         }
+         element = resolveElement(selector);
          const rect = element.getBoundingClientRect();
          targetX = rect.left + rect.width / 2;
          targetY = rect.top + rect.height / 2;
