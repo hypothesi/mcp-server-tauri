@@ -123,21 +123,22 @@ This plugin is part of the larger MCP Server for Tauri, which provides **18 tota
 
 1. **list_devices** - List connected Android devices and iOS simulators
 
-### UI Automation & WebView Tools (11)
+### UI Automation & WebView Tools (12)
 
 Tools for UI automation and webview interaction via the plugin's WebSocket connection:
 
 1. **driver_session** - Manage automation session (start, stop, or status)
 2. **manage_window** - List windows, get window info, or resize windows
-3. **webview_find_element** - Find an element in the webview
+3. **webview_find_element** - Find elements by CSS selector, XPath, text, or ref ID
 4. **read_logs** - Read logs (console, Android logcat, iOS, system)
 5. **webview_interact** - Perform gestures (click, double-click, long-press, swipe, scroll, focus)
-6. **webview_screenshot** - Take screenshots of the entire webview
+6. **webview_screenshot** - Take screenshots (JPEG default, with optional resizing)
 7. **webview_keyboard** - Type text or simulate keyboard events with optional modifiers
 8. **webview_wait_for** - Wait for element selectors, text content, or IPC events
 9. **webview_get_styles** - Get computed CSS styles for element(s)
 10. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
-11. **webview_dom_snapshot** - Get structured accessibility tree snapshot for AI consumption
+11. **webview_dom_snapshot** - Get structured DOM snapshot (accessibility or structure type)
+12. **get_setup_instructions** - Get setup/update instructions for the MCP Bridge plugin
 
 ### IPC Tools (5)
 

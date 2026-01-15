@@ -157,27 +157,27 @@ When starting a session, the tool uses the following connection strategy:
 ```javascript
 // Start an automation session (default - localhost)
 {
-  "tool": "tauri_driver_session",
+  "tool": "driver_session",
   "action": "start"
 }
 
 // Connect to a real iOS device on the network
 {
-  "tool": "tauri_driver_session",
+  "tool": "driver_session",
   "action": "start",
   "host": "192.168.1.100"
 }
 
 // Connect to a specific port
 {
-  "tool": "tauri_driver_session",
+  "tool": "driver_session",
   "action": "start",
   "port": 9225
 }
 
 // Check connection status
 {
-  "tool": "tauri_driver_session",
+  "tool": "driver_session",
   "action": "status"
 }
 ```
@@ -321,46 +321,87 @@ Get a structured DOM snapshot of a Tauri app's webview for AI consumption.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `type` | `'accessibility'` | Yes | Snapshot type |
+| `type` | `'accessibility'` \| `'structure'` | Yes | Snapshot type |
 | `selector` | string | No | CSS selector to scope the snapshot |
 | `windowId` | string | No | Window label to target |
 | `appIdentifier` | string \| number | No | App identifier |
 
+### Snapshot Types
+
+**`accessibility`** - Uses aria-api for comprehensive, spec-compliant accessibility computation:
+- WAI-ARIA 1.3 role computation
+- Accessible names and descriptions
+- ARIA states (disabled, expanded, checked, etc.)
+- Best for understanding UI semantics and finding interactive elements
+
+**`structure`** - DOM structure tree with:
+- Element tag names
+- Element IDs (if present)
+- CSS classes (if present)
+- `data-testid` attributes (if present)
+- Best for understanding page layout and debugging CSS selectors
+
 ### Accessibility Snapshot Format
 
-The accessibility snapshot uses YAML format similar to Playwright's aria snapshots:
-
 ```yaml
-- heading "Page Title" [level=1 ref=e0]:
+- heading "Page Title" [level=1] [ref=e0]:
 - navigation [ref=e1]:
   - list [ref=e2]:
     - listitem [ref=e3]:
       - link "Home" [ref=e4]
-    - listitem [ref=e5]:
-      - link "About" [ref=e6]
-- main [ref=e7]:
-  - button "Submit" [disabled ref=e8]
-  - textbox "Enter name" [ref=e9]
+- main [ref=e5]:
+  - button "Submit" [disabled] [ref=e6]
+  - textbox "Enter name" [ref=e7]
+```
+
+### Structure Snapshot Format
+
+```yaml
+- body [ref=e0]:
+  - div#app.container [ref=e1]:
+    - header.header [ref=e2]:
+      - nav.nav-menu [ref=e3]
+    - main.content [ref=e4]:
+      - form#login-form [ref=e5] [data-testid=login]:
+        - input#username [ref=e6]
+        - button.btn.btn-primary [ref=e7]
 ```
 
 ### Element References
 
-Each element includes a `ref` attribute (e.g., `[ref=e0]`) that can be used with other tools to target that specific element. The refs are stored in `window.__MCP_ARIA_REFS__` and persist until the next snapshot.
+Each element includes a `ref` attribute (e.g., `[ref=e0]`) that can be used with other webview tools to target that specific element. Simply pass the ref ID as the `selector` parameter:
+
+```javascript
+// First, get a snapshot to see available refs
+{ "tool": "webview_dom_snapshot", "type": "accessibility" }
+
+// Then use a ref to interact with an element
+{ "tool": "webview_interact", "action": "click", "selector": "ref=e7" }
+
+// Or type into an input
+{ "tool": "webview_keyboard", "action": "type", "selector": "ref=e6", "text": "hello" }
+```
+
+Refs work with: `webview_interact`, `webview_keyboard`, `webview_get_styles`, `webview_find_element`, and `webview_wait_for`.
+
+::: warning
+Refs are regenerated each time you call `webview_dom_snapshot`. If the DOM changes significantly, run a new snapshot to get updated refs.
+:::
 
 ### Example
 
 ```javascript
-// Snapshot entire page
+// Accessibility snapshot of entire page
 {
   "tool": "webview_dom_snapshot",
   "type": "accessibility"
 }
 
-// Snapshot only the navigation
+// Structure snapshot of a specific component
 {
   "tool": "webview_dom_snapshot",
-  "type": "accessibility",
-  "selector": "nav"
+  "type": "structure",
+  "selector": ".login-form"
 }
 ```
 
@@ -370,9 +411,7 @@ Use the `selector` parameter to snapshot a subtree. If the selector matches mult
 
 ### Response
 
-Returns a YAML-formatted accessibility tree with:
-- Element roles (button, textbox, heading, link, etc.)
-- Accessible names
-- ARIA states (disabled, expanded, checked, etc.)
-- Ref IDs for element targeting
+Returns a YAML-formatted tree with:
+- **Accessibility type**: Element roles, accessible names, ARIA states, ref IDs
+- **Structure type**: Tag names, IDs, CSS classes, data-testid attributes, ref IDs
 - Metadata footer with generation timestamp and element count

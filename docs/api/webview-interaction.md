@@ -20,7 +20,7 @@ Perform various interaction gestures on webview elements.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `action` | string | Yes | Action: 'click', 'double-click', 'long-press', 'scroll', 'swipe', 'focus' |
-| `selector` | string | No | CSS selector for the element to interact with |
+| `selector` | string | No | CSS selector or ref ID (e.g., `ref=e3`) for the element to interact with |
 | `x` | number | No | X coordinate for direct coordinate interaction |
 | `y` | number | No | Y coordinate for direct coordinate interaction |
 | `duration` | number | No | Duration in ms (default: 500ms for long-press, 300ms for swipe) |
@@ -85,8 +85,8 @@ Capture a screenshot of the current viewport (visible area) of the webview.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `format` | string | No | Image format: 'png', 'jpeg' (default: 'png') |
-| `quality` | number | No | JPEG quality 0-100 (only for jpeg format) |
+| `format` | string | No | Image format: 'png', 'jpeg' (default: 'jpeg') |
+| `quality` | number | No | JPEG quality 0-100 (default: 80, only for jpeg format) |
 | `filePath` | string | No | File path to save the screenshot to instead of returning base64 |
 | `windowId` | string | No | Window label to target (defaults to 'main') |
 | `maxWidth` | number | No | Maximum width in pixels. Images wider than this will be scaled down proportionally |
@@ -140,7 +140,7 @@ Type text or send keyboard events to the webview.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `action` | string | Yes | Action: 'type', 'press', 'down', 'up' |
-| `selector` | string | No | CSS selector for element to type into (required for 'type' action) |
+| `selector` | string | No | CSS selector or ref ID (e.g., `ref=e3`) for element to type into (required for 'type' action) |
 | `text` | string | No | Text to type (required for 'type' action) |
 | `key` | string | No | Key to press (required for 'press/down/up' actions, e.g., 'Enter', 'Escape') |
 | `modifiers` | string[] | No | Modifier keys: ['Control', 'Alt', 'Shift', 'Meta'] |
@@ -174,7 +174,7 @@ Wait for specific conditions in the webview.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `type` | string | Yes | What to wait for: 'selector', 'text', 'ipc-event' |
-| `value` | string | Yes | Selector, text content, or IPC event name to wait for |
+| `value` | string | Yes | CSS selector/ref ID, text content, or IPC event name to wait for |
 | `timeout` | number | No | Timeout in milliseconds (default: 5000ms) |
 
 ### Example
@@ -255,7 +255,7 @@ Get computed CSS styles for elements.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `selector` | string | Yes | CSS selector for element(s) to get styles from |
+| `selector` | string | Yes | CSS selector or ref ID (e.g., `ref=e3`) for element(s) to get styles from |
 | `properties` | string[] | No | Specific CSS properties to retrieve (if omitted, returns all) |
 | `multiple` | boolean | No | Get styles for all matching elements (default: false) |
 

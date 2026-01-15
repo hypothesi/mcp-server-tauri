@@ -168,7 +168,7 @@ The server exposes tools across 4 categories:
    </div>
    <div class="tool-category">
       <Target :size="20" :stroke-width="2" class="category-icon" />
-      <strong>UI Automation & WebView</strong> (11 tools) - Gestures, screenshots, JS execution, element finding, logs
+      <strong>UI Automation & WebView</strong> (12 tools) - Gestures, screenshots, DOM snapshots, JS execution, element finding, logs
    </div>
    <div class="tool-category">
       <Zap :size="20" :stroke-width="2" class="category-icon" />

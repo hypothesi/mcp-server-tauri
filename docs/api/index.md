@@ -21,7 +21,7 @@ Use these tools when you need to install or update the MCP Bridge plugin in a Ta
 
 | Tool | What It Does |
 |------|--------------|
-| `tauri_get_setup_instructions` | Returns guided setup/update instructions for the MCP Bridge plugin (and reminds the AI to ask permission before editing files) |
+| `get_setup_instructions` | Returns guided setup/update instructions for the MCP Bridge plugin (and reminds the AI to ask permission before editing files) |
 
 ## <MessageSquareCode :size="24" :stroke-width="2" class="heading-icon" /> Slash Commands
 

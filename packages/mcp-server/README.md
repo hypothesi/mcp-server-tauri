@@ -86,21 +86,28 @@ await driver_session({ action: "stop", appIdentifier: 9223 })
 await driver_session({ action: "stop" })
 ```
 
-## Available Tools (16 total)
+## Available Tools (18 total)
+
+### Setup & Configuration
+
+| Tool | Description |
+|------|-------------|
+| `get_setup_instructions` | Get setup/update instructions for the MCP Bridge plugin |
 
 ### UI Automation
 
 | Tool | Description |
 |------|-------------|
 | `driver_session` | Start/stop/status automation session |
-| `webview_find_element` | Find elements by selector |
+| `webview_find_element` | Find elements by CSS selector, XPath, text, or ref ID |
 | `read_logs` | Read console, Android, iOS, or system logs |
 | `webview_interact` | Click, scroll, swipe, focus, long-press |
-| `webview_screenshot` | Capture webview screenshots |
+| `webview_screenshot` | Capture webview screenshots (JPEG default) |
 | `webview_keyboard` | Type text or send key events |
 | `webview_wait_for` | Wait for elements, text, or events |
 | `webview_get_styles` | Get computed CSS styles |
 | `webview_execute_js` | Execute JavaScript in webview |
+| `webview_dom_snapshot` | Get structured DOM snapshot (accessibility or structure) |
 | `manage_window` | List windows, get info, or resize |
 
 ### IPC & Plugin
