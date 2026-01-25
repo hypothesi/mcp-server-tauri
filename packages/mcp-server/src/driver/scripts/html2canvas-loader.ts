@@ -1,34 +1,37 @@
 /**
- * html2canvas library loader
+ * html2canvas-pro library loader
  *
- * Loads the html2canvas library from node_modules and provides it as a string
- * that can be injected into the webview.
+ * Loads the html2canvas-pro library from node_modules and provides it as a string
+ * that can be injected into the webview. html2canvas-pro is a fork of html2canvas
+ * that adds support for modern CSS color functions like oklch(), oklab(), lab(),
+ * lch(), and color().
  */
 
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 
-// Use createRequire to resolve the path to html2canvas in node_modules
+// Use createRequire to resolve the path to html2canvas-pro in node_modules
 const require = createRequire(import.meta.url);
 
-let html2canvasSource: string | null = null;
+let html2canvasProSource: string | null = null;
 
 /** Script ID used for the html2canvas library in the script registry. */
 export const HTML2CANVAS_SCRIPT_ID = '__mcp_html2canvas__';
 
 /**
- * Get the html2canvas library source code.
+ * Get the html2canvas-pro library source code.
  * Loaded lazily and cached.
  */
 export function getHtml2CanvasSource(): string {
-   if (html2canvasSource === null) {
-      // Resolve the path to html2canvas.min.js
-      const html2canvasPath = require.resolve('html2canvas/dist/html2canvas.min.js');
+   if (html2canvasProSource === null) {
+      // Resolve the path to html2canvas-pro.js (UMD build)
+      // Note: We use the main entry point since the minified version isn't exported
+      const html2canvasProPath = require.resolve('html2canvas-pro');
 
-      html2canvasSource = readFileSync(html2canvasPath, 'utf-8');
+      html2canvasProSource = readFileSync(html2canvasProPath, 'utf-8');
    }
 
-   return html2canvasSource;
+   return html2canvasProSource;
 }
 
 /**
