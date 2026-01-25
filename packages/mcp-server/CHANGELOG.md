@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-01-25
+
+### Fixed
+- Replace `html2canvas` with `html2canvas-pro` to fix screenshot failures with modern CSS color functions like `oklch()` (#4)
+
 ## [0.8.0] - 2025-01-15
 
 ### Added
