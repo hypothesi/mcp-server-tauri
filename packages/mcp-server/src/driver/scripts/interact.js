@@ -14,13 +14,10 @@
 (function(params) {
    const { action, selector, x, y, duration, scrollX, scrollY } = params;
 
-   // Resolve element from CSS selector or ref ID (e.g., "ref=e3", "e3", or "[ref=e3]")
    function resolveElement(selectorOrRef) {
       if (!selectorOrRef) return null;
-      var resolve = window.__MCP__ && window.__MCP__.resolveRef;
-      if (!resolve) throw new Error('Run webview_dom_snapshot first to index elements.');
-      var el = resolve(selectorOrRef);
-      if (!el) throw new Error('Element not found: ' + selectorOrRef + '. The DOM may have changed since the snapshot.');
+      var el = window.__MCP__.resolveRef(selectorOrRef);
+      if (!el) throw new Error('Element not found: ' + selectorOrRef);
       return el;
    }
 

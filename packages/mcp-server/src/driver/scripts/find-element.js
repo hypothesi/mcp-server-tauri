@@ -10,9 +10,8 @@
    let element;
 
    // Check if it's a ref ID first (works with any strategy)
-   var resolve = window.__MCP__ && window.__MCP__.resolveRef;
-   if (resolve && /^\[?(?:ref=)?(e\d+)\]?$/.test(selector)) {
-      element = resolve(selector);
+   if (/^\[?(?:ref=)?(e\d+)\]?$/.test(selector)) {
+      element = window.__MCP__.resolveRef(selector);
    } else if (strategy === 'text') {
       // Find element containing text
       const xpath = "//*[contains(text(), '" + selector + "')]";
@@ -36,7 +35,7 @@
       element = result.singleNodeValue;
    } else {
       // CSS selector (default)
-      element = document.querySelector(selector);
+      element = window.__MCP__.resolveRef(selector);
    }
 
    if (element) {

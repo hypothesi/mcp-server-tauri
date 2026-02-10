@@ -60,20 +60,6 @@
    window.__MCP__.refs = refMap;
    window.__MCP__.reverseRefs = reverseRefMap;
 
-   /**
-    * Shared ref resolver - available to all webview scripts via window.__MCP__.
-    * Accepts a ref ID ("e3", "ref=e3", "[ref=e3]") or CSS selector.
-    * Returns the DOM element, or null if not found.
-    */
-   window.__MCP__.resolveRef = function(selectorOrRef) {
-      if (!selectorOrRef) return null;
-      var refMatch = selectorOrRef.match(/^\[?(?:ref=)?(e\d+)\]?$/);
-      if (refMatch) {
-         return reverseRefMap.get(refMatch[1]) || null;
-      }
-      return document.querySelector(selectorOrRef);
-   };
-
    // ========================================================================
    // Visibility (using aria-api for correct aria-hidden inheritance)
    // ========================================================================

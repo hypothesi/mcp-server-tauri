@@ -17,6 +17,7 @@ function loadScript(name: string): string {
 
 // Load scripts once at module initialization
 export const SCRIPTS = {
+   resolveRef: loadScript('resolve-ref'),
    interact: loadScript('interact'),
    swipe: loadScript('swipe'),
    keyboard: loadScript('keyboard'),
@@ -26,6 +27,16 @@ export const SCRIPTS = {
    findElement: loadScript('find-element'),
    domSnapshot: loadScript('dom-snapshot'),
 } as const;
+
+/** Script ID used for resolve-ref in the script registry. */
+export const RESOLVE_REF_SCRIPT_ID = '__mcp_resolve_ref__';
+
+/**
+ * Get the resolve-ref script source code.
+ */
+export function getResolveRefSource(): string {
+   return SCRIPTS.resolveRef;
+}
 
 /**
  * Build a script invocation with parameters
@@ -46,11 +57,8 @@ export function buildTypeScript(selector: string, text: string): string {
          const selector = '${selector}';
          const text = '${escapedText}';
 
-         // Resolve element from CSS selector or ref ID (e.g., "ref=e3", "e3", or "[ref=e3]")
-         var resolve = window.__MCP__ && window.__MCP__.resolveRef;
-         if (!resolve) throw new Error('Run webview_dom_snapshot first to index elements.');
-         var element = resolve(selector);
-         if (!element) throw new Error('Element not found: ' + selector + '. The DOM may have changed since the snapshot.');
+         var element = window.__MCP__.resolveRef(selector);
+         if (!element) throw new Error('Element not found: ' + selector);
 
          element.focus();
          element.value = text;

@@ -10,13 +10,9 @@
    const { type, value, timeout } = params;
    const startTime = Date.now();
 
-   // Resolve element from CSS selector or ref ID (e.g., "ref=e3", "e3", or "[ref=e3]")
-   // Returns null instead of throwing (used in polling loop)
    function resolveElement(selectorOrRef) {
       if (!selectorOrRef) return null;
-      var resolve = window.__MCP__ && window.__MCP__.resolveRef;
-      if (resolve) return resolve(selectorOrRef);
-      return document.querySelector(selectorOrRef);
+      return window.__MCP__.resolveRef(selectorOrRef);
    }
 
    return new Promise((resolve, reject) => {

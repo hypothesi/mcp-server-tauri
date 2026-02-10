@@ -9,6 +9,7 @@ import {
    HTML2CANVAS_SCRIPT_ID,
 } from './scripts/html2canvas-loader.js';
 import { registerScript, isScriptRegistered } from './script-manager.js';
+import { getResolveRefSource, RESOLVE_REF_SCRIPT_ID } from './scripts/index.js';
 
 /**
  * WebView Executor - Native IPC-based JavaScript execution
@@ -59,6 +60,9 @@ export async function ensureReady(): Promise<void> {
    if (session) {
       await connectPlugin(session.host, session.port);
    }
+
+   // Register the resolve-ref helper so ref-based selectors work in all tools
+   await registerScript(RESOLVE_REF_SCRIPT_ID, 'inline', getResolveRefSource());
 
    isInitialized = true;
 }
