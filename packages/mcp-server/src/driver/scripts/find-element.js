@@ -10,13 +10,9 @@
    let element;
 
    // Check if it's a ref ID first (works with any strategy)
-   const refMatch = selector.match(/^(?:ref=)?(e\d+)$/);
-   if (refMatch) {
-      const refId = refMatch[1],
-            refMap = window.__MCP_ARIA_REFS_REVERSE__;
-      if (refMap) {
-         element = refMap.get(refId);
-      }
+   var resolve = window.__MCP_RESOLVE_REF__;
+   if (resolve && /^\[?(?:ref=)?(e\d+)\]?$/.test(selector)) {
+      element = resolve(selector);
    } else if (strategy === 'text') {
       // Find element containing text
       const xpath = "//*[contains(text(), '" + selector + "')]";

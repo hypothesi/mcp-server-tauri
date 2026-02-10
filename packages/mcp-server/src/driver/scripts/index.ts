@@ -46,10 +46,11 @@ export function buildTypeScript(selector: string, text: string): string {
          const selector = '${selector}';
          const text = '${escapedText}';
 
-         const element = document.querySelector(selector);
-         if (!element) {
-            throw new Error('Element not found: ' + selector);
-         }
+         // Resolve element from CSS selector or ref ID (e.g., "ref=e3", "e3", or "[ref=e3]")
+         var resolve = window.__MCP_RESOLVE_REF__;
+         if (!resolve) throw new Error('Run webview_dom_snapshot first to index elements.');
+         var element = resolve(selector);
+         if (!element) throw new Error('Element not found: ' + selector + '. The DOM may have changed since the snapshot.');
 
          element.focus();
          element.value = text;

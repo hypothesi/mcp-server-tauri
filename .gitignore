@@ -37,6 +37,8 @@ specs/plans
 .windsurf
 .aix
 ai.json
+.claude
+.serena
 
 # Test artifacts
 packages/mcp-server/.test-app-port

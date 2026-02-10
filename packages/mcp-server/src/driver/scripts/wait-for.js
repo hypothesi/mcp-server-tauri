@@ -10,16 +10,12 @@
    const { type, value, timeout } = params;
    const startTime = Date.now();
 
-   // Resolve element from CSS selector or ref ID (e.g., "ref=e3" or "e3")
+   // Resolve element from CSS selector or ref ID (e.g., "ref=e3", "e3", or "[ref=e3]")
+   // Returns null instead of throwing (used in polling loop)
    function resolveElement(selectorOrRef) {
       if (!selectorOrRef) return null;
-      var refMatch = selectorOrRef.match(/^(?:ref=)?(e\d+)$/);
-      if (refMatch) {
-         var refId = refMatch[1],
-             refMap = window.__MCP_ARIA_REFS_REVERSE__;
-         if (!refMap) return null; // For wait-for, return null instead of throwing
-         return refMap.get(refId) || null;
-      }
+      var resolve = window.__MCP_RESOLVE_REF__;
+      if (resolve) return resolve(selectorOrRef);
       return document.querySelector(selectorOrRef);
    }
 
