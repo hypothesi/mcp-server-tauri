@@ -162,7 +162,7 @@ describe('Webview Interactions Unit Tests', () => {
          const result = await keyboard({ action: 'type', selectorOrKey: '#input', textOrModifiers: 'Hello World' });
 
          expect(mockExecuteInWebview).toHaveBeenCalledOnce();
-         expect(mockExecuteInWebview).toHaveBeenCalledWith(expect.stringContaining('__MCP_RESOLVE_REF__'), undefined, undefined);
+         expect(mockExecuteInWebview).toHaveBeenCalledWith(expect.stringContaining('__MCP__'), undefined, undefined);
          expect(result).toContain('Typed');
       });
 

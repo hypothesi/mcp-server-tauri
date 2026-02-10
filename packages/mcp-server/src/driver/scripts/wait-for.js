@@ -14,7 +14,7 @@
    // Returns null instead of throwing (used in polling loop)
    function resolveElement(selectorOrRef) {
       if (!selectorOrRef) return null;
-      var resolve = window.__MCP_RESOLVE_REF__;
+      var resolve = window.__MCP__ && window.__MCP__.resolveRef;
       if (resolve) return resolve(selectorOrRef);
       return document.querySelector(selectorOrRef);
    }

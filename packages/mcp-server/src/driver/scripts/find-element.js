@@ -10,7 +10,7 @@
    let element;
 
    // Check if it's a ref ID first (works with any strategy)
-   var resolve = window.__MCP_RESOLVE_REF__;
+   var resolve = window.__MCP__ && window.__MCP__.resolveRef;
    if (resolve && /^\[?(?:ref=)?(e\d+)\]?$/.test(selector)) {
       element = resolve(selector);
    } else if (strategy === 'text') {

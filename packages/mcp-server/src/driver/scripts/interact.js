@@ -17,7 +17,7 @@
    // Resolve element from CSS selector or ref ID (e.g., "ref=e3", "e3", or "[ref=e3]")
    function resolveElement(selectorOrRef) {
       if (!selectorOrRef) return null;
-      var resolve = window.__MCP_RESOLVE_REF__;
+      var resolve = window.__MCP__ && window.__MCP__.resolveRef;
       if (!resolve) throw new Error('Run webview_dom_snapshot first to index elements.');
       var el = resolve(selectorOrRef);
       if (!el) throw new Error('Element not found: ' + selectorOrRef + '. The DOM may have changed since the snapshot.');
