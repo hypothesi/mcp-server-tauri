@@ -168,48 +168,68 @@ export class PluginClient extends EventEmitter {
    }
 
    /**
-    * Send a command to the plugin and wait for response
+    * Send a command to the plugin and wait for response.
+    *
+    * Automatically retries on transient "not found" errors (e.g. window not
+    * yet registered after WebSocket connect) with exponential backoff.
     */
    public async sendCommand(command: PluginCommand, timeoutMs = 5000): Promise<PluginResponse> {
-      // If not connected, try to reconnect first
-      if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-         try {
-            await this.connect();
-         } catch{
-            throw new Error('Not connected to plugin and reconnection failed');
-         }
-      }
+      const maxRetries = 3;
 
-      // Double-check connection after reconnect attempt
-      if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-         throw new Error('Not connected to plugin');
-      }
+      const baseDelayMs = 100;
 
-      // Generate unique ID for this request
-      const id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      const commandWithId = { ...command, id };
-
-      return new Promise((resolve, reject) => {
-         // Set up timeout
-         const timeout = setTimeout(() => {
-            this._pendingRequests.delete(id);
-            reject(new Error(`Request timeout after ${timeoutMs}ms`));
-         }, timeoutMs);
-
-         // Store pending request
-         this._pendingRequests.set(id, { resolve, reject, timeout });
-
-         // Send command
-         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-         this._ws!.send(JSON.stringify(commandWithId), (error) => {
-            if (error) {
-               clearTimeout(timeout);
-               this._pendingRequests.delete(id);
-               reject(error);
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+         // If not connected, try to reconnect first
+         if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+            try {
+               await this.connect();
+            } catch{
+               throw new Error('Not connected to plugin and reconnection failed');
             }
+         }
+
+         // Double-check connection after reconnect attempt
+         if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+            throw new Error('Not connected to plugin');
+         }
+
+         // Generate unique ID for this request
+         const id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+         const commandWithId = { ...command, id };
+
+         const response = await new Promise<PluginResponse>((resolve, reject) => {
+            // Set up timeout
+            const timeout = setTimeout(() => {
+               this._pendingRequests.delete(id);
+               reject(new Error(`Request timeout after ${timeoutMs}ms`));
+            }, timeoutMs);
+
+            // Store pending request
+            this._pendingRequests.set(id, { resolve, reject, timeout });
+
+            // Send command
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            this._ws!.send(JSON.stringify(commandWithId), (error) => {
+               if (error) {
+                  clearTimeout(timeout);
+                  this._pendingRequests.delete(id);
+                  reject(error);
+               }
+            });
          });
-      });
+
+         // Retry on "not found" errors (window not yet registered)
+         if (!response.success && response.error?.includes('not found') && attempt < maxRetries) {
+            await new Promise<void>((r) => { setTimeout(r, baseDelayMs * Math.pow(2, attempt)); });
+            continue;
+         }
+
+         return response;
+      }
+
+      // Unreachable — loop always returns or throws — but satisfies TypeScript
+      throw new Error('Retry attempts exhausted');
    }
 
    /**
