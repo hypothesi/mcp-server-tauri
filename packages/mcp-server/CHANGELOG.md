@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-02-10
+
+### Fixed
+- Fix window timing race condition: retry commands with exponential backoff when Tauri window is not yet registered after WebSocket connect
+
+### Changed
+- Consolidate `window.__MCP__` namespace and extract `resolveRef` into a standalone persistent script registered once at session init
+- Update setup tool instructions with feature-flag workflow, conditional capabilities, and dev script configuration
+
 ## [0.8.1] - 2026-01-25
 
 ### Fixed
