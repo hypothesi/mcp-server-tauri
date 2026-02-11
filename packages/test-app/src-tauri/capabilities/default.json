@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "mcp-bridge:default"
+    "mcp-bridge:default",
+    "dialog:default"
   ]
 }

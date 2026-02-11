@@ -22,6 +22,7 @@ fn get_config() -> serde_json::Value {
 pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![greet, add_numbers, get_config]);
 
     #[cfg(debug_assertions)]

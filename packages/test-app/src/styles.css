@@ -168,6 +168,39 @@ body {
   display: none;
 }
 
+.dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(15, 157, 157, 0.2);
+}
+
+.dialog-result {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: 0.5rem;
+  color: var(--accent-light);
+  font-weight: 500;
+  font-size: 0.875rem;
+  min-height: 2.5rem;
+}
+
+.dialog-result:empty {
+  display: none;
+}
+
 .scroll-card {
   flex: 1;
   display: flex;
