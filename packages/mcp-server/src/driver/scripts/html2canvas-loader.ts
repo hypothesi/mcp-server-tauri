@@ -28,7 +28,11 @@ export function getHtml2CanvasSource(): string {
       // Note: We use the main entry point since the minified version isn't exported
       const html2canvasProPath = require.resolve('html2canvas-pro');
 
-      html2canvasProSource = readFileSync(html2canvasProPath, 'utf-8');
+      html2canvasProSource = readFileSync(html2canvasProPath, 'utf-8')
+         // Strip sourceMappingURL to prevent the browser from trying to fetch the
+         // .map file relative to the page's base URL (which fails when the app is
+         // served under a sub-path like '/some/path/').
+         .replace(/\/\/[#@]\s*sourceMappingURL=.*/g, '');
    }
 
    return html2canvasProSource;
