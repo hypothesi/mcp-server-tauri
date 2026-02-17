@@ -49,15 +49,18 @@ export function buildScript(script: string, params: Record<string, unknown>): st
 /**
  * Build a script for typing text (uses the keyboard script's typeText function)
  */
-export function buildTypeScript(selector: string, text: string): string {
+export function buildTypeScript(selector: string, text: string, strategy?: string): string {
    const escapedText = text.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+   const escapedSelector = selector.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+   const strat = strategy || 'css';
 
    return `
       (function() {
-         const selector = '${selector}';
+         const selector = '${escapedSelector}';
+         const strategy = '${strat}';
          const text = '${escapedText}';
 
-         var element = window.__MCP__.resolveRef(selector);
+         var element = window.__MCP__.resolveRef(selector, strategy);
          if (!element) throw new Error('Element not found: ' + selector);
 
          element.focus();
@@ -65,7 +68,10 @@ export function buildTypeScript(selector: string, text: string): string {
          element.dispatchEvent(new Event('input', { bubbles: true }));
          element.dispatchEvent(new Event('change', { bubbles: true }));
 
-         return 'Typed "' + text + '" into ' + selector;
+         var msg = 'Typed "' + text + '" into ' + selector;
+         var count = window.__MCP__.countAll(selector, strategy);
+         if (count > 1) msg += ' (+' + (count - 1) + ' more match' + (count - 1 === 1 ? '' : 'es') + ')';
+         return msg;
       })()
    `;
 }

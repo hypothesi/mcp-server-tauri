@@ -2,36 +2,33 @@
  * Get computed CSS styles for elements
  *
  * @param {Object} params
- * @param {string} params.selector - CSS selector or ref ID (e.g., "ref=e3") for element(s)
+ * @param {string} params.selector - CSS selector, XPath, text, or ref ID (e.g., "ref=e3") for element(s)
+ * @param {string} params.strategy - Selector strategy: 'css', 'xpath', or 'text'
  * @param {string[]} params.properties - Specific CSS properties to retrieve
  * @param {boolean} params.multiple - Whether to get styles for all matching elements
  */
 (function(params) {
-   const { selector, properties, multiple } = params;
+   const { selector, strategy, properties, multiple } = params;
 
-   function resolveElement(selectorOrRef) {
-      if (!selectorOrRef) return null;
-      var el = window.__MCP__.resolveRef(selectorOrRef);
-      if (!el) throw new Error('Element not found: ' + selectorOrRef);
-      return el;
+   var elements;
+
+   if (multiple) {
+      elements = window.__MCP__.resolveAll(selector, strategy);
+   } else {
+      var el = window.__MCP__.resolveRef(selector, strategy);
+      elements = el ? [el] : [];
    }
-
-   // Check if selector is a ref ID - if so, multiple doesn't apply
-   const isRef = /^\[?(?:ref=)?(e\d+)\]?$/.test(selector);
-   const elements = isRef
-      ? [resolveElement(selector)]
-      : (multiple ? Array.from(document.querySelectorAll(selector)) : [document.querySelector(selector)]);
 
    if (!elements[0]) {
-      throw new Error(`Element not found: ${selector}`);
+      throw new Error('Element not found: ' + selector);
    }
 
-   const results = elements.map(element => {
+   const results = elements.map(function(element) {
       const styles = window.getComputedStyle(element);
 
       if (properties.length > 0) {
          const result = {};
-         properties.forEach(prop => {
+         properties.forEach(function(prop) {
             result[prop] = styles.getPropertyValue(prop);
          });
          return result;

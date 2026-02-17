@@ -18,12 +18,13 @@
  *
  * @param {Object} params
  * @param {string} params.type - Snapshot type ('accessibility' or 'structure')
- * @param {string|null} params.selector - Optional CSS selector to scope snapshot
+ * @param {string|null} params.selector - Optional selector to scope snapshot (CSS, XPath, text, or ref ID)
+ * @param {string} params.strategy - Selector strategy: 'css', 'xpath', or 'text'
  */
 (function(params) {
    'use strict';
 
-   const { type, selector } = params;
+   const { type, selector, strategy } = params;
 
    // ARIA states to include in snapshot (used by accessibility type)
    const ARIA_STATES = [
@@ -445,18 +446,17 @@
 
       if (selector) {
          try {
-            document.querySelector(selector);
+            var structureElements = window.__MCP__.resolveAll(selector, strategy);
          } catch (e) {
-            return 'Error: Invalid CSS selector "' + selector + '": ' + e.message;
+            return 'Error: Invalid selector "' + selector + '" (strategy: ' + strategy + '): ' + e.message;
          }
 
-         var structureElements = document.querySelectorAll(selector);
          if (structureElements.length === 0) {
-            return 'Error: No elements found matching selector "' + selector + '"';
+            return 'Error: No elements found matching selector "' + selector + '" (strategy: ' + strategy + ')';
          }
 
-         structureRoots = Array.from(structureElements);
-         structureScopeInfo = '# Scoped to: ' + selector + '\n';
+         structureRoots = structureElements;
+         structureScopeInfo = '# Scoped to: ' + selector + (strategy !== 'css' ? ' (strategy: ' + strategy + ')' : '') + '\n';
          if (structureRoots.length > 1) structureScopeInfo += '# ' + structureRoots.length + ' elements matched\n';
       } else {
          structureRoots = [document.body];
@@ -498,18 +498,17 @@
 
    if (selector) {
       try {
-         document.querySelector(selector);
+         var elements = window.__MCP__.resolveAll(selector, strategy);
       } catch (e) {
-         return 'Error: Invalid CSS selector "' + selector + '": ' + e.message;
+         return 'Error: Invalid selector "' + selector + '" (strategy: ' + strategy + '): ' + e.message;
       }
 
-      var elements = document.querySelectorAll(selector);
       if (elements.length === 0) {
-         return 'Error: No elements found matching selector "' + selector + '"';
+         return 'Error: No elements found matching selector "' + selector + '" (strategy: ' + strategy + ')';
       }
 
-      roots = Array.from(elements);
-      scopeInfo = '# Scoped to: ' + selector + '\n';
+      roots = elements;
+      scopeInfo = '# Scoped to: ' + selector + (strategy !== 'css' ? ' (strategy: ' + strategy + ')' : '') + '\n';
       if (roots.length > 1) scopeInfo += '# ' + roots.length + ' elements matched\n';
    } else {
       roots = [document.body];

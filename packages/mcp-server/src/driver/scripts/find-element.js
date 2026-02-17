@@ -7,36 +7,8 @@
  */
 (function(params) {
    const { selector, strategy } = params;
-   let element;
 
-   // Check if it's a ref ID first (works with any strategy)
-   if (/^\[?(?:ref=)?(e\d+)\]?$/.test(selector)) {
-      element = window.__MCP__.resolveRef(selector);
-   } else if (strategy === 'text') {
-      // Find element containing text
-      const xpath = "//*[contains(text(), '" + selector + "')]";
-      const result = document.evaluate(
-         xpath,
-         document,
-         null,
-         XPathResult.FIRST_ORDERED_NODE_TYPE,
-         null
-      );
-      element = result.singleNodeValue;
-   } else if (strategy === 'xpath') {
-      // XPath selector
-      const result = document.evaluate(
-         selector,
-         document,
-         null,
-         XPathResult.FIRST_ORDERED_NODE_TYPE,
-         null
-      );
-      element = result.singleNodeValue;
-   } else {
-      // CSS selector (default)
-      element = window.__MCP__.resolveRef(selector);
-   }
+   var element = window.__MCP__.resolveRef(selector, strategy);
 
    if (element) {
       const outerHTML = element.outerHTML;
@@ -44,7 +16,10 @@
       const truncated = outerHTML.length > 5000
          ? outerHTML.substring(0, 5000) + '...'
          : outerHTML;
-      return 'Found element: ' + truncated;
+      var msg = 'Found element: ' + truncated;
+      var count = window.__MCP__.countAll(selector, strategy);
+      if (count > 1) msg += '\n(+' + (count - 1) + ' more match' + (count - 1 === 1 ? '' : 'es') + ')';
+      return msg;
    }
 
    return 'Element not found';

@@ -26,13 +26,29 @@ export const WindowTargetSchema = z.object({
 });
 
 // ============================================================================
+// Shared Selector Strategy
+// ============================================================================
+
+/**
+ * Reusable strategy field for tools that accept a selector.
+ * Defaults to 'css' for backward compatibility.
+ */
+const selectorStrategyField = z.enum([ 'css', 'xpath', 'text' ]).default('css').describe(
+   'Selector strategy: "css" (default) for CSS selectors, "xpath" for XPath expressions, ' +
+   '"text" to find elements containing the given text. Ref IDs (e.g., "ref=e3") work with any strategy.'
+);
+
+// ============================================================================
 // Schemas
 // ============================================================================
 
 export const InteractSchema = WindowTargetSchema.extend({
    action: z.enum([ 'click', 'double-click', 'long-press', 'scroll', 'swipe', 'focus' ])
       .describe('Type of interaction to perform'),
-   selector: z.string().optional().describe('CSS selector for the element to interact with'),
+   selector: z.string().optional().describe(
+      'Element selector: CSS selector (default), XPath expression, text content, or ref ID (e.g., "ref=e3")'
+   ),
+   strategy: selectorStrategyField,
    x: z.number().optional().describe('X coordinate for direct coordinate interaction'),
    y: z.number().optional().describe('Y coordinate for direct coordinate interaction'),
    duration: z.number().optional()
@@ -58,7 +74,11 @@ export const ScreenshotSchema = WindowTargetSchema.extend({
 export const KeyboardSchema = WindowTargetSchema.extend({
    action: z.enum([ 'type', 'press', 'down', 'up' ])
       .describe('Keyboard action type: "type" for typing text into an element, "press/down/up" for key events'),
-   selector: z.string().optional().describe('CSS selector for element to type into (required for "type" action)'),
+   selector: z.string().optional().describe(
+      'Element selector for element to type into (required for "type" action): ' +
+      'CSS selector (default), XPath, text content, or ref ID'
+   ),
+   strategy: selectorStrategyField,
    text: z.string().optional().describe('Text to type (required for "type" action)'),
    key: z.string().optional().describe('Key to press (required for "press/down/up" actions, e.g., "Enter", "a", "Escape")'),
    modifiers: z.array(z.enum([ 'Control', 'Alt', 'Shift', 'Meta' ])).optional().describe('Modifier keys to hold'),
@@ -67,11 +87,15 @@ export const KeyboardSchema = WindowTargetSchema.extend({
 export const WaitForSchema = WindowTargetSchema.extend({
    type: z.enum([ 'selector', 'text', 'ipc-event' ]).describe('What to wait for'),
    value: z.string().describe('Selector, text content, or IPC event name to wait for'),
+   strategy: selectorStrategyField.describe(
+      'Selector strategy (applies when type is "selector"): "css" (default), "xpath", or "text".'
+   ),
    timeout: z.number().optional().default(5000).describe('Timeout in milliseconds (default: 5000ms)'),
 });
 
 export const GetStylesSchema = WindowTargetSchema.extend({
-   selector: z.string().describe('CSS selector for element(s) to get styles from'),
+   selector: z.string().describe('Element selector: CSS selector (default), XPath expression, text content, or ref ID'),
+   strategy: selectorStrategyField,
    properties: z.array(z.string()).optional().describe('Specific CSS properties to retrieve. If omitted, returns all computed styles'),
    multiple: z.boolean().optional().default(false)
       .describe('Whether to get styles for all matching elements (true) or just the first (false)'),
@@ -91,8 +115,11 @@ export const FocusElementSchema = WindowTargetSchema.extend({
 });
 
 export const FindElementSchema = WindowTargetSchema.extend({
-   selector: z.string(),
-   strategy: z.enum([ 'css', 'xpath', 'text' ]).default('css'),
+   selector: z.string().describe(
+      'The selector to find: CSS selector (default), XPath expression, text content, or ref ID (e.g., "ref=e3"). ' +
+      'Interpretation depends on strategy.'
+   ),
+   strategy: selectorStrategyField,
 });
 
 export const GetConsoleLogsSchema = WindowTargetSchema.extend({
@@ -103,8 +130,9 @@ export const GetConsoleLogsSchema = WindowTargetSchema.extend({
 export const DomSnapshotSchema = WindowTargetSchema.extend({
    type: z.enum([ 'accessibility', 'structure' ]).describe('Snapshot type'),
    selector: z.string().optional().describe(
-      'CSS selector to scope the snapshot. If omitted, snapshots entire document.'
+      'Selector to scope the snapshot: CSS selector (default), XPath, text content, or ref ID. If omitted, snapshots entire document.'
    ),
+   strategy: selectorStrategyField,
 });
 
 // ============================================================================
@@ -114,6 +142,7 @@ export const DomSnapshotSchema = WindowTargetSchema.extend({
 export async function interact(options: {
    action: string;
    selector?: string;
+   strategy?: string;
    x?: number;
    y?: number;
    duration?: number;
@@ -126,7 +155,7 @@ export async function interact(options: {
    windowId?: string;
    appIdentifier?: string | number;
 }): Promise<string> {
-   const { action, selector, x, y, duration, scrollX, scrollY, fromX, fromY, toX, toY, windowId, appIdentifier } = options;
+   const { action, selector, strategy, x, y, duration, scrollX, scrollY, fromX, fromY, toX, toY, windowId, appIdentifier } = options;
 
    // Handle swipe action separately since it has different logic
    if (action === 'swipe') {
@@ -138,12 +167,13 @@ export async function interact(options: {
       if (!selector) {
          throw new Error('Focus action requires a selector');
       }
-      return focusElement({ selector, windowId, appIdentifier });
+      return focusElement({ selector, strategy, windowId, appIdentifier });
    }
 
    const script = buildScript(SCRIPTS.interact, {
       action,
       selector: selector ?? null,
+      strategy: strategy ?? 'css',
       x: x ?? null,
       y: y ?? null,
       duration: duration ?? 500,
@@ -233,6 +263,7 @@ export async function screenshot(options: ScreenshotOptions = {}): Promise<Scree
 export interface KeyboardOptions {
    action: string;
    selectorOrKey?: string;
+   strategy?: string;
    textOrModifiers?: string | string[];
    modifiers?: string[];
    windowId?: string;
@@ -240,7 +271,7 @@ export interface KeyboardOptions {
 }
 
 export async function keyboard(options: KeyboardOptions): Promise<string> {
-   const { action, selectorOrKey, textOrModifiers, modifiers, windowId, appIdentifier } = options;
+   const { action, selectorOrKey, strategy, textOrModifiers, modifiers, windowId, appIdentifier } = options;
 
    // Handle the different parameter combinations based on action
    if (action === 'type') {
@@ -252,7 +283,7 @@ export async function keyboard(options: KeyboardOptions): Promise<string> {
          throw new Error('Type action requires both selector and text parameters');
       }
 
-      const script = buildTypeScript(selector, text);
+      const script = buildTypeScript(selector, text, strategy);
 
       try {
          return await executeInWebview(script, windowId, appIdentifier);
@@ -286,15 +317,16 @@ export async function keyboard(options: KeyboardOptions): Promise<string> {
 export interface WaitForOptions {
    type: string;
    value: string;
+   strategy?: string;
    timeout?: number;
    windowId?: string;
    appIdentifier?: string | number;
 }
 
 export async function waitFor(options: WaitForOptions): Promise<string> {
-   const { type, value, timeout = 5000, windowId, appIdentifier } = options;
+   const { type, value, strategy, timeout = 5000, windowId, appIdentifier } = options;
 
-   const script = buildScript(SCRIPTS.waitFor, { type, value, timeout });
+   const script = buildScript(SCRIPTS.waitFor, { type, value, strategy: strategy ?? 'css', timeout });
 
    try {
       return await executeInWebview(script, windowId, appIdentifier);
@@ -307,6 +339,7 @@ export async function waitFor(options: WaitForOptions): Promise<string> {
 
 export interface GetStylesOptions {
    selector: string;
+   strategy?: string;
    properties?: string[];
    multiple?: boolean;
    windowId?: string;
@@ -314,10 +347,11 @@ export interface GetStylesOptions {
 }
 
 export async function getStyles(options: GetStylesOptions): Promise<string> {
-   const { selector, properties, multiple = false, windowId, appIdentifier } = options;
+   const { selector, strategy, properties, multiple = false, windowId, appIdentifier } = options;
 
    const script = buildScript(SCRIPTS.getStyles, {
       selector,
+      strategy: strategy ?? 'css',
       properties: properties || [],
       multiple,
    });
@@ -374,14 +408,15 @@ export async function executeJavaScript(options: ExecuteJavaScriptOptions): Prom
 
 export interface FocusElementOptions {
    selector: string;
+   strategy?: string;
    windowId?: string;
    appIdentifier?: string | number;
 }
 
 export async function focusElement(options: FocusElementOptions): Promise<string> {
-   const { selector, windowId, appIdentifier } = options;
+   const { selector, strategy, windowId, appIdentifier } = options;
 
-   const script = buildScript(SCRIPTS.focus, { selector });
+   const script = buildScript(SCRIPTS.focus, { selector, strategy: strategy ?? 'css' });
 
    try {
       return await executeInWebview(script, windowId, appIdentifier);
@@ -441,6 +476,7 @@ export async function getConsoleLogs(options: GetConsoleLogsOptions = {}): Promi
 export interface DomSnapshotOptions {
    type: 'accessibility' | 'structure';
    selector?: string;
+   strategy?: string;
    windowId?: string;
    appIdentifier?: string | number;
 }
@@ -450,7 +486,7 @@ export interface DomSnapshotOptions {
  * Uses aria-api for comprehensive, spec-compliant accessibility computation.
  */
 export async function domSnapshot(options: DomSnapshotOptions): Promise<string> {
-   const { type, selector, windowId, appIdentifier } = options;
+   const { type, selector, strategy, windowId, appIdentifier } = options;
 
    // Only load aria-api for accessibility snapshots
    if (type === 'accessibility') {
@@ -458,7 +494,7 @@ export async function domSnapshot(options: DomSnapshotOptions): Promise<string> 
    }
 
    // Then execute the snapshot script
-   const script = buildScript(SCRIPTS.domSnapshot, { type, selector: selector ?? null });
+   const script = buildScript(SCRIPTS.domSnapshot, { type, selector: selector ?? null, strategy: strategy ?? 'css' });
 
    try {
       return await executeInWebview(script, windowId, appIdentifier);

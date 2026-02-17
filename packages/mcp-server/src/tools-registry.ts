@@ -253,6 +253,8 @@ export const TOOLS: ToolDefinition[] = [
       name: 'webview_find_element',
       description:
          '[Tauri Apps Only] Find DOM elements in a running Tauri app\'s webview. ' +
+         'Supports CSS selectors (default), XPath expressions, and text content matching via the strategy parameter. ' +
+         'Returns the element\'s HTML. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser pages or documentation sites, use Chrome DevTools MCP instead.',
@@ -302,6 +304,7 @@ export const TOOLS: ToolDefinition[] = [
       description:
          '[Tauri Apps Only] Click, scroll, swipe, focus, or perform gestures in a Tauri app webview. ' +
          'Supported actions: click, double-click, long-press, scroll, swipe, focus. ' +
+         'Supports CSS selectors (default), XPath, and text content matching via the strategy parameter. ' +
          'Requires active driver_session. ' +
          'For browser interaction, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -360,6 +363,8 @@ export const TOOLS: ToolDefinition[] = [
       name: 'webview_keyboard',
       description:
          '[Tauri Apps Only] Type text or send keyboard events in a Tauri app. ' +
+         'The selector parameter (for "type" action) supports CSS selectors (default), ' +
+         'XPath, and text content matching via the strategy parameter. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser keyboard input, use Chrome DevTools MCP instead.',
@@ -378,6 +383,7 @@ export const TOOLS: ToolDefinition[] = [
             return await keyboard({
                action: parsed.action,
                selectorOrKey: parsed.selector,
+               strategy: parsed.strategy,
                textOrModifiers: parsed.text,
                windowId: parsed.windowId,
                appIdentifier: parsed.appIdentifier,
@@ -397,6 +403,7 @@ export const TOOLS: ToolDefinition[] = [
       name: 'webview_wait_for',
       description:
          '[Tauri Apps Only] Wait for elements, text, or IPC events in a Tauri app. ' +
+         'When type is "selector", supports CSS (default), XPath, and text strategies via the strategy parameter. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser waits, use Chrome DevTools MCP instead.',
@@ -413,6 +420,7 @@ export const TOOLS: ToolDefinition[] = [
          return await waitFor({
             type: parsed.type,
             value: parsed.value,
+            strategy: parsed.strategy,
             timeout: parsed.timeout,
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
@@ -424,6 +432,7 @@ export const TOOLS: ToolDefinition[] = [
       name: 'webview_get_styles',
       description:
          '[Tauri Apps Only] Get computed CSS styles from elements in a Tauri app. ' +
+         'Supports CSS selectors (default), XPath, and text content matching via the strategy parameter. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser style inspection, use Chrome DevTools MCP instead.',
@@ -439,6 +448,7 @@ export const TOOLS: ToolDefinition[] = [
 
          return await getStyles({
             selector: parsed.selector,
+            strategy: parsed.strategy,
             properties: parsed.properties,
             multiple: parsed.multiple,
             windowId: parsed.windowId,
@@ -488,6 +498,7 @@ export const TOOLS: ToolDefinition[] = [
          'with element tag names, IDs, CSS classes, and data-testid attributes (if present). ' +
          'Use this for understanding page layout, debugging CSS selectors, or locating elements by class/ID. ' +
          'Use the optional selector parameter to scope the snapshot to a subtree. ' +
+         'The selector supports CSS (default), XPath, and text content matching via the strategy parameter. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC,
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -503,6 +514,7 @@ export const TOOLS: ToolDefinition[] = [
          return await domSnapshot({
             type: parsed.type,
             selector: parsed.selector,
+            strategy: parsed.strategy,
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
          });
