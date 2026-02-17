@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-02-17
+
+### Fixed
+- Support selection by text content in tools with selectors
+- Remove sourceMappingURL from html2canvas file to prevent 404
+
 ## [0.8.2] - 2026-02-10
 
 ### Fixed
