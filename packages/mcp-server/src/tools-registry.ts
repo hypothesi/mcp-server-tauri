@@ -25,6 +25,10 @@ import {
    WaitForSchema, GetStylesSchema, ExecuteJavaScriptSchema,
    FindElementSchema, DomSnapshotSchema,
 } from './driver/webview-interactions.js';
+import {
+   selectElement, getPointedElement,
+   SelectElementSchema, GetPointedElementSchema,
+} from './driver/element-picker.js';
 import { PLUGIN_VERSION_CARGO } from './version.js';
 
 /**
@@ -515,6 +519,62 @@ export const TOOLS: ToolDefinition[] = [
             type: parsed.type,
             selector: parsed.selector,
             strategy: parsed.strategy,
+            windowId: parsed.windowId,
+            appIdentifier: parsed.appIdentifier,
+         });
+      },
+   },
+
+   // Element Picker Tools
+   {
+      name: 'webview_select_element',
+      description:
+         '[Tauri Apps Only] Activates an element picker overlay in the Tauri app. ' +
+         'The user visually selects an element by clicking it, and the tool returns ' +
+         'rich element metadata (tag, id, classes, attributes, text, bounding rect, ' +
+         'CSS selector, computed styles, parent chain) plus an annotated screenshot ' +
+         'with the element highlighted. ' +
+         'Requires active driver_session. ' +
+         MULTI_APP_DESC,
+      category: TOOL_CATEGORIES.UI_AUTOMATION,
+      schema: SelectElementSchema,
+      annotations: {
+         title: 'Select Element (Visual Picker)',
+         readOnlyHint: true,
+         openWorldHint: false,
+      },
+      handler: async (args) => {
+         const parsed = SelectElementSchema.parse(args);
+
+         return await selectElement({
+            timeout: parsed.timeout,
+            windowId: parsed.windowId,
+            appIdentifier: parsed.appIdentifier,
+         });
+      },
+   },
+
+   {
+      name: 'webview_get_pointed_element',
+      description:
+         '[Tauri Apps Only] Retrieves element metadata for an element the user previously ' +
+         'pointed at via Alt+Shift+Click in the Tauri app. Returns the same rich metadata ' +
+         'as webview_select_element (tag, id, classes, attributes, text, bounding rect, ' +
+         'CSS selector, computed styles, parent chain) plus an annotated screenshot. ' +
+         'The user must Alt+Shift+Click an element first before calling this tool. ' +
+         'Requires active driver_session. ' +
+         MULTI_APP_DESC,
+      category: TOOL_CATEGORIES.UI_AUTOMATION,
+      schema: GetPointedElementSchema,
+      annotations: {
+         title: 'Get Pointed Element',
+         readOnlyHint: true,
+         openWorldHint: false,
+      },
+      handler: async (args) => {
+         const parsed = GetPointedElementSchema.parse(args);
+
+         return await getPointedElement({
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
          });

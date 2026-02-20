@@ -6,6 +6,7 @@
 
 // Individual command modules
 pub mod backend_state;
+pub mod element_picker;
 pub mod emit_event;
 pub mod execute_command;
 pub mod execute_js;

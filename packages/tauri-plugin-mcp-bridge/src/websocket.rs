@@ -37,7 +37,8 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 /// #[tokio::main]
 /// async fn main() {
 ///     // Requires a Tauri AppHandle
-///     let (server, _rx) = WebSocketServer::new(9223, "0.0.0.0", app_handle);
+///     let (event_tx, _event_rx) = tokio::sync::broadcast::channel(100);
+///     let server = WebSocketServer::new(9223, "0.0.0.0", app_handle, event_tx);
 ///
 ///     tokio::spawn(async move {
 ///         if let Err(e) = server.start().await {
@@ -60,40 +61,33 @@ impl<R: Runtime> WebSocketServer<R> {
     /// * `port` - The port number to bind the server to (typically 9223)
     /// * `bind_address` - The address to bind to (e.g., "0.0.0.0" or "127.0.0.1")
     /// * `app` - The Tauri application handle
+    /// * `event_tx` - An external broadcast sender for distributing events
     ///
     /// # Returns
     ///
-    /// A tuple containing:
-    /// - The `WebSocketServer` instance
-    /// - A broadcast receiver for monitoring events
+    /// The `WebSocketServer` instance
     ///
     /// # Examples
     ///
     /// ```rust,ignore
     /// use tauri_plugin_mcp_bridge::websocket::WebSocketServer;
     ///
-    /// // Bind to all interfaces (for remote device access)
-    /// let (server, event_rx) = WebSocketServer::new(9223, "0.0.0.0", app_handle);
-    ///
-    /// // Bind to localhost only
-    /// let (server, event_rx) = WebSocketServer::new(9223, "127.0.0.1", app_handle);
+    /// let (event_tx, _event_rx) = tokio::sync::broadcast::channel(100);
+    /// let server = WebSocketServer::new(9223, "0.0.0.0", app_handle, event_tx);
     /// ```
     pub fn new(
         port: u16,
         bind_address: &str,
         app: AppHandle<R>,
-    ) -> (Self, broadcast::Receiver<String>) {
+        event_tx: broadcast::Sender<String>,
+    ) -> Self {
         let addr: SocketAddr = format!("{bind_address}:{port}").parse().unwrap();
-        let (event_tx, event_rx) = broadcast::channel(100);
 
-        (
-            Self {
-                addr,
-                event_tx,
-                app,
-            },
-            event_rx,
-        )
+        Self {
+            addr,
+            event_tx,
+            app,
+        }
     }
 
     /// Starts the WebSocket server and begins accepting connections.

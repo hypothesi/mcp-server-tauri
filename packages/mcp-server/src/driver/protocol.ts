@@ -34,9 +34,56 @@ export interface PluginResponse {
 
 /** Event broadcast from Tauri plugin (not in response to a request) */
 export interface PluginEvent {
-   type: 'ipc_event' | 'console_log' | 'error';
+   type: 'ipc_event' | 'console_log' | 'error' | 'element_picked' | 'element_pointed';
    payload: unknown;
-   timestamp: string;
+   timestamp?: string;
+}
+
+/** Structured info about a parent element in the DOM ancestry */
+export interface ParentElementInfo {
+   tag: string;
+   id: string | null;
+   classes: string[];
+   boundingRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+   };
+}
+
+/** Metadata collected about a picked/pointed DOM element */
+export interface ElementMetadata {
+   tag: string;
+   id: string | null;
+   classes: string[];
+   attributes: Record<string, string>;
+   textContent: string;
+   boundingRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+   };
+   cssSelector: string;
+   xpath: string;
+   computedStyles: Record<string, string>;
+   parentChain: ParentElementInfo[];
+   timestamp: number;
+}
+
+/** Broadcast message for element picker events */
+export interface ElementPickerBroadcast {
+   type: 'element_picked' | 'element_pointed';
+   payload: {
+      pickerId?: string;
+      element?: ElementMetadata;
+      cancelled?: boolean;
+   };
 }
 
 /** IPC event captured by the monitor */

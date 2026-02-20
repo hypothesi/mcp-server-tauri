@@ -116,6 +116,36 @@ Once changes are approved and made:
 - The WebSocket server binds to \`0.0.0.0:9223\` by default
 - For localhost-only access, use \`Builder::new().bind_address("127.0.0.1").build()\``;
 
+const SELECT_ELEMENT_PROMPT = (message?: string): string => {
+   const lines = [
+      'The user wants to visually select an element in their running Tauri app so they can discuss it with you.',
+      '',
+      'Follow these steps:',
+      '',
+      '1. **Ensure a session is active** - Use `driver_session` with action "start" if not already connected',
+      '',
+      '2. **Activate the element picker** - Call `webview_select_element` to show the picker overlay in the app.',
+      'The user will see a blue highlight following their cursor and can click to select an element.',
+      'They can press Escape or click X to cancel.',
+      '',
+      '3. **Review the result** - You will receive the element\'s metadata (tag, id, classes, CSS selector, XPath,',
+      'bounding rect, attributes, computed styles, parent chain) and an annotated screenshot with the element highlighted.',
+      '',
+      '4. **Respond to the user** - Use the element context and screenshot to address their request.',
+   ];
+
+   if (message) {
+      lines.push(
+         '',
+         '## User\'s Message About the Element',
+         '',
+         message
+      );
+   }
+
+   return lines.join('\n');
+};
+
 /**
  * Complete registry of all available prompts
  */
@@ -135,6 +165,32 @@ export const PROMPTS: PromptDefinition[] = [
                content: {
                   type: 'text',
                   text: FIX_WEBVIEW_ERRORS_PROMPT,
+               },
+            },
+         ];
+      },
+   },
+
+   {
+      name: 'select',
+      description:
+         'Visually select an element in the running Tauri app. ' +
+         'Activates a picker overlay — click an element to send its metadata and an annotated screenshot to the agent. ' +
+         'Optionally include a message describing what you want to do with the element.',
+      arguments: [
+         {
+            name: 'message',
+            description: 'What you want to discuss or do with the selected element (e.g. "this button should be green instead of blue")',
+            required: false,
+         },
+      ],
+      handler: (args) => {
+         return [
+            {
+               role: 'user',
+               content: {
+                  type: 'text',
+                  text: SELECT_ELEMENT_PROMPT(args.message),
                },
             },
          ];

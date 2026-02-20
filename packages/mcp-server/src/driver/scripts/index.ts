@@ -26,6 +26,7 @@ export const SCRIPTS = {
    focus: loadScript('focus'),
    findElement: loadScript('find-element'),
    domSnapshot: loadScript('dom-snapshot'),
+   elementPicker: loadScript('element-picker'),
 } as const;
 
 /** Script ID used for resolve-ref in the script registry. */

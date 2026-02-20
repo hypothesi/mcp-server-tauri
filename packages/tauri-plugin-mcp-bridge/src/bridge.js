@@ -183,6 +183,242 @@
       bridgeLogger.info('IPC monitoring stopped');
    };
 
+   // =========================================================================
+   // Element Picker Shared Helpers
+   // =========================================================================
+
+   /**
+    * Generates a unique CSS selector for a given element by traversing up the DOM.
+    * @param {Element} el
+    * @returns {string}
+    */
+   function generateUniqueSelector(el) {
+      var parts = [],
+          current = el,
+          part, parent, siblings, index, totalSameTag, i;
+
+      while (current && current !== document.documentElement) {
+         if (current.id) {
+            parts.unshift('#' + current.id);
+            break;
+         }
+
+         part = current.tagName.toLowerCase();
+         parent = current.parentElement;
+
+         if (parent) {
+            siblings = parent.children;
+            index = 0;
+
+            for (i = 0; i < siblings.length; i += 1) {
+               if (siblings[i].tagName === current.tagName) {
+                  index += 1;
+               }
+               if (siblings[i] === current) {
+                  break;
+               }
+            }
+
+            // Only add nth-of-type if there are multiple siblings of the same tag
+            totalSameTag = 0;
+
+            for (i = 0; i < siblings.length; i += 1) {
+               if (siblings[i].tagName === current.tagName) {
+                  totalSameTag += 1;
+               }
+            }
+
+            if (totalSameTag > 1) {
+               part += ':nth-of-type(' + index + ')';
+            }
+         }
+
+         parts.unshift(part);
+         current = parent;
+      }
+
+      return parts.join(' > ');
+   }
+
+   /**
+    * Generates an XPath for a given element. More robust than CSS selectors for
+    * uniquely identifying elements in the DOM tree.
+    * @param {Element} el
+    * @returns {string}
+    */
+   function generateXPath(el) {
+      var nodeElem = el,
+          parts = [],
+          nbOfPreviousSiblings, hasNextSiblings, sibling, prefix, nth;
+
+      while (nodeElem && nodeElem.nodeType === 1) { // ELEMENT_NODE
+         if (nodeElem.id) {
+            parts.unshift('*[@id="' + nodeElem.id + '"]');
+            break;
+         }
+
+         nbOfPreviousSiblings = 0;
+         hasNextSiblings = false;
+
+         sibling = nodeElem.previousSibling;
+         while (sibling) {
+            if (sibling.nodeType !== 10 && sibling.nodeName === nodeElem.nodeName) { // not DOCUMENT_TYPE_NODE
+               nbOfPreviousSiblings += 1;
+            }
+            sibling = sibling.previousSibling;
+         }
+
+         sibling = nodeElem.nextSibling;
+         while (sibling) {
+            if (sibling.nodeName === nodeElem.nodeName) {
+               hasNextSiblings = true;
+               break;
+            }
+            sibling = sibling.nextSibling;
+         }
+
+         prefix = nodeElem.prefix ? nodeElem.prefix + ':' : '';
+         nth = (nbOfPreviousSiblings || hasNextSiblings)
+            ? '[' + (nbOfPreviousSiblings + 1) + ']'
+            : '';
+
+         parts.unshift(prefix + nodeElem.localName + nth);
+         nodeElem = nodeElem.parentElement;
+      }
+
+      return parts.length ? '/' + parts.join('/') : '';
+   }
+
+   /**
+    * Finds the best element at a given point, filtering out SVG internals and
+    * MCP picker UI elements. Uses elementsFromPoint for more robust detection.
+    * @param {number} x
+    * @param {number} y
+    * @returns {Element|null}
+    */
+   function getElementAtPoint(x, y) {
+      var elements, i, el, rect;
+
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+         return null;
+      }
+
+      elements = document.elementsFromPoint(x, y);
+
+      for (i = 0; i < elements.length; i++) {
+         el = elements[i];
+
+         // Skip SVG internal elements (lines, paths, rects inside SVGs)
+         if (el.closest && el.closest('svg') && el.tagName.toLowerCase() !== 'svg') {
+            continue;
+         }
+
+         // Skip picker UI elements
+         if (el.getAttribute && el.getAttribute('data-mcp-picker')) {
+            continue;
+         }
+         if (el.closest && el.closest('[data-mcp-picker]')) {
+            continue;
+         }
+
+         // Verify the element is actually at the point via bounding rect
+         rect = el.getBoundingClientRect();
+         if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+            return el;
+         }
+      }
+
+      return null;
+   }
+
+   /**
+    * Collects rich metadata about a DOM element.
+    * @param {Element} el
+    * @returns {Object}
+    */
+   function collectElementMetadata(el) {
+      var rect = el.getBoundingClientRect(),
+          cs = window.getComputedStyle(el),
+          attrs = {},
+          styleProps, computedStyles, parentChain, ancestor, ancestorRect, parentInfo, textContent,
+          i, attr;
+
+      for (i = 0; i < el.attributes.length; i += 1) {
+         attr = el.attributes[i];
+         attrs[attr.name] = attr.value;
+      }
+
+      styleProps = [
+         'display', 'position', 'visibility', 'opacity',
+         'color', 'background-color', 'font-size', 'font-family',
+         'padding', 'margin', 'border', 'width', 'height',
+         'z-index', 'overflow',
+      ];
+      computedStyles = {};
+
+      for (i = 0; i < styleProps.length; i += 1) {
+         computedStyles[styleProps[i]] = cs.getPropertyValue(styleProps[i]);
+      }
+
+      // Build structured parent chain (richer than just string descriptors)
+      parentChain = [];
+      ancestor = el.parentElement;
+
+      while (ancestor && ancestor !== document.documentElement && parentChain.length < 5) {
+         ancestorRect = ancestor.getBoundingClientRect();
+         parentInfo = {
+            tag: ancestor.tagName.toLowerCase(),
+            id: ancestor.id || null,
+            classes: ancestor.className && typeof ancestor.className === 'string'
+               ? ancestor.className.trim().split(/\s+/).filter(Boolean)
+               : [],
+            boundingRect: {
+               x: ancestorRect.x,
+               y: ancestorRect.y,
+               width: ancestorRect.width,
+               height: ancestorRect.height,
+            },
+         };
+
+         parentChain.push(parentInfo);
+         ancestor = ancestor.parentElement;
+      }
+
+      textContent = (el.textContent || '').trim();
+
+      if (textContent.length > 500) {
+         textContent = textContent.substring(0, 500) + '...';
+      }
+
+      return {
+         tag: el.tagName.toLowerCase(),
+         id: el.id || null,
+         classes: el.className && typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean) : [],
+         attributes: attrs,
+         textContent: textContent,
+         boundingRect: {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            left: rect.left,
+         },
+         cssSelector: generateUniqueSelector(el),
+         xpath: generateXPath(el),
+         computedStyles: computedStyles,
+         parentChain: parentChain,
+         timestamp: Date.now(),
+      };
+   }
+
+   // Expose helpers on window for reuse by element-picker.js
+   window.__MCP_COLLECT_ELEMENT_METADATA__ = collectElementMetadata;
+   window.__MCP_GENERATE_SELECTOR__ = generateUniqueSelector;
+   window.__MCP_GET_ELEMENT_AT_POINT__ = getElementAtPoint;
+
    waitForTauri(function() {
       bridgeLogger.info('Tauri API available, initializing bridge');
 
@@ -234,6 +470,55 @@
             }
          });
       }
+
+      // =====================================================================
+      // User-initiated element pointing (Alt+Shift+Click)
+      // =====================================================================
+      document.addEventListener('click', function(e) {
+         var el, metadata, flashDiv;
+
+         if (!e.altKey || !e.shiftKey) {
+            return;
+         }
+
+         e.preventDefault();
+         e.stopPropagation();
+
+         el = e.target;
+
+         if (!el || el.nodeType !== 1) {
+            return;
+         }
+
+         metadata = collectElementMetadata(el);
+         window.__MCP_POINTED_ELEMENT__ = metadata;
+
+         // Visual flash feedback (green border, fades out)
+         flashDiv = document.createElement('div');
+         flashDiv.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;' +
+            'border:3px solid #22C55E;background:rgba(34,197,94,0.1);transition:opacity 0.5s;' +
+            'top:' + metadata.boundingRect.top + 'px;' +
+            'left:' + metadata.boundingRect.left + 'px;' +
+            'width:' + metadata.boundingRect.width + 'px;' +
+            'height:' + metadata.boundingRect.height + 'px;';
+         document.body.appendChild(flashDiv);
+
+         setTimeout(function() {
+            flashDiv.style.opacity = '0';
+         }, 1000);
+         setTimeout(function() {
+            if (flashDiv.parentNode) {
+               flashDiv.parentNode.removeChild(flashDiv);
+            }
+         }, 1500);
+
+         // Emit Tauri event for the Rust forwarder
+         if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.emit) {
+            window.__TAURI__.event.emit('__element_pointed', metadata);
+         }
+
+         bridgeLogger.info('Element pointed via Alt+Shift+Click:', metadata.cssSelector);
+      }, true);
 
       // Listen for execution requests from eval() contexts
       window.addEventListener('__mcp_exec_request', async function(event) {

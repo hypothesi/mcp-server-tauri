@@ -96,6 +96,7 @@ use monitor::IPCMonitor;
 use script_registry::create_shared_registry;
 use std::sync::{Arc, Mutex};
 use tauri::{plugin::Builder as PluginBuilder, plugin::TauriPlugin, Manager, Runtime};
+use tokio::sync::broadcast;
 
 /// Initializes the MCP Bridge plugin.
 ///
@@ -197,10 +198,17 @@ pub fn init_with_config<R: Runtime>(config: Config) -> TauriPlugin<R> {
 
             let identifier = app.config().identifier.clone();
 
+            // Create broadcast channel externally so it can be shared with
+            // the element picker event forwarder
+            let (event_tx, _event_rx) = broadcast::channel::<String>(100);
+
+            // Set up element picker event listeners (forwards Tauri events to WS broadcast)
+            commands::element_picker::setup_element_picker_listeners(app, event_tx.clone());
+
             // Start WebSocket server in background
             let app_handle = app.clone();
-            let (ws_server, _event_rx) =
-                websocket::WebSocketServer::new(port, &bind_address, app_handle);
+            let ws_server =
+                websocket::WebSocketServer::new(port, &bind_address, app_handle, event_tx);
 
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = ws_server.start().await {
