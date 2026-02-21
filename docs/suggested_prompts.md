@@ -91,7 +91,37 @@ Please:
 
 ---
 
-## 4. JavaScript Errors & Console Debugging
+## 4. Element Picking & Visual Selection
+
+These prompts use the **element picker** tools (see [/api/ui-automation](/api/ui-automation#webview-select-element)).
+
+**Prompt:**
+
+"I need to discuss a specific element in my running Tauri app.
+
+Please:
+- Connect to my running app.
+- Activate the element picker so I can click on the element I want to discuss.
+- Once I select it, show me the element's metadata (tag, classes, styles, selector).
+- Help me understand how that element is styled and suggest improvements."
+
+**Prompt:**
+
+"I Alt+Shift+Clicked an element in my Tauri app. Can you tell me about it?
+
+Please:
+- Retrieve the pointed element's metadata.
+- Show me its CSS selector, computed styles, and position.
+- Take a screenshot of just that element.
+- Suggest any accessibility or styling issues you notice."
+
+**Prompt:**
+
+"/select this button looks wrong on dark mode"
+
+---
+
+## 4b. JavaScript Errors & Console Debugging
 
 These prompts lean on console log and JavaScript execution tools.
 
@@ -188,35 +218,7 @@ Please:
 
 ---
 
-## 7. Implementing a New MCP Tool
-
-These prompts align with the workflow described in `AGENTS.md` for adding tools.
-
-**Prompt:**
-
-"Add a new tool to the MCP server that inspects the current Tauri window list.
-
-Requirements:
-- Follow the existing patterns in `packages/mcp-server/src/tools-registry.ts`.
-- Define a Zod schema for the input and output.
-- Implement the handler in the appropriate driver or manager module.
-- Wire it into the Rust plugin in `packages/tauri-plugin-mcp-bridge` if native support is required.
-- Add an E2E test in `packages/mcp-server/tests/e2e/`.
-- Document the new tool in the API docs."
-
-**Prompt:**
-
-"Review the implementation of a new MCP tool I just added.
-
-Please:
-- Check the TypeScript types and schema definitions.
-- Verify that the tool is registered correctly in `tools-registry.ts`.
-- Ensure the Rust side (`tauri-plugin-mcp-bridge`) is consistent with the TypeScript contract.
-- Suggest improvements for error handling, logging, and test coverage."
-
----
-
-## 8. Error Handling & Resilience
+## 7. Error Handling & Resilience
 
 **Prompt:**
 
@@ -240,7 +242,7 @@ Please:
 
 ---
 
-## 9. Release & Version Management
+## 8. Release & Version Management
 
 These prompts follow the release process documented in `AGENTS.md`.
 
@@ -268,7 +270,7 @@ Steps:
 
 ---
 
-## 10. General Development Workflow
+## 9. General Development Workflow
 
 These prompts combine multiple tools for everyday development.
 
