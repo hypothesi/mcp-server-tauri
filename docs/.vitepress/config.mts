@@ -82,6 +82,7 @@ export default defineConfig({
                items: [
                   { text: 'Getting Started', link: '/guides/getting-started' },
                   { text: 'Using Prompts', link: '/guides/prompts' },
+                  { text: 'Element Picker', link: '/guides/element-picker' },
                ],
             },
          ],
