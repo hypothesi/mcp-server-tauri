@@ -33,7 +33,7 @@ import { data as versions } from './.vitepress/versions.data';
     <Feature icon="bug" title="Live Debugging" details="Access console logs, window state, and system logs in real-time" />
     <Feature icon="activity" title="IPC Monitoring" details="Capture and inspect Tauri IPC calls between frontend and backend in real-time" />
     <Feature icon="smartphone" title="Device Management" details="List Android emulators and iOS simulators for mobile testing" />
-    <Feature icon="mouse-pointer" title="WebView Automation" details="Click, type, scroll, find elements, and verify UI state in your app's webview" />
+    <Feature icon="mouse-pointer" title="WebView Automation" details="Click, type, scroll, find elements, pick elements visually, and verify UI state in your app's webview" />
     <Feature icon="plug" title="Plugin Bridge" details="Execute IPC commands and interact with the Tauri plugin system" />
   </div>
 </div>
@@ -153,11 +153,15 @@ The server provides **slash commands** ([prompts](https://modelcontextprotocol.i
       <MessageSquareCode :size="20" :stroke-width="2" class="category-icon" />
       <strong>/fix-webview-errors</strong> - Find and fix JavaScript errors in your webview
    </div>
+   <div class="tool-category">
+      <MessageSquareCode :size="20" :stroke-width="2" class="category-icon" />
+      <strong>/select</strong> - Visually pick an element in your app to discuss with the AI
+   </div>
 </div>
 
 [Learn more about prompts →](/api/prompts)
 
-## 18 Powerful Tools
+## 20 Powerful Tools
 
 The server exposes tools across 4 categories:
 
@@ -168,7 +172,7 @@ The server exposes tools across 4 categories:
    </div>
    <div class="tool-category">
       <Target :size="20" :stroke-width="2" class="category-icon" />
-      <strong>UI Automation & WebView</strong> (12 tools) - Gestures, screenshots, DOM snapshots, JS execution, element finding, logs
+      <strong>UI Automation & WebView</strong> (14 tools) - Gestures, screenshots, DOM snapshots, JS execution, element picking, logs
    </div>
    <div class="tool-category">
       <Zap :size="20" :stroke-width="2" class="category-icon" />

@@ -8,7 +8,7 @@ head:
 ---
 
 <script setup>
-import { MessageSquareCode, Bug, Zap, Settings } from 'lucide-vue-next';
+import { MessageSquareCode, Bug, Zap, Settings, Target } from 'lucide-vue-next';
 </script>
 
 # <MessageSquareCode :size="28" :stroke-width="2" class="heading-icon" /> Prompts (Slash Commands)
@@ -117,11 +117,53 @@ This achieves the same result as `/fix-webview-errors` but gives you more contro
 |----------|--------|------|
 | Set up MCP bridge in a project | `/setup` | - |
 | Debug JS errors in webview | `/fix-webview-errors` | - |
+| Discuss a specific element visually | `/select` | - |
 | Take a single screenshot | - | `webview_screenshot` |
 | Multi-step testing workflow | Ask AI to create one | - |
 | Check a specific element | - | `webview_find_element` |
 | Guided debugging session | Use a prompt | - |
 | Quick one-off action | - | Let AI choose the tool |
+
+---
+
+### <Target :size="20" :stroke-width="2" class="heading-icon" /> select
+
+**Slash command:** `/select`
+
+Visually select an element in your running Tauri app so you can discuss it with the AI. Activates a picker overlay — click an element to send its metadata and a screenshot to the agent. You can optionally include a message describing what you want to do with the element.
+
+1. **Ensures a session is active** — starts one if needed
+2. **Activates the element picker** — a blue highlight follows your cursor
+3. **You click an element** — metadata and screenshot are sent to the AI
+4. **AI responds** — using the element context to address your request
+
+**Example usage:**
+
+```
+/select
+```
+
+```
+/select this button should be green instead of blue
+```
+
+**Arguments:**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `message` | No | What you want to discuss or do with the selected element |
+
+::: tip When to Use
+Use this prompt when you want to point at a specific element in your running app and tell the AI what you want changed. It's the fastest way to discuss visual issues, styling problems, or element-specific bugs.
+:::
+
+**What it does behind the scenes:**
+
+| Step | Tool Used | Purpose |
+|------|-----------|---------|
+| 1 | `driver_session` | Ensure connection to the running app |
+| 2 | `webview_select_element` | Show picker overlay, wait for user click |
+| 3 | AI analysis | Review metadata and screenshot |
 
 ## See Also
 

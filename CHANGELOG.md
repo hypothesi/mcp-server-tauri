@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-20
+
+### Added
+- Add `webview_select_element` tool: agent-initiated visual element picker overlay — user clicks an element and the tool returns rich metadata (tag, id, classes, attributes, text, bounding rect, CSS selector, XPath, computed styles, parent chain) plus an element screenshot
+- Add `webview_get_pointed_element` tool: retrieve element metadata for an element the user previously pointed at via Alt+Shift+Click
+- Add `/select` slash command (prompt) for guided element selection workflows with optional user message
+
 ## [0.8.3] - 2026-02-17
 
 ### Fixed

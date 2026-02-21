@@ -28,6 +28,51 @@ While **tools** are individual actions the AI can take (like taking a screenshot
 
 ## Available Prompts
 
+### /select
+
+**Purpose:** Visually select an element in your running Tauri app so you can discuss it with the AI.
+
+**When to use:**
+- You want to point at a specific element and ask the AI about it
+- You see a styling issue and want to show the AI exactly which element
+- You want the AI to inspect or modify a particular UI component
+
+**What it does:**
+
+```
+1. Ensures a session is active with your Tauri app
+2. Activates a visual element picker overlay
+3. You click the element you want to discuss
+4. The AI receives element metadata and a screenshot
+5. The AI responds using that context
+```
+
+**Prerequisites:**
+- Your Tauri app must be running with the MCP bridge plugin installed
+- `withGlobalTauri` must be enabled in `tauri.conf.json`
+
+**Example session:**
+
+```
+You: /select this button should be green instead of blue
+
+AI: I'll help you change the button color. Let me activate the element picker...
+
+    [Picker overlay appears in your app]
+    [You click the button]
+
+    I can see the button you selected:
+    - Element: <button> with class "btn-primary"
+    - Current color: rgb(59, 130, 246) (blue)
+    - CSS Selector: .action-bar > button.btn-primary
+
+    I'll update the CSS to change it to green...
+```
+
+You can also use `/select` without a message — the AI will simply ask you what you'd like to do with the selected element.
+
+---
+
 ### /fix-webview-errors
 
 **Purpose:** Find and fix JavaScript errors in your Tauri app's webview.

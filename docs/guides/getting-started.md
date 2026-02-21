@@ -269,6 +269,7 @@ The AI connects to your running app and can see, click, type, and debug—just l
 |---------|--------------|
 | `/setup` | Configure the MCP bridge (you just used this!) |
 | `/fix-webview-errors` | Find and fix JavaScript errors automatically |
+| `/select` | Visually pick an element to discuss with the AI |
 
 See the [Prompts documentation](/api/prompts) for details.
 
@@ -278,7 +279,7 @@ Some MCP clients don't support slash commands yet. See the [manual prompt instru
 
 ## Next Steps
 
-- **[API Reference](/api/)** — Learn about all 18 available tools
+- **[API Reference](/api/)** — Learn about all 20 available tools
 - **[IPC & Plugin Tools](/api/ipc-plugin)** — Debug your app's IPC layer
 - **[UI Automation](/api/ui-automation)** — Automate webview interactions
 

@@ -1,6 +1,6 @@
 ---
 title: UI Automation Tools
-description: Automate Tauri application UI testing - manage sessions, capture screenshots, access console logs, and control webview interactions.
+description: Automate Tauri application UI testing - manage sessions, capture screenshots, pick elements, access console logs, and control webview interactions.
 head:
   - - meta
     - name: keywords
@@ -415,3 +415,95 @@ Returns a YAML-formatted tree with:
 - **Accessibility type**: Element roles, accessible names, ARIA states, ref IDs
 - **Structure type**: Tag names, IDs, CSS classes, data-testid attributes, ref IDs
 - Metadata footer with generation timestamp and element count
+
+## webview_select_element
+
+Activate a visual element picker overlay in the Tauri app. The user sees a blue highlight following their cursor and can click to select an element. The tool returns rich metadata about the selected element plus a cropped screenshot of it.
+
+This is useful when you want the user to **point out** a specific UI element so you can discuss it, debug it, or make changes to it.
+
+::: tip Slash Command
+You can also use the `/select` slash command for a guided element selection workflow. See [Prompts](/api/prompts) for details.
+:::
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `timeout` | number | No | Timeout in ms for user to pick an element (5000–120000, default: 60000) |
+| `windowId` | string | No | Window label to target (defaults to 'main') |
+| `appIdentifier` | string \| number | No | App identifier for multi-app setups |
+
+### Example
+
+```javascript
+// Activate the element picker with default timeout
+{
+  "tool": "webview_select_element"
+}
+
+// Activate with a longer timeout
+{
+  "tool": "webview_select_element",
+  "timeout": 120000
+}
+```
+
+### Response
+
+Returns two content items:
+
+1. **Text** — Formatted element metadata including:
+   - Tag name, ID, classes
+   - CSS selector and XPath
+   - Bounding rect (position and dimensions)
+   - HTML attributes
+   - Text content (truncated to 200 characters)
+   - Computed CSS styles
+   - Parent chain (tag, id, classes, dimensions for each ancestor)
+
+2. **Image** — A cropped PNG screenshot of just the selected element.
+
+If the user presses **Escape** or clicks the **X** button, the tool returns a cancellation message.
+
+### How It Works
+
+1. A translucent blue overlay appears in the Tauri app
+2. As the user moves their cursor, elements are highlighted with a blue outline
+3. The user clicks an element to select it
+4. The overlay is removed and metadata + screenshot are returned
+5. The user can cancel by pressing Escape or clicking the close button
+
+## webview_get_pointed_element
+
+Retrieve element metadata for an element the user previously pointed at via **Alt+Shift+Click** in the Tauri app. This is the passive counterpart to `webview_select_element` — the user can Alt+Shift+Click elements at any time while using the app, and then later the agent can retrieve the metadata.
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `windowId` | string | No | Window label to target (defaults to 'main') |
+| `appIdentifier` | string \| number | No | App identifier for multi-app setups |
+
+### Example
+
+```javascript
+// Get the element the user Alt+Shift+Clicked
+{
+  "tool": "webview_get_pointed_element"
+}
+```
+
+### Response
+
+If the user has Alt+Shift+Clicked an element, returns the same content as `webview_select_element`:
+
+1. **Text** — Formatted element metadata (tag, id, classes, selector, styles, parent chain, etc.)
+2. **Image** — A cropped PNG screenshot of the element.
+
+If no element has been pointed, returns an instruction message telling the user to Alt+Shift+Click an element first.
+
+::: tip When to Use Which
+- **`webview_select_element`** — The agent initiates the picker. Best when the AI wants to ask the user to select something.
+- **`webview_get_pointed_element`** — The user initiates the selection. Best when the user says "look at this element I pointed at".
+:::

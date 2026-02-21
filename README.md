@@ -23,7 +23,7 @@ A **Model Context Protocol (MCP) server** that enables AI assistants like Claude
 
 | Category | Capabilities |
 |----------|-------------|
-| 🎯 **UI Automation** | Screenshots, clicks, typing, scrolling, element finding |
+| 🎯 **UI Automation** | Screenshots, clicks, typing, scrolling, element finding, visual element picker |
 | 🔍 **IPC Monitoring** | Capture and inspect Tauri IPC calls in real-time |
 | 📱 **Mobile Dev** | List iOS simulators & Android emulators |
 | 📋 **Logs** | Stream console, Android logcat, iOS, and system logs |
@@ -121,12 +121,13 @@ If you prefer to set up manually, see the [Getting Started guide](https://hypoth
 |---------|-------------|
 | `/setup` | Set up or update the MCP bridge plugin in your Tauri project |
 | `/fix-webview-errors` | Find and fix JavaScript errors in your webview |
+| `/select` | Visually select an element in your app — returns metadata and screenshot |
 
 Just type the command in your AI assistant to start a guided workflow.
 
 ---
 
-## 🧰 Available Tools (18 total)
+## 🧰 Available Tools (20 total)
 
 <details>
 <summary><strong>Setup & Configuration</strong></summary>
@@ -152,6 +153,8 @@ Just type the command in your AI assistant to start a guided workflow.
 | `webview_get_styles` | Get computed CSS styles |
 | `webview_execute_js` | Execute JavaScript in webview |
 | `webview_dom_snapshot` | Get structured accessibility tree snapshot |
+| `webview_select_element` | Visual element picker — user clicks an element, returns metadata + screenshot |
+| `webview_get_pointed_element` | Get metadata for element user Alt+Shift+Clicked |
 | `manage_window` | List windows, get info, or resize |
 
 > **Multi-Window Support**: All webview tools accept an optional `windowId` parameter to target specific windows. Use `manage_window` with `action: "list"` to discover available windows.

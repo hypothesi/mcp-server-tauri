@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-20
+
+### Added
+- Add `element_picker` command module for broadcasting element pick events from the webview via WebSocket
+- Add element picker bridge script for handling `selectElement` and `getPointedElement` messages in the webview
+
 ## [0.8.3] - 2026-02-17
 
 _No changes to this package._

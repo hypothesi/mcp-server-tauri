@@ -11,7 +11,7 @@ A **Model Context Protocol (MCP) server** that enables AI assistants like Claude
 
 | Category | Capabilities |
 |----------|-------------|
-| 🎯 **UI Automation** | Screenshots, clicks, typing, scrolling, element finding |
+| 🎯 **UI Automation** | Screenshots, clicks, typing, scrolling, element finding, visual element picker |
 | 🔍 **IPC Monitoring** | Capture and inspect Tauri IPC calls in real-time |
 | 📱 **Mobile Dev** | List Android emulators & iOS simulators |
 | 📋 **Logs** | Stream console, Android logcat, iOS, and system logs |
@@ -86,7 +86,7 @@ await driver_session({ action: "stop", appIdentifier: 9223 })
 await driver_session({ action: "stop" })
 ```
 
-## Available Tools (18 total)
+## Available Tools (20 total)
 
 ### Setup & Configuration
 
@@ -108,6 +108,8 @@ await driver_session({ action: "stop" })
 | `webview_get_styles` | Get computed CSS styles |
 | `webview_execute_js` | Execute JavaScript in webview |
 | `webview_dom_snapshot` | Get structured DOM snapshot (accessibility or structure) |
+| `webview_select_element` | Visual element picker — user clicks an element, returns metadata + screenshot |
+| `webview_get_pointed_element` | Get metadata for element user Alt+Shift+Clicked |
 | `manage_window` | List windows, get info, or resize |
 
 ### IPC & Plugin
