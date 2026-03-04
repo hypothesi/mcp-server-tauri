@@ -58,15 +58,23 @@
          return function() {
             args = Array.prototype.slice.call(arguments);
 
-            try {
-               message = args
-                  .map(function(a) {
-                     return typeof a === 'object' ? JSON.stringify(a) : String(a);
-                  })
-                  .join(' ');
-            } catch(e) {
-               message = args.map(String).join(' ');
-            }
+            message = args
+               .map(function(a) {
+                  if (typeof a !== 'object' || a === null) {
+                     return String(a);
+                  }
+                  try {
+                     return JSON.stringify(a);
+                  } catch(_) {
+                     // Circular reference or non-serializable (e.g. null-prototype object)
+                     try {
+                        return String(a);
+                     } catch(_) {
+                        return '[non-serializable]';
+                     }
+                  }
+               })
+               .join(' ');
 
             window.__MCP_CONSOLE_LOGS__.push({
                level: level,
