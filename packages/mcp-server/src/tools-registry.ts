@@ -258,6 +258,7 @@ export const TOOLS: ToolDefinition[] = [
       description:
          '[Tauri Apps Only] Find DOM elements in a running Tauri app\'s webview. ' +
          'Supports CSS selectors (default), XPath expressions, and text content matching via the strategy parameter. ' +
+         'The "text" strategy first searches element text content, then falls back to placeholder, aria-label, and title attributes. ' +
          'Returns the element\'s HTML. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
