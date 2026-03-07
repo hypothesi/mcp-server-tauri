@@ -1,5 +1,5 @@
 {
-  "name": "@hypothesi/tauri-mcp-server",
+  "name": "@gruckion/tauri-mcp-server",
   "version": "0.9.0",
   "mcpName": "io.github.hypothesi/mcp-server-tauri",
   "description": "A Model Context Protocol server for use with Tauri v2 applications",
@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hypothesi/mcp-server-tauri.git",
+    "url": "https://github.com/gruckion/mcp-server-tauri.git",
     "directory": "packages/mcp-server"
   },
   "files": [
