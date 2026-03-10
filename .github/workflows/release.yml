@@ -151,6 +151,9 @@ jobs:
           npm run test --workspace=@hypothesi/tauri-mcp-cli
           npx tsc --noEmit --project packages/cli/tsconfig.json
 
+      - name: Validate agent skills
+        run: npm run skills:validate --workspace=@hypothesi/tauri-mcp-cli
+
   release-plugin:
     name: Release tauri-plugin-mcp-bridge
     needs: [determine-packages, test-plugin]

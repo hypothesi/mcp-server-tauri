@@ -6,13 +6,16 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "tauri-mcp": "./dist/index.js"
+    "tauri-mcp": "./dist/index.js",
+    "intent": "./bin/intent.js"
   },
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
     "test": "vitest run",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "skills:validate": "intent validate skills/",
+    "skills:stale": "cd ../.. && npx @tanstack/intent stale",
+    "prepublishOnly": "npm run build && npm run skills:validate"
   },
   "repository": {
     "type": "git",
@@ -23,7 +26,10 @@
     "dist",
     "package.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "skills",
+    "!skills/_artifacts",
+    "bin"
   ],
   "author": "hypothesi",
   "license": "MIT",
@@ -41,6 +47,7 @@
     "mcporter": "0.7.3"
   },
   "devDependencies": {
+    "@tanstack/intent": "^0.0.14",
     "@types/node": "22.19.1",
     "vitest": "4.0.13"
   },
