@@ -5,6 +5,7 @@
   "workspaces": [
     "packages/tauri-plugin-mcp-bridge",
     "packages/mcp-server",
+    "packages/cli",
     "packages/test-app"
   ],
   "scripts": {
@@ -12,8 +13,10 @@
     "build": "npm run build --workspaces",
     "build:plugin": "npm run build -w @hypothesi/tauri-plugin-mcp-bridge",
     "build:server": "npm run build -w @hypothesi/tauri-mcp-server",
+    "build:cli": "npm run build -w @hypothesi/tauri-mcp-cli",
     "build:test-app": "npm run build -w test-app",
     "test": "npm run test -w @hypothesi/tauri-mcp-server",
+    "test:cli": "npm run test -w @hypothesi/tauri-mcp-cli",
     "docs:rust": "cd packages/tauri-plugin-mcp-bridge && cargo doc --no-deps --open",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
@@ -23,6 +26,7 @@
     "eslint": "eslint .",
     "release:plugin": "node scripts/release-package.js plugin",
     "release:server": "node scripts/release-package.js server",
+    "release:cli": "node scripts/release-package.js cli",
     "prepare": "husky"
   },
   "devDependencies": {

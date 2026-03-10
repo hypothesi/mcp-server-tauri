@@ -93,6 +93,18 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client cline
 
 **Restart your AI assistant** after adding the configuration.
 
+### CLI Usage
+
+If you want to call the tools directly from a terminal instead of from an MCP client:
+
+```bash
+npm install -g @hypothesi/tauri-mcp-cli
+tauri-mcp driver-session start --port 9223
+tauri-mcp webview-screenshot --file screenshot.png
+```
+
+The CLI uses MCPorter keep-alive support so `driver_session` state survives across separate commands.
+
 ### 2. Set Up the MCP Bridge Plugin
 
 Ask your AI assistant to help configure your Tauri app:

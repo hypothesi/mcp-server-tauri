@@ -101,6 +101,13 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
 
 Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
 
+If you want a direct terminal workflow instead, install the companion CLI:
+
+```bash
+npm install -g @hypothesi/tauri-mcp-cli
+tauri-mcp driver-session start --port 9223
+```
+
 <details>
 <summary>Manual Configuration</summary>
 

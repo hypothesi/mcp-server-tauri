@@ -10,6 +10,7 @@
  * Package names:
  * - plugin: @hypothesi/tauri-plugin-mcp-bridge (Cargo + NPM)
  * - server: @hypothesi/tauri-mcp-server (NPM only)
+ * - cli: @hypothesi/tauri-mcp-cli (NPM only)
  */
 
 import { execSync } from 'child_process';
@@ -37,6 +38,13 @@ const packages = {
       cargo: false,
       npm: true,
       githubTag: 'tauri-mcp-server',
+   },
+   cli: {
+      name: '@hypothesi/tauri-mcp-cli',
+      path: 'packages/cli',
+      cargo: false,
+      npm: true,
+      githubTag: 'tauri-mcp-cli',
    },
 };
 

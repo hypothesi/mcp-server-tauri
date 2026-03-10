@@ -4,6 +4,14 @@
   "mcpName": "io.github.hypothesi/mcp-server-tauri",
   "description": "A Model Context Protocol server for use with Tauri v2 applications",
   "type": "module",
+  "main": "./dist/api.js",
+  "types": "./dist/api.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    }
+  },
   "bin": {
     "mcp-server-tauri": "./dist/index.js"
   },

@@ -81,6 +81,7 @@ export default defineConfig({
                text: 'Guides',
                items: [
                   { text: 'Getting Started', link: '/guides/getting-started' },
+                  { text: 'CLI Usage', link: '/guides/cli' },
                   { text: 'Using Prompts', link: '/guides/prompts' },
                   { text: 'Element Picker', link: '/guides/element-picker' },
                ],
