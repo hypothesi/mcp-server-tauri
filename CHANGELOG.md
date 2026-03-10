@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add `@hypothesi/tauri-mcp-cli`, a direct terminal CLI for the Tauri MCP server backed by MCPorter keep-alive daemon support
+- Fix CLI-only release automation by adding the `tauri-mcp-cli/v*` workflow trigger and document the one-time npm first-publish setup
+
 ## [0.9.0] - 2026-02-20
 
 ### Added

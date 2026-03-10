@@ -29,6 +29,7 @@ This directory contains GitHub Actions workflows for CI/CD automation.
 - `v*` - Release all packages with the same version
 - `tauri-plugin-mcp-bridge/v*` - Release only the plugin
 - `mcp-server/v*` - Release only the server
+- `tauri-mcp-cli/v*` - Release only the CLI
 
 **Purpose**: Unified release workflow for all packages
 
@@ -102,6 +103,23 @@ npm publishing uses **provenance** with OIDC authentication (no NPM_TOKEN needed
 
 This eliminates the need for NPM_TOKEN secrets and provides better supply chain security.
 
+### First Publish for a New npm Package
+
+Trusted publishing is the steady-state path, but a brand-new npm package may need a one-time manual publish before npm can be configured to trust this repository workflow.
+
+For `@hypothesi/tauri-mcp-cli`:
+
+1. Publish it once manually from an npm maintainer account:
+   ```bash
+   npm publish -w @hypothesi/tauri-mcp-cli --access public
+   ```
+2. Add the trusted publisher in npm package settings:
+   - Provider: GitHub Actions
+   - Organization: `hypothesi`
+   - Repository: `mcp-server-tauri`
+   - Workflow: `release.yml`
+3. After that, use the normal tag-driven GitHub Actions release flow.
+
 ## Tag Formats
 
 The release workflow supports three tag patterns:
@@ -116,6 +134,10 @@ The release workflow supports three tag patterns:
 
    * **Server only**: `mcp-server/v0.1.0`
       * Releases only the MCP server
+      * Updates version to 0.1.0
+
+   * **CLI only**: `tauri-mcp-cli/v0.1.0`
+      * Releases only the CLI
       * Updates version to 0.1.0
 
 ## Usage Examples
@@ -158,6 +180,7 @@ npm run standards
    # For individual package
    git tag -s tauri-plugin-mcp-bridge/v0.1.0 -m "Release tauri-plugin-mcp-bridge v0.1.0"
    git tag -s mcp-server/v0.1.0 -m "Release mcp-server v0.1.0"
+   git tag -s tauri-mcp-cli/v0.1.0 -m "Release tauri-mcp-cli v0.1.0"
 
    # For all packages
    git tag -s v0.1.0 -m "Release v0.1.0"
@@ -207,6 +230,7 @@ The workflows require the following permissions:
 - Verify npm Trusted Publisher is configured correctly
 - Ensure the workflow name matches exactly: `release.yml`
 - Check that `id-token: write` permission is set
+- For a brand-new package, publish it once manually before expecting OIDC releases to work
 
 ### MCP Registry workflow doesn't trigger
 
