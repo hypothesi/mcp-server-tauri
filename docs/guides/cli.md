@@ -1,6 +1,7 @@
 # CLI Usage
 
-Use `@hypothesi/tauri-mcp-cli` when you want to call the Tauri MCP tools from a terminal, script, or CI pipeline instead of from an MCP client.
+Use `@hypothesi/tauri-mcp-cli` when you want to call the Tauri MCP tools from a terminal,
+script, or CI pipeline instead of from an MCP client.
 
 ## Install
 
@@ -28,7 +29,8 @@ npx @hypothesi/tauri-mcp-cli <command>
 tauri-mcp driver-session start --port 9223
 ```
 
-The `--port` must match the WebSocket port the MCP Bridge plugin is listening on (default: 9223).
+The `--port` must match the WebSocket port the MCP Bridge plugin is listening on (default:
+9223).
 
 ### 2. Call tools in separate invocations
 
@@ -60,7 +62,8 @@ This makes it suitable for scripted workflows where each step is a separate comm
 - Image tools write image files to disk by default.
 - Default filename: `<tool-name>-<timestamp>.png` in the current directory.
 - Use `--file <path>` to control the image filename.
-- Use `--json` for structured JSON output. Images are still written to disk; the JSON includes their file paths.
+- Use `--json` for structured JSON output. Images are still written to disk; the JSON
+  includes their file paths.
 - Use `--raw <json>` to pass raw JSON arguments directly to the underlying tool.
 
 ## Daemon Management
@@ -100,16 +103,20 @@ tauri-mcp driver-session status --json
 
 ### Stale daemon config
 
-MCPorter reads `~/.mcporter/tauri-mcp-cli.json`. If it becomes corrupted, delete it and run any `tauri-mcp` command to regenerate it.
+MCPorter reads `~/.mcporter/tauri-mcp-cli.json`. If it becomes corrupted, delete it and
+run any `tauri-mcp` command to regenerate it.
 
 ## Agent Skills
 
-This package ships one bundled [Agent Skill](https://agentskills.io) that AI coding agents can load automatically. After installing the package, run:
+This package ships one bundled [Agent Skill](https://agentskills.io) that AI coding agents
+can load automatically. After installing the package, run:
 
 ```bash
 npx @tanstack/intent@latest install
 ```
 
-This wires the CLI's bundled `tauri-mcp-cli` skill into your agent config (CLAUDE.md, .cursorrules, etc.) so agents understand session lifecycle, screenshot patterns, IPC debugging, and device workflows without extra prompting.
+This wires the CLI's bundled `tauri-mcp-cli` skill into your agent config (CLAUDE.md,
+.cursorrules, etc.) so agents understand session lifecycle, screenshot patterns, IPC
+debugging, and device workflows without extra prompting.
 
 See the [Agent Skills guide](/guides/agent-skills) for the full skills inventory.

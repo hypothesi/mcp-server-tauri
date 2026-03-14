@@ -9,13 +9,16 @@ head:
 
 # Agent Skills
 
-The `@hypothesi/tauri-mcp-cli` package ships one bundled **Agent Skill** — a portable instruction set that teaches AI coding agents how to use the Tauri MCP CLI correctly. The skill covers session lifecycle, UI automation, screenshots and inspection, IPC debugging, daemon recovery, and mobile workflows in one place.
-
-Skills work with **40+ agents** including Claude Code, Cursor, Copilot, Windsurf, Gemini CLI, OpenCode, Cline, and others.
+The `@hypothesi/tauri-mcp-cli` package ships one bundled **Agent Skill** — a portable
+instruction set that teaches AI coding agents how to use the Tauri MCP CLI correctly. The
+skill covers session lifecycle, UI automation, screenshots and inspection, IPC debugging,
+daemon recovery, and mobile workflows in one place. Skills work with **40+ agents**
+including Claude Code, Cursor, Copilot, Windsurf, Gemini CLI, OpenCode, Cline, and others.
 
 ## Install with `npx skills` (Recommended)
 
-The [skills](https://www.npmjs.com/package/skills) CLI from [skills.sh](https://skills.sh) is the easiest way to install:
+The [skills](https://www.npmjs.com/package/skills) CLI from [skills.sh](https://skills.sh)
+is the easiest way to install:
 
 ```bash
 # Interactive — choose which skills and agents to target
@@ -51,14 +54,16 @@ npx skills add hypothesi/mcp-server-tauri --list
 
 ## Alternative: Install via npm + intent
 
-If you prefer not to use `npx skills`, you can install the CLI package and wire the bundled skill with the `@tanstack/intent` tool:
+If you prefer not to use `npx skills`, you can install the CLI package and wire the
+bundled skill with the `@tanstack/intent` tool:
 
 ```bash
 npm install -g @hypothesi/tauri-mcp-cli
 npx @tanstack/intent@latest install
 ```
 
-This scans the installed package's `skills/` directory and wires the bundled skill into your agent configuration files (`CLAUDE.md`, `.cursorrules`, etc.).
+This scans the installed package's `skills/` directory and wires the bundled skill into
+your agent configuration files (`CLAUDE.md`, `.cursorrules`, etc.).
 
 ## Alternative: Claude Code Plugin
 
@@ -85,7 +90,8 @@ license: MIT
 # Instructions for the agent...
 ```
 
-Skills follow the [open Agent Skills specification](https://skills.sh/docs) and are compatible with any agent that supports the format.
+Skills follow the [open Agent Skills specification](https://skills.sh/docs) and are
+compatible with any agent that supports the format.
 
 ## Managing Installed Skills
 
@@ -104,4 +110,5 @@ npx skills remove tauri-mcp-cli
 
 - [skills.sh documentation](https://skills.sh/docs)
 - [CLI Usage Guide](/guides/cli)
-- [Vercel Agent Skills spec](https://vercel.com/kb/guide/agent-skills-creating-installing-and-sharing-reusable-agent-context)
+- [Vercel Agent Skills
+  spec](https://vercel.com/kb/guide/agent-skills-creating-installing-and-sharing-reusable-agent-context)
