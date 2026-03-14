@@ -80,6 +80,15 @@ fn native_evaluate_js<R: Runtime>(
                 let wkwebview: &WKWebView =
                     &*(webview.inner() as *const _ as *const WKWebView);
 
+                // Make sure the window is visible and ordered front
+                // so WKWebView processes JS even when the app isn't focused.
+                // orderFrontRegardless brings the window forward without
+                // activating the app (won't steal focus from terminal).
+                let ns_window: *mut objc2::runtime::AnyObject = objc2::msg_send![wkwebview, window];
+                if !ns_window.is_null() {
+                    let _: () = objc2::msg_send![ns_window, orderFrontRegardless];
+                }
+
                 let tx_clone = tx.clone();
                 let handler =
                     RcBlock::new(move |result: *mut objc2::runtime::AnyObject, error: *mut NSError| {
