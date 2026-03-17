@@ -1,13 +1,13 @@
 {
-  "name": "tauri-mcp-skills",
-  "owner": {
-    "name": "hypothesi"
-  },
-  "plugins": [
-    {
-      "name": "tauri-mcp",
-      "source": "./packages/cli",
-      "description": "Agent Skills for automating and testing Tauri v2 applications"
-    }
-  ]
+   "name": "tauri-mcp-skills",
+   "owner": {
+      "name": "hypothesi"
+   },
+   "plugins": [
+      {
+         "name": "tauri-mcp-cli",
+         "source": "./packages/cli",
+         "description": "Agent Skills for automating and testing Tauri v2 applications"
+      }
+   ]
 }
