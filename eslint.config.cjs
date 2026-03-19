@@ -92,6 +92,30 @@ module.exports = [
    },
    {
       files: [
+         'packages/cli/src/**/*.ts',
+         'packages/cli/src/**/*.js',
+         'packages/cli/src/types/**/*.d.ts',
+      ],
+      languageOptions: {
+         parserOptions: {
+            project: 'packages/cli/tsconfig.json',
+         },
+      },
+   },
+   {
+      files: [
+         'packages/cli/tests/**/*.ts',
+         'packages/cli/tests/**/*.js',
+         'packages/cli/vitest.config.ts',
+      ],
+      languageOptions: {
+         parserOptions: {
+            project: 'packages/cli/tsconfig.test.json',
+         },
+      },
+   },
+   {
+      files: [
          '**/tests/**/*.ts',
          '**/tests/**/*.js',
          '**/*.test.ts',

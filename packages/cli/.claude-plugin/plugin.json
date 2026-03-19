@@ -1,0 +1,11 @@
+{
+   "name": "tauri-mcp-cli",
+   "description": "Agent Skills for automating and testing Tauri v2 applications",
+   "version": "0.10.0",
+   "author": {
+      "name": "hypothesi"
+   },
+   "license": "MIT",
+   "homepage": "https://github.com/hypothesi/mcp-server-tauri",
+   "repository": "https://github.com/hypothesi/mcp-server-tauri"
+}

@@ -896,6 +896,55 @@ html {
   line-height: 1.5;
 }
 
+/* NEW banner */
+.new-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 80rem;
+  margin: 0 auto 32px auto;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(139, 92, 246, 0.10));
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.new-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.4);
+  animation: badge-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 2px 6px rgba(14, 165, 233, 0.4); }
+  50%      { box-shadow: 0 2px 12px rgba(139, 92, 246, 0.6); }
+}
+
+.new-text {
+  color: var(--vp-c-text-2);
+}
+
+.new-text a {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.new-text a:hover {
+  text-decoration: underline;
+}
+
 /* CTA section */
 .cta-section {
   text-align: center;

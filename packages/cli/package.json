@@ -1,0 +1,61 @@
+{
+   "name": "@hypothesi/tauri-mcp-cli",
+   "version": "0.10.0",
+   "description": "CLI wrapper for calling the Tauri MCP server tools directly from the terminal",
+   "type": "module",
+   "main": "./dist/index.js",
+   "types": "./dist/index.d.ts",
+   "bin": {
+      "tauri-mcp": "./dist/index.js",
+      "intent": "./bin/intent.js"
+   },
+   "scripts": {
+      "build": "tsc && chmod +x dist/index.js",
+      "test": "vitest run",
+      "dev": "tsc --watch",
+      "skills:validate": "intent validate skills/",
+      "skills:stale": "cd ../.. && npx @tanstack/intent stale",
+      "prepublishOnly": "npm run build && npm run skills:validate"
+   },
+   "repository": {
+      "type": "git",
+      "url": "https://github.com/hypothesi/mcp-server-tauri.git",
+      "directory": "packages/cli"
+   },
+   "files": [
+      "dist",
+      "package.json",
+      "README.md",
+      "LICENSE",
+      "skills",
+      "!skills/_artifacts",
+      ".claude-plugin",
+      "gemini-extension.json",
+      "GEMINI.md",
+      "bin"
+   ],
+   "author": "hypothesi",
+   "license": "MIT",
+   "keywords": [
+      "mcp",
+      "model-context-protocol",
+      "tauri",
+      "cli",
+      "automation",
+      "debugging",
+      "tanstack-intent"
+   ],
+   "dependencies": {
+      "@hypothesi/tauri-mcp-server": "0.10.0",
+      "commander": "14.0.2",
+      "mcporter": "0.7.3"
+   },
+   "devDependencies": {
+      "@tanstack/intent": "^0.0.14",
+      "@types/node": "22.19.1",
+      "vitest": "4.0.13"
+   },
+   "publishConfig": {
+      "access": "public"
+   }
+}

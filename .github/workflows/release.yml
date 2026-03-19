@@ -6,6 +6,7 @@ on:
       - "v*"                          # Release all packages with same version
       - "tauri-plugin-mcp-bridge/v*"  # Release only the plugin
       - "mcp-server/v*"               # Release only the server
+      - "tauri-mcp-cli/v*"            # Release only the CLI
 
 jobs:
   determine-packages:
@@ -14,6 +15,7 @@ jobs:
     outputs:
       release-plugin: ${{ steps.check.outputs.plugin }}
       release-server: ${{ steps.check.outputs.server }}
+      release-cli: ${{ steps.check.outputs.cli }}
       version: ${{ steps.check.outputs.version }}
     steps:
       - name: Checkout code
@@ -32,15 +34,23 @@ jobs:
             VERSION=${TAG#tauri-plugin-mcp-bridge/v}
             echo "plugin=true" >> $GITHUB_OUTPUT
             echo "server=false" >> $GITHUB_OUTPUT
+            echo "cli=false" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == "mcp-server/v"* ]]; then
             VERSION=${TAG#mcp-server/v}
             echo "plugin=false" >> $GITHUB_OUTPUT
             echo "server=true" >> $GITHUB_OUTPUT
+            echo "cli=false" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == "tauri-mcp-cli/v"* ]]; then
+            VERSION=${TAG#tauri-mcp-cli/v}
+            echo "plugin=false" >> $GITHUB_OUTPUT
+            echo "server=false" >> $GITHUB_OUTPUT
+            echo "cli=true" >> $GITHUB_OUTPUT
           else
             # Generic version tag - release all packages
             VERSION=${TAG#v}
             echo "plugin=true" >> $GITHUB_OUTPUT
             echo "server=true" >> $GITHUB_OUTPUT
+            echo "cli=true" >> $GITHUB_OUTPUT
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -109,6 +119,42 @@ jobs:
           npm run build --workspace=@hypothesi/tauri-mcp-server
           npm run test:unit --workspace=@hypothesi/tauri-mcp-server
           npx tsc --noEmit --project packages/mcp-server/tsconfig.json
+
+  test-cli:
+    name: Test @hypothesi/tauri-mcp-cli
+    needs: determine-packages
+    if: needs.determine-packages.outputs.release-cli == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ["24", "20"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI dependencies
+        run: |
+          npm run build --workspace=@hypothesi/tauri-mcp-server
+          npm run build --workspace=@hypothesi/tauri-mcp-cli
+
+      - name: Test CLI
+        run: |
+          cd packages/cli
+          npm run test
+          cd ../..
+          npx tsc --noEmit --project packages/cli/tsconfig.json
+
+      - name: Validate agent skills
+        run: npm run skills:validate --workspace=@hypothesi/tauri-mcp-cli
 
   release-plugin:
     name: Release tauri-plugin-mcp-bridge
@@ -201,10 +247,46 @@ jobs:
           npm publish --access public --provenance
         continue-on-error: false
 
+  release-cli:
+    name: Release @hypothesi/tauri-mcp-cli
+    needs: [determine-packages, test-cli]
+    if: needs.determine-packages.outputs.release-cli == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install and update version
+        run: |
+          npm ci
+          cd packages/cli
+          npm version ${{ needs.determine-packages.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Build
+        run: |
+          npm run build --workspace=@hypothesi/tauri-mcp-server
+          cd packages/cli
+          npm run build
+
+      - name: Publish to NPM
+        run: |
+          cd packages/cli
+          npm publish --access public --provenance
+        continue-on-error: false
+
   create-release:
     name: Create GitHub Release
-    needs: [determine-packages, release-plugin, release-server]
-    if: ${{ !cancelled() && (needs.release-plugin.result == 'success' || needs.release-server.result == 'success' || needs.release-plugin.result == 'skipped' || needs.release-server.result == 'skipped') }}
+    needs: [determine-packages, release-plugin, release-server, release-cli]
+    if: ${{ !cancelled() && (needs.release-plugin.result == 'success' || needs.release-server.result == 'success' || needs.release-cli.result == 'success' || needs.release-plugin.result == 'skipped' || needs.release-server.result == 'skipped' || needs.release-cli.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -256,6 +338,20 @@ jobs:
               SERVER_CHANGES=$(extract_changelog "packages/mcp-server/CHANGELOG.md" "$VERSION")
               if [[ -n "$SERVER_CHANGES" ]]; then
                 echo "$SERVER_CHANGES"
+              else
+                echo "_No changes to this package._"
+              fi
+              echo ""
+            fi
+
+            if [[ "${{ needs.determine-packages.outputs.release-cli }}" == "true" ]]; then
+              echo "## @hypothesi/tauri-mcp-cli"
+              echo ""
+              echo "[![npm](https://img.shields.io/npm/v/@hypothesi/tauri-mcp-cli)](https://www.npmjs.com/package/@hypothesi/tauri-mcp-cli)"
+              echo ""
+              CLI_CHANGES=$(extract_changelog "packages/cli/CHANGELOG.md" "$VERSION")
+              if [[ -n "$CLI_CHANGES" ]]; then
+                echo "$CLI_CHANGES"
               else
                 echo "_No changes to this package._"
               fi

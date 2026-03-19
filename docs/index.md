@@ -22,17 +22,22 @@ hero:
 ---
 
 <script setup>
-import { MousePointer, Target, Zap, Smartphone, Wrench, BookOpen, MessageSquareCode } from 'lucide-vue-next';
+import { MousePointer, Target, Zap, Smartphone, Wrench, BookOpen, MessageSquareCode, Terminal, Puzzle } from 'lucide-vue-next';
 import { withBase } from 'vitepress';
 import { data as versions } from './.vitepress/versions.data';
 </script>
 
+<div class="new-banner">
+  <span class="new-badge">NEW</span>
+  <span class="new-text"><strong>Tauri MCP CLI</strong> — call every MCP tool from your terminal, CI pipeline, or AI agent. <a :href="withBase('/guides/cli')">Learn more →</a></span>
+</div>
+
 <div class="features-section">
   <div class="features-grid">
+    <Feature icon="terminal" title="CLI &amp; Agent Skills" details="Run every MCP tool from the terminal. Ships agent skills for Claude Code, Cursor, Gemini CLI, and 40+ agents." />
     <Feature icon="camera" title="Visual Context" details="Capture and analyze screenshots to understand UI state and help with visual debugging" />
     <Feature icon="bug" title="Live Debugging" details="Access console logs, window state, and system logs in real-time" />
     <Feature icon="activity" title="IPC Monitoring" details="Capture and inspect Tauri IPC calls between frontend and backend in real-time" />
-    <Feature icon="smartphone" title="Device Management" details="List Android emulators and iOS simulators for mobile testing" />
     <Feature icon="mouse-pointer" title="WebView Automation" details="Click, type, scroll, find elements, pick elements visually, and verify UI state in your app's webview" />
     <Feature icon="plug" title="Plugin Bridge" details="Execute IPC commands and interact with the Tauri plugin system" />
   </div>
@@ -44,7 +49,20 @@ This is an **unofficial** community project, independently developed to enhance 
 
 ## What Is This?
 
-**MCP Server for [Tauri<sup>&reg;</sup>](https://tauri.app)** bridges AI assistants with your Tauri development environment via the Model Context Protocol. Control your entire dev workflow through natural language - test UI, debug issues, monitor IPC calls, and inspect your app's state.
+**MCP Server for [Tauri<sup>&reg;</sup>](https://tauri.app)** bridges AI assistants with your Tauri development environment via the Model Context Protocol. Control your entire dev workflow through natural language — test UI, debug issues, monitor IPC calls, and inspect your app's state.
+
+### Two Ways to Use It
+
+<div class="tool-categories">
+   <div class="tool-category">
+      <Terminal :size="20" :stroke-width="2" class="category-icon" />
+      <div><strong>CLI</strong> — <code>npm i -g @hypothesi/tauri-mcp-cli</code> and call tools directly from your terminal, scripts, or CI. Ships <a :href="withBase('/guides/agent-skills')">Agent Skills</a> so coding agents learn correct usage automatically.</div>
+   </div>
+   <div class="tool-category">
+      <Puzzle :size="20" :stroke-width="2" class="category-icon" />
+      <div><strong>MCP Server</strong> — connect Claude Code, Cursor, VS Code, Windsurf, or any MCP-compatible client to your running Tauri app. Also available as a <a :href="withBase('/guides/claude-code-plugin')">Claude Code Plugin</a>.</div>
+   </div>
+</div>
 
 ## Quick Start
 

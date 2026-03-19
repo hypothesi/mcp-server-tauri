@@ -52,6 +52,18 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
 
 Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
 
+## Terminal CLI
+
+If you want to call the same tools directly from a shell, install the companion CLI package:
+
+```bash
+npm install -g @hypothesi/tauri-mcp-cli
+tauri-mcp driver-session start --port 9223
+tauri-mcp driver-session status --json
+```
+
+The CLI keeps the underlying MCP server warm in the background so stateful commands such as `driver_session` work across separate invocations.
+
 ## Multi-App Support
 
 The MCP server supports connecting to multiple Tauri apps simultaneously. Each app runs on a unique port, and the most recently connected app becomes the "default" app.

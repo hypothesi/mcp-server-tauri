@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-16
+
+### Added
+- Add `@hypothesi/tauri-mcp-cli`, a direct terminal CLI for the Tauri MCP server backed by MCPorter keep-alive daemon support
+- Add Claude Code Plugin packaging for the CLI package
+- Add Gemini CLI extension metadata and docs for the CLI package
+- Add TanStack Intent Agent Skills packaging and guides for the CLI package
+
+### Fixed
+- Fix CLI-only release automation by adding the `tauri-mcp-cli/v*` workflow trigger
+
+### Documentation
+- Clarify CLI publishing setup and add dedicated guides for Agent Skills and the Claude Code Plugin
+
 ## [0.9.0] - 2026-02-20
 
 ### Added

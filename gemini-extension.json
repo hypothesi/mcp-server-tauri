@@ -1,0 +1,6 @@
+{
+   "name": "tauri-mcp",
+   "version": "0.10.0",
+   "description": "Agent Skills for automating and testing Tauri v2 applications",
+   "contextFileName": "GEMINI.md"
+}

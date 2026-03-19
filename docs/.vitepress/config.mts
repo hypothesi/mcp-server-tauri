@@ -81,6 +81,9 @@ export default defineConfig({
                text: 'Guides',
                items: [
                   { text: 'Getting Started', link: '/guides/getting-started' },
+                  { text: 'CLI Usage', link: '/guides/cli' },
+                  { text: 'Agent Skills', link: '/guides/agent-skills' },
+                  { text: 'Claude Code Plugin', link: '/guides/claude-code-plugin' },
                   { text: 'Using Prompts', link: '/guides/prompts' },
                   { text: 'Element Picker', link: '/guides/element-picker' },
                ],

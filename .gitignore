@@ -40,5 +40,8 @@ ai.json
 .claude
 .serena
 
+# Redis
+*.rdb
+
 # Test artifacts
 packages/mcp-server/.test-app-port
