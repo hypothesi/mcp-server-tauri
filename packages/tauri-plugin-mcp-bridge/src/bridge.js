@@ -58,15 +58,20 @@
          return function() {
             args = Array.prototype.slice.call(arguments);
 
-            try {
-               message = args
-                  .map(function(a) {
-                     return typeof a === 'object' ? JSON.stringify(a) : String(a);
-                  })
-                  .join(' ');
-            } catch(e) {
-               message = args.map(String).join(' ');
-            }
+            message = args
+               .map(function(a) {
+                  if (typeof a !== 'object' || a === null) {
+                     return String(a);
+                  }
+                  try {
+                     return JSON.stringify(a);
+                  } catch(_) {
+                     // JSON.stringify fails on circular references or null-prototype objects.
+                     // Values cannot be serialized — listing keys only.
+                     return '[non-serializable, keys only: ' + Object.keys(a).join(', ') + ']';
+                  }
+               })
+               .join(' ');
 
             window.__MCP_CONSOLE_LOGS__.push({
                level: level,
