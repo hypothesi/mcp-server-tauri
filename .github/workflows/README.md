@@ -55,6 +55,8 @@ This directory contains GitHub Actions workflows for CI/CD automation.
 
 **Purpose**: Publish MCP server metadata to the official MCP Registry
 
+See `specs/publishing-to-mcp-registry.md` for the full maintainer guide.
+
 **Features**:
 - Depends on Release Packages workflow via `workflow_run`
 - Only runs if Release Packages succeeded
