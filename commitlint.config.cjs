@@ -15,6 +15,8 @@ module.exports = {
          2,
          'always',
          baseScopes.concat([
+            'mcp',
+            'bridge',
             'tauri-mcp-server',
             'tauri-plugin-mcp-bridge',
             'cli',
