@@ -1,11 +1,5 @@
-# Rust checks
-cd packages/tauri-plugin-mcp-bridge
-cargo fmt --check
-cargo clippy -- -D warnings
-cd ../..
-
 # JS/TS checks
-npm run eslint
+npm run standards
 
 # Commitlint (skip if no commits yet)
 if git rev-parse HEAD~1 >/dev/null 2>&1; then
