@@ -20,31 +20,36 @@ pub async fn execute_js<R: Runtime>(
     script: String,
     state: State<'_, ScriptExecutor>,
 ) -> Result<Value, String> {
-    let prepared_script = prepare_script(&script);
-
-    // Wrap the user script to return a JSON string.
-    // Avoid async/await here since WKWebView's evaluateJavaScript
-    // doesn't handle Promise results well in the completion handler.
-    let wrapped_script = format!(
-        r#"
-        (function() {{
-            try {{
-                var __result = (function() {{ {prepared_script} }})();
-                return __result !== undefined ? JSON.stringify(__result) : "null";
-            }} catch (error) {{
-                return JSON.stringify({{ "__mcp_error__": error.message || String(error) }});
-            }}
-        }})()
-        "#
-    );
-
     // Try native evaluation first (macOS), fall back to eval + IPC
     #[cfg(target_os = "macos")]
     {
-        match native_evaluate_js(&window, &wrapped_script) {
-            Ok(result) => return Ok(result),
-            Err(e) => {
-                mcp_log_error("EXECUTE_JS", &format!("Native eval failed, falling back: {e}"));
+        let prepared_script = prepare_script(&script);
+
+        // Wrap the user script to return a JSON string.
+        // Avoid async/await here since WKWebView's evaluateJavaScript
+        // doesn't handle Promise results well in the completion handler.
+        let wrapped_script = format!(
+            r#"
+            (function() {{
+                try {{
+                    var __result = (function() {{ {prepared_script} }})();
+                    return __result !== undefined ? JSON.stringify(__result) : "null";
+                }} catch (error) {{
+                    return JSON.stringify({{ "__mcp_error__": error.message || String(error) }});
+                }}
+            }})()
+            "#
+        );
+
+        if should_use_native_evaluation(&script) {
+            match native_evaluate_js(&window, &wrapped_script) {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    mcp_log_error(
+                        "EXECUTE_JS",
+                        &format!("Native eval failed, falling back: {e}"),
+                    );
+                }
             }
         }
     }
@@ -77,8 +82,7 @@ fn native_evaluate_js<R: Runtime>(
     window
         .with_webview(move |webview| {
             unsafe {
-                let wkwebview: &WKWebView =
-                    &*(webview.inner() as *const _ as *const WKWebView);
+                let wkwebview: &WKWebView = &*(webview.inner() as *const _ as *const WKWebView);
 
                 // Make sure the window is visible and ordered front
                 // so WKWebView processes JS even when the app isn't focused.
@@ -90,8 +94,8 @@ fn native_evaluate_js<R: Runtime>(
                 }
 
                 let tx_clone = tx.clone();
-                let handler =
-                    RcBlock::new(move |result: *mut objc2::runtime::AnyObject, error: *mut NSError| {
+                let handler = RcBlock::new(
+                    move |result: *mut objc2::runtime::AnyObject, error: *mut NSError| {
                         if let Some(tx) = tx_clone.lock().unwrap().take() {
                             if !error.is_null() {
                                 let err = &*error;
@@ -103,7 +107,9 @@ fn native_evaluate_js<R: Runtime>(
                                     Some(s) => {
                                         // Check for error sentinel
                                         if let Ok(val) = serde_json::from_str::<Value>(&s) {
-                                            if let Some(err) = val.get("__mcp_error__").and_then(|v| v.as_str()) {
+                                            if let Some(err) =
+                                                val.get("__mcp_error__").and_then(|v| v.as_str())
+                                            {
                                                 let _ = tx.send(Ok(serde_json::json!({
                                                     "success": false,
                                                     "error": err
@@ -135,7 +141,8 @@ fn native_evaluate_js<R: Runtime>(
                                 })));
                             }
                         }
-                    });
+                    },
+                );
 
                 wkwebview.evaluateJavaScript_completionHandler(&script_for_closure, Some(&handler));
             }
@@ -164,6 +171,18 @@ unsafe fn result_to_string(obj: *mut objc2::runtime::AnyObject) -> Option<String
     } else {
         None
     }
+}
+
+#[cfg(target_os = "macos")]
+fn should_use_native_evaluation(script: &str) -> bool {
+    let trimmed = script.trim();
+
+    !trimmed.contains("await ")
+        && !trimmed.contains("async ")
+        && !trimmed.contains("(async")
+        && !trimmed.contains(".then(")
+        && !trimmed.contains("Promise.")
+        && !trimmed.contains("new Promise(")
 }
 
 /// Fallback: eval + IPC event listener approach.
@@ -343,5 +362,36 @@ fn prepare_script(script: &str) -> String {
         format!("return {trimmed}")
     } else {
         script.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::prepare_script;
+
+    #[cfg(target_os = "macos")]
+    use super::should_use_native_evaluation;
+
+    #[test]
+    fn adds_return_for_simple_expression() {
+        assert_eq!(prepare_script("document.title"), "return document.title");
+    }
+
+    #[test]
+    fn keeps_multi_statement_script_unchanged() {
+        let script = "const title = document.title; return title;";
+        assert_eq!(prepare_script(script), script);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn skips_native_eval_for_async_scripts() {
+        assert!(!should_use_native_evaluation(
+            "return (async () => await document.title)();"
+        ));
+        assert!(!should_use_native_evaluation(
+            "return fetch('/').then((r) => r.text());"
+        ));
+        assert!(should_use_native_evaluation("return document.title;"));
     }
 }

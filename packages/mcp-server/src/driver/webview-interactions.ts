@@ -247,12 +247,9 @@ export async function screenshot(options: ScreenshotOptions = {}): Promise<Scree
          throw new Error('Screenshot capture failed: no image data');
       }
 
-      // Decode base64 and write to file
-      const buffer = Buffer.from(imageContent.data, 'base64');
-
       const resolvedPath = resolve(filePath);
 
-      await writeFile(resolvedPath, buffer);
+      await writeFile(resolvedPath, imageContent.data, 'base64');
 
       return { filePath: resolvedPath, format };
    }

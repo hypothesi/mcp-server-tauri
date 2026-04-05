@@ -728,6 +728,8 @@ fn inject_script_to_window<R: Runtime>(
         ),
     };
 
+    prepare_window_for_eval(window)?;
+
     window
         .eval(&script)
         .map_err(|e| format!("Failed to inject script: {e}"))
@@ -766,6 +768,8 @@ fn remove_script_from_window<R: Runtime>(
         "#
     );
 
+    prepare_window_for_eval(window)?;
+
     window
         .eval(&script)
         .map_err(|e| format!("Failed to remove script: {e}"))
@@ -796,9 +800,32 @@ fn clear_scripts_from_window<R: Runtime>(window: &WebviewWindow<R>) -> Result<()
         })();
     "#;
 
+    prepare_window_for_eval(window)?;
+
     window
         .eval(script)
         .map_err(|e| format!("Failed to clear scripts: {e}"))
+}
+
+#[cfg(target_os = "macos")]
+fn prepare_window_for_eval<R: Runtime>(window: &WebviewWindow<R>) -> Result<(), String> {
+    use objc2_web_kit::WKWebView;
+
+    window
+        .with_webview(move |webview| unsafe {
+            let wkwebview: &WKWebView = &*(webview.inner() as *const _ as *const WKWebView);
+            let ns_window: *mut objc2::runtime::AnyObject = objc2::msg_send![wkwebview, window];
+
+            if !ns_window.is_null() {
+                let _: () = objc2::msg_send![ns_window, orderFrontRegardless];
+            }
+        })
+        .map_err(|e| format!("Failed to prepare webview for eval: {e}"))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn prepare_window_for_eval<R: Runtime>(_window: &WebviewWindow<R>) -> Result<(), String> {
+    Ok(())
 }
 
 /// Clears all MCP-managed scripts from the webview DOM.

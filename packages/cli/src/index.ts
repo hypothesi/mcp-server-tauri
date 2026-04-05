@@ -484,7 +484,7 @@ async function writeImageFiles(
       }
 
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
-      await fs.writeFile(outputPath, Buffer.from(image.data, 'base64'));
+      await fs.writeFile(outputPath, image.data, 'base64');
 
       return {
          path: outputPath,
