@@ -70,14 +70,20 @@ export function buildTypeScript(selector: string, text: string, strategy?: strin
          var proto = element.tagName === 'TEXTAREA'
             ? HTMLTextAreaElement.prototype
             : HTMLInputElement.prototype;
-         var nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-         nativeSetter.call(element, text);
+         var descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+
+         if (descriptor && descriptor.set) {
+            descriptor.set.call(element, text);
+         } else {
+            element.value = text;
+         }
 
          // Reset React's internal value tracker so it detects the change
          if (element._valueTracker) element._valueTracker.setValue('');
 
          // Dispatch proper InputEvent (not generic Event) for React compatibility
          element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+         element.dispatchEvent(new Event('change', { bubbles: true }));
 
          var msg = 'Typed "' + text + '" into ' + selector;
          var count = window.__MCP__.countAll(selector, strategy);
