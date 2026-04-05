@@ -139,7 +139,7 @@ Just type the command in your AI assistant to start a guided workflow.
 
 ---
 
-## 🧰 Available Tools (20 total)
+## 🧰 Available Tools (21 total)
 
 <details>
 <summary><strong>Setup & Configuration</strong></summary>

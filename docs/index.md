@@ -179,7 +179,7 @@ The server provides **slash commands** ([prompts](https://modelcontextprotocol.i
 
 [Learn more about prompts →](/api/prompts)
 
-## 20 Powerful Tools
+## 21 Powerful Tools
 
 The server exposes tools across 4 categories:
 

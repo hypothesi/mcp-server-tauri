@@ -36,8 +36,8 @@ The `--port` must match the WebSocket port the MCP Bridge plugin is listening on
 
 ```bash
 tauri-mcp webview-screenshot --file screenshot.png
-tauri-mcp webview-click --selector "#submit-btn"
-tauri-mcp webview-execute-script --script "document.title"
+tauri-mcp webview-interact --action click --selector "#submit-btn"
+tauri-mcp webview-execute-js --script "document.title"
 tauri-mcp driver-session status --json
 ```
 
