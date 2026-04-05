@@ -63,6 +63,7 @@ export async function ensureReady(): Promise<void> {
 
    // Register the resolve-ref helper so ref-based selectors work in all tools
    await registerScript(RESOLVE_REF_SCRIPT_ID, 'inline', getResolveRefSource());
+   await waitForResolveRefHelper(session);
 
    isInitialized = true;
 }
@@ -72,6 +73,29 @@ export async function ensureReady(): Promise<void> {
  */
 export function resetInitialization(): void {
    isInitialized = false;
+}
+
+async function waitForResolveRefHelper(session: ReturnType<typeof getDefaultSession>): Promise<void> {
+   if (!session) {
+      throw new Error('No active session available while registering resolve-ref helper.');
+   }
+
+   for (let attempt = 0; attempt < 20; attempt++) {
+      const response = await session.client.sendCommand({
+         command: 'execute_js',
+         args: {
+            script: 'return !!(window.__MCP__ && typeof window.__MCP__.resolveRef === "function")',
+         },
+      }, 2000);
+
+      if (response.success && response.data === true) {
+         return;
+      }
+
+      await new Promise((resolve) => { return setTimeout(resolve, 50); });
+   }
+
+   throw new Error('Resolve-ref helper was not available in the webview after registration.');
 }
 
 // ============================================================================
