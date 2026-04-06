@@ -47,9 +47,22 @@
       }
 
       if (strategy === 'text') {
+         // First try: match element text content
          var xpath = xpathForText(selectorOrRef);
          var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-         return result.singleNodeValue;
+         if (result.singleNodeValue) return result.singleNodeValue;
+
+         // Fallback: search placeholder, aria-label, and title attributes
+         var attrSelectors = [
+            '[placeholder*="' + selectorOrRef.replace(/"/g, '\\"') + '"]',
+            '[aria-label*="' + selectorOrRef.replace(/"/g, '\\"') + '"]',
+            '[title*="' + selectorOrRef.replace(/"/g, '\\"') + '"]',
+         ];
+         for (var i = 0; i < attrSelectors.length; i++) {
+            var el = document.querySelector(attrSelectors[i]);
+            if (el) return el;
+         }
+         return null;
       }
 
       if (strategy === 'xpath') {
@@ -78,11 +91,24 @@
       }
 
       if (strategy === 'text') {
+         // First try: match element text content
          var xpath = xpathForText(selector);
          var snapshot = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
          var results = [];
          for (var i = 0; i < snapshot.snapshotLength; i++) {
             results.push(snapshot.snapshotItem(i));
+         }
+         if (results.length > 0) return results;
+
+         // Fallback: search placeholder, aria-label, and title attributes
+         var attrSelectors = [
+            '[placeholder*="' + selector.replace(/"/g, '\\"') + '"]',
+            '[aria-label*="' + selector.replace(/"/g, '\\"') + '"]',
+            '[title*="' + selector.replace(/"/g, '\\"') + '"]',
+         ];
+         for (var i = 0; i < attrSelectors.length; i++) {
+            var found = Array.from(document.querySelectorAll(attrSelectors[i]));
+            if (found.length > 0) return results.concat(found);
          }
          return results;
       }

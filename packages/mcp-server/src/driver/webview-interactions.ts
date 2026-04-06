@@ -35,7 +35,8 @@ export const WindowTargetSchema = z.object({
  */
 const selectorStrategyField = z.enum([ 'css', 'xpath', 'text' ]).default('css').describe(
    'Selector strategy: "css" (default) for CSS selectors, "xpath" for XPath expressions, ' +
-   '"text" to find elements containing the given text. Ref IDs (e.g., "ref=e3") work with any strategy.'
+   '"text" to find elements by text content, with fallback to placeholder, aria-label, ' +
+   'and title attributes. Ref IDs (e.g., "ref=e3") work with any strategy.'
 );
 
 // ============================================================================

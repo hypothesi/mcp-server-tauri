@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { connectPlugin } from './plugin-client.js';
-import { hasActiveSession, getDefaultSession, resolveTargetApp } from './session-manager.js';
+import { hasActiveSession, getDefaultSession, resolveTargetApp, manageDriverSession } from './session-manager.js';
 import { createMcpLogger } from '../logger.js';
 import {
    buildScreenshotScript,
@@ -47,11 +47,15 @@ export async function ensureReady(): Promise<void> {
       return;
    }
 
-   // Require an active session to prevent connecting to wrong app
+   // Auto-connect if no active session
    if (!hasActiveSession()) {
-      throw new Error(
-         'No active session. Call driver_session with action "start" first to connect to a Tauri app.'
-      );
+      const result = await manageDriverSession('start');
+
+      if (!hasActiveSession()) {
+         throw new Error(
+            'Auto-connect failed: ' + result + '. Call driver_session with action "start" to connect manually.'
+         );
+      }
    }
 
    // Get default session for initial connection
