@@ -75,9 +75,10 @@ export async function registerScript(
    id: string,
    type: ScriptType,
    content: string,
-   windowLabel?: string
+   windowLabel?: string,
+   appIdentifier?: string | number
 ): Promise<RegisterScriptResponse> {
-   const client = await ensureSessionAndConnect();
+   const client = await ensureSessionAndConnect(appIdentifier);
 
    const response = await client.sendCommand({
       command: 'register_script',
@@ -100,9 +101,10 @@ export async function registerScript(
  */
 export async function removeScript(
    id: string,
-   windowLabel?: string
+   windowLabel?: string,
+   appIdentifier?: string | number
 ): Promise<RemoveScriptResponse> {
-   const client = await ensureSessionAndConnect();
+   const client = await ensureSessionAndConnect(appIdentifier);
 
    const response = await client.sendCommand({
       command: 'remove_script',
@@ -122,8 +124,11 @@ export async function removeScript(
  * @param windowLabel - Optional window label to target
  * @returns Promise resolving to the number of scripts cleared
  */
-export async function clearScripts(windowLabel?: string): Promise<ClearScriptsResponse> {
-   const client = await ensureSessionAndConnect();
+export async function clearScripts(
+   windowLabel?: string,
+   appIdentifier?: string | number
+): Promise<ClearScriptsResponse> {
+   const client = await ensureSessionAndConnect(appIdentifier);
 
    const response = await client.sendCommand({
       command: 'clear_scripts',
@@ -142,8 +147,8 @@ export async function clearScripts(windowLabel?: string): Promise<ClearScriptsRe
  *
  * @returns Promise resolving to the list of registered scripts
  */
-export async function getScripts(): Promise<GetScriptsResponse> {
-   const client = await ensureSessionAndConnect();
+export async function getScripts(appIdentifier?: string | number): Promise<GetScriptsResponse> {
+   const client = await ensureSessionAndConnect(appIdentifier);
 
    const response = await client.sendCommand({
       command: 'get_scripts',
@@ -163,8 +168,8 @@ export async function getScripts(): Promise<GetScriptsResponse> {
  * @param id - The script ID to check
  * @returns Promise resolving to true if the script is registered
  */
-export async function isScriptRegistered(id: string): Promise<boolean> {
-   const { scripts } = await getScripts();
+export async function isScriptRegistered(id: string, appIdentifier?: string | number): Promise<boolean> {
+   const { scripts } = await getScripts(appIdentifier);
 
    return scripts.some((s) => { return s.id === id; });
 }

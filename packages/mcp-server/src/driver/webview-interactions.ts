@@ -488,7 +488,7 @@ export async function domSnapshot(options: DomSnapshotOptions): Promise<string> 
 
    // Only load aria-api for accessibility snapshots
    if (type === 'accessibility') {
-      await ensureAriaApiLoaded(windowId);
+      await ensureAriaApiLoaded(windowId, appIdentifier);
    }
 
    // Then execute the snapshot script
@@ -507,14 +507,14 @@ export async function domSnapshot(options: DomSnapshotOptions): Promise<string> 
  * Ensure aria-api library is loaded in the webview.
  * Uses the script manager to inject the library if not already present.
  */
-async function ensureAriaApiLoaded(windowId?: string): Promise<void> {
+async function ensureAriaApiLoaded(windowId?: string, appIdentifier?: string | number): Promise<void> {
    const { getAriaApiSource, ARIA_API_SCRIPT_ID: ariaApiScriptId } = await import('./scripts/aria-api-loader.js');
 
    const { registerScript, isScriptRegistered } = await import('./script-manager.js');
 
-   if (await isScriptRegistered(ariaApiScriptId)) {
+   if (await isScriptRegistered(ariaApiScriptId, appIdentifier)) {
       return;
    }
 
-   await registerScript(ariaApiScriptId, 'inline', getAriaApiSource(), windowId);
+   await registerScript(ariaApiScriptId, 'inline', getAriaApiSource(), windowId, appIdentifier);
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { connectPlugin } from './plugin-client.js';
+
 import { hasActiveSession, getDefaultSession, resolveTargetApp, manageDriverSession } from './session-manager.js';
 import { createMcpLogger } from '../logger.js';
 import {
@@ -25,7 +25,7 @@ import { getResolveRefSource, RESOLVE_REF_SCRIPT_ID } from './scripts/index.js';
 // Auto-Initialization System
 // ============================================================================
 
-let isInitialized = false;
+const initializedTargets = new Set<string>();
 
 const driverLogger = createMcpLogger('DRIVER');
 
@@ -42,11 +42,7 @@ const driverLogger = createMcpLogger('DRIVER');
  *
  * @throws Error if no session is active (driver_session must be called first)
  */
-export async function ensureReady(): Promise<void> {
-   if (isInitialized) {
-      return;
-   }
-
+export async function ensureReady(windowId?: string, appIdentifier?: string | number): Promise<void> {
    // Auto-connect if no active session
    if (!hasActiveSession()) {
       const result = await manageDriverSession('start');
@@ -58,28 +54,34 @@ export async function ensureReady(): Promise<void> {
       }
    }
 
-   // Get default session for initial connection
-   const session = getDefaultSession();
+   const session = resolveTargetApp(appIdentifier);
 
-   if (session) {
-      await connectPlugin(session.host, session.port);
+   if (!session.client.isConnected()) {
+      await session.client.connect();
    }
 
-   // Register the resolve-ref helper so ref-based selectors work in all tools
-   await registerScript(RESOLVE_REF_SCRIPT_ID, 'inline', getResolveRefSource());
-   await waitForResolveRefHelper(session);
+   const targetKey = `${session.host}:${session.port}:${windowId ?? 'main'}`;
 
-   isInitialized = true;
+   if (initializedTargets.has(targetKey)) {
+      return;
+   }
+
+   // Register the resolve-ref helper in the target window
+   // so ref-based selectors work there.
+   await registerScript(RESOLVE_REF_SCRIPT_ID, 'inline', getResolveRefSource(), windowId, appIdentifier);
+   await waitForResolveRefHelper(session, windowId);
+
+   initializedTargets.add(targetKey);
 }
 
 /**
  * Reset initialization state (useful for testing or reconnecting).
  */
 export function resetInitialization(): void {
-   isInitialized = false;
+   initializedTargets.clear();
 }
 
-async function waitForResolveRefHelper(session: ReturnType<typeof getDefaultSession>): Promise<void> {
+async function waitForResolveRefHelper(session: ReturnType<typeof getDefaultSession>, windowId?: string): Promise<void> {
    if (!session) {
       throw new Error('No active session available while registering resolve-ref helper.');
    }
@@ -89,6 +91,7 @@ async function waitForResolveRefHelper(session: ReturnType<typeof getDefaultSess
          command: 'execute_js',
          args: {
             script: 'return !!(window.__MCP__ && typeof window.__MCP__.resolveRef === "function")',
+            windowLabel: windowId,
          },
       }, 2000);
 
@@ -141,7 +144,7 @@ export async function executeInWebviewWithContext(
 ): Promise<ExecuteInWebviewResult> {
    try {
       // Ensure we're fully initialized
-      await ensureReady();
+      await ensureReady(windowId, appIdentifier);
 
       // Resolve target session
       const session = resolveTargetApp(appIdentifier);
@@ -195,11 +198,18 @@ export async function executeInWebviewWithContext(
  * @param timeout - Timeout in milliseconds (default: 5000)
  * @returns Result of the script execution
  */
-export async function executeAsyncInWebview(script: string, windowId?: string, timeout = 5000): Promise<string> {
+export async function executeAsyncInWebview(
+   script: string,
+   windowId?: string,
+   timeout?: number,
+   appIdentifier?: string | number
+): Promise<string> {
+   const resolvedTimeout = timeout ?? 5000;
+
    const wrappedScript = `
       return (async () => {
          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Script execution timeout')), ${timeout});
+            setTimeout(() => reject(new Error('Script execution timeout')), ${resolvedTimeout});
          });
 
          const scriptPromise = (async () => {
@@ -210,7 +220,7 @@ export async function executeAsyncInWebview(script: string, windowId?: string, t
       })();
    `;
 
-   return executeInWebview(wrappedScript, windowId);
+   return executeInWebview(wrappedScript, windowId, appIdentifier);
 }
 
 // ============================================================================
@@ -391,16 +401,21 @@ export interface CaptureScreenshotOptions {
  * Prepares the html2canvas script for screenshot capture.
  * Tries to use the script manager for persistence, falls back to inline injection.
  */
-async function prepareHtml2canvasScript(format: 'png' | 'jpeg', quality: number): Promise<string> {
+async function prepareHtml2canvasScript(
+   format: 'png' | 'jpeg',
+   quality: number,
+   windowId?: string,
+   appIdentifier?: string | number
+): Promise<string> {
    try {
       // Check if html2canvas is already registered
-      const isRegistered = await isScriptRegistered(HTML2CANVAS_SCRIPT_ID);
+      const isRegistered = await isScriptRegistered(HTML2CANVAS_SCRIPT_ID, appIdentifier);
 
       if (!isRegistered) {
          // Register html2canvas via script manager for persistence across navigations
          const html2canvasSource = getHtml2CanvasSource();
 
-         await registerScript(HTML2CANVAS_SCRIPT_ID, 'inline', html2canvasSource);
+         await registerScript(HTML2CANVAS_SCRIPT_ID, 'inline', html2canvasSource, windowId, appIdentifier);
       }
 
       // Use the capture-only script since html2canvas is now registered
@@ -426,7 +441,7 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
    // - Linux: Chromium/WebKit screenshot APIs
    try {
       // Ensure we're fully initialized
-      await ensureReady();
+      await ensureReady(windowId, appIdentifier);
 
       // Resolve target session
       const session = resolveTargetApp(appIdentifier);
@@ -466,7 +481,7 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
 
    // Fallback 1: Use html2canvas library for high-quality DOM rendering
    // Try to use the script manager to register html2canvas for persistence
-   const html2canvasScript = await prepareHtml2canvasScript(format, quality);
+   const html2canvasScript = await prepareHtml2canvasScript(format, quality, windowId, appIdentifier);
 
    // Fallback: Try Screen Capture API if available
    // Note: This script is wrapped by executeAsyncInWebview, so we don't need an IIFE
@@ -527,7 +542,7 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
 
    try {
       // Try html2canvas second (after native APIs)
-      const result = await executeAsyncInWebview(html2canvasScript, undefined, 10000); // Longer timeout for library loading
+      const result = await executeAsyncInWebview(html2canvasScript, windowId, 10000, appIdentifier);
 
       // Validate that we got a real data URL, not 'null' or empty
       if (result && result !== 'null' && result.startsWith('data:image/')) {
@@ -538,7 +553,7 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
    } catch(html2canvasError: unknown) {
       try {
          // Fallback to Screen Capture API
-         const result = await executeAsyncInWebview(screenCaptureScript);
+         const result = await executeAsyncInWebview(screenCaptureScript, windowId, 5000, appIdentifier);
 
          // Validate that we got a real data URL
          if (result && result.startsWith('data:image/')) {
