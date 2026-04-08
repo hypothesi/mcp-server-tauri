@@ -7,6 +7,7 @@
 use crate::commands::{self, resolve_window_with_context, ScriptExecutor, WindowContext};
 use crate::logging::{mcp_log_error, mcp_log_info};
 use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
+use crate::utils::prepare_window_for_eval;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{self, Value};
 use std::net::SocketAddr;
@@ -807,26 +808,6 @@ fn clear_scripts_from_window<R: Runtime>(window: &WebviewWindow<R>) -> Result<()
         .map_err(|e| format!("Failed to clear scripts: {e}"))
 }
 
-#[cfg(target_os = "macos")]
-fn prepare_window_for_eval<R: Runtime>(window: &WebviewWindow<R>) -> Result<(), String> {
-    use objc2_web_kit::WKWebView;
-
-    window
-        .with_webview(move |webview| unsafe {
-            let wkwebview: &WKWebView = &*(webview.inner() as *const _ as *const WKWebView);
-            let ns_window: *mut objc2::runtime::AnyObject = objc2::msg_send![wkwebview, window];
-
-            if !ns_window.is_null() {
-                let _: () = objc2::msg_send![ns_window, orderFrontRegardless];
-            }
-        })
-        .map_err(|e| format!("Failed to prepare webview for eval: {e}"))
-}
-
-#[cfg(not(target_os = "macos"))]
-fn prepare_window_for_eval<R: Runtime>(_window: &WebviewWindow<R>) -> Result<(), String> {
-    Ok(())
-}
 
 /// Clears all MCP-managed scripts from the webview DOM.
 /// Returns window context for the response.

@@ -85,6 +85,7 @@ mod logging;
 pub mod monitor;
 pub mod screenshot;
 pub mod script_registry;
+pub mod utils;
 pub mod websocket;
 
 pub use config::{Builder, Config};
