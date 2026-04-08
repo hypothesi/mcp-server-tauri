@@ -132,16 +132,17 @@ async function cleanupPickerHighlights(windowId?: string, appIdentifier?: string
  */
 async function captureElementScreenshot(
    cssSelector: string,
-   windowId?: string
+   windowId?: string,
+   appIdentifier?: string | number
 ): Promise<ToolContent | null> {
    // Ensure html2canvas is loaded in the webview
    try {
-      const isRegistered = await isScriptRegistered(HTML2CANVAS_SCRIPT_ID);
+      const isRegistered = await isScriptRegistered(HTML2CANVAS_SCRIPT_ID, appIdentifier);
 
       if (!isRegistered) {
          const source = getHtml2CanvasSource();
 
-         await registerScript(HTML2CANVAS_SCRIPT_ID, 'inline', source);
+         await registerScript(HTML2CANVAS_SCRIPT_ID, 'inline', source, windowId, appIdentifier);
       }
    } catch{
       // Script manager unavailable — we'll inline the library in the capture script
@@ -187,7 +188,7 @@ async function captureElementScreenshot(
    `;
 
    try {
-      const dataUrl = await executeAsyncInWebview(captureScript, windowId, 10000);
+      const dataUrl = await executeAsyncInWebview(captureScript, windowId, 10000, appIdentifier);
 
       if (!dataUrl || !dataUrl.startsWith('data:image/')) {
          return null;
@@ -289,7 +290,7 @@ export async function selectElement(options: {
    content.push({ type: 'text', text: formatElementMetadata(element) });
 
    // Capture element-only screenshot (no picker overlays visible)
-   const screenshot = await captureElementScreenshot(element.cssSelector, windowId);
+   const screenshot = await captureElementScreenshot(element.cssSelector, windowId, appIdentifier);
 
    if (screenshot) {
       content.push(screenshot);
@@ -342,7 +343,7 @@ export async function getPointedElement(options: {
    content.push({ type: 'text', text: formatElementMetadata(element) });
 
    // Capture element-only screenshot (no overlays)
-   const screenshot = await captureElementScreenshot(element.cssSelector, windowId);
+   const screenshot = await captureElementScreenshot(element.cssSelector, windowId, appIdentifier);
 
    if (screenshot) {
       content.push(screenshot);

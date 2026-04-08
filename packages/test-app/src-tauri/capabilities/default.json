@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
+  "description": "Capability for test-app windows",
+  "windows": ["main", "recording-toolbar"],
   "permissions": [
     "core:default",
     "opener:default",
