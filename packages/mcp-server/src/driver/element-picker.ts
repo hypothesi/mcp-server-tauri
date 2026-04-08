@@ -14,6 +14,8 @@ import { WindowTargetSchema } from './webview-interactions.js';
 import {
    getHtml2CanvasSource,
    HTML2CANVAS_SCRIPT_ID,
+   HTML2CANVAS_RESOLVER_SCRIPT,
+   HTML2CANVAS_OPTIONS_SCRIPT,
 } from './scripts/html2canvas-loader.js';
 import { registerScript, isScriptRegistered } from './script-manager.js';
 import type { ToolContent } from '../tools-registry.js';
@@ -152,28 +154,14 @@ async function captureElementScreenshot(
 
    // Build a script that captures just the element with html2canvas
    const captureScript = `
-      const html2canvasFn = typeof html2canvas !== 'undefined' ? html2canvas :
-                           (typeof window !== 'undefined' && window.html2canvas) ? window.html2canvas :
-                           (typeof self !== 'undefined' && self.html2canvas) ? self.html2canvas :
-                           (typeof globalThis !== 'undefined' && globalThis.html2canvas) ? globalThis.html2canvas : null;
-
-      if (!html2canvasFn) {
-         throw new Error('html2canvas not loaded');
-      }
+      ${HTML2CANVAS_RESOLVER_SCRIPT}
 
       const el = document.querySelector('${escapedSelector}');
       if (!el) {
          throw new Error('Element not found for screenshot');
       }
 
-      const canvas = await html2canvasFn(el, {
-         backgroundColor: null,
-         scale: window.devicePixelRatio || 1,
-         logging: false,
-         useCORS: true,
-         allowTaint: false,
-         imageTimeout: 5000,
-      });
+      const canvas = await html2canvasFn(el, ${HTML2CANVAS_OPTIONS_SCRIPT});
 
       if (!canvas) {
          throw new Error('html2canvas returned null canvas');

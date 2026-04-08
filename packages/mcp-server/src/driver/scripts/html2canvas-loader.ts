@@ -38,13 +38,7 @@ export function getHtml2CanvasSource(): string {
    return html2canvasProSource;
 }
 
-/**
- * Build a script that captures a screenshot using html2canvas.
- * Assumes html2canvas is already loaded (either via script manager or inline).
- */
-export function buildScreenshotCaptureScript(format: 'png' | 'jpeg', quality: number): string {
-   // Note: This script is wrapped by executeAsyncInWebview, so we don't need an IIFE
-   return `
+export const HTML2CANVAS_RESOLVER_SCRIPT = `
       // Get the html2canvas function (may be on window, self, or globalThis)
       const html2canvasFn = typeof html2canvas !== 'undefined' ? html2canvas :
                            (typeof window !== 'undefined' && window.html2canvas) ? window.html2canvas :
@@ -52,8 +46,27 @@ export function buildScreenshotCaptureScript(format: 'png' | 'jpeg', quality: nu
                            (typeof globalThis !== 'undefined' && globalThis.html2canvas) ? globalThis.html2canvas : null;
 
       if (!html2canvasFn) {
-         throw new Error('html2canvas not loaded - function not found on any global');
+         throw new Error('html2canvas not loaded');
       }
+`;
+
+export const HTML2CANVAS_OPTIONS_SCRIPT = `{
+         backgroundColor: null,
+         scale: window.devicePixelRatio || 1,
+         logging: false,
+         useCORS: true,
+         allowTaint: false,
+         imageTimeout: 5000,
+      }`;
+
+/**
+ * Build a script that captures a screenshot using html2canvas.
+ * Assumes html2canvas is already loaded (either via script manager or inline).
+ */
+export function buildScreenshotCaptureScript(format: 'png' | 'jpeg', quality: number): string {
+   // Note: This script is wrapped by executeAsyncInWebview, so we don't need an IIFE
+   return `
+      ${HTML2CANVAS_RESOLVER_SCRIPT}
 
       // Capture the entire document
       const element = document.documentElement;
@@ -61,18 +74,8 @@ export function buildScreenshotCaptureScript(format: 'png' | 'jpeg', quality: nu
          throw new Error('document.documentElement is null');
       }
 
-      // Configure html2canvas options
-      const options = {
-         backgroundColor: null,
-         scale: window.devicePixelRatio || 1,
-         logging: false,
-         useCORS: true,
-         allowTaint: false,
-         imageTimeout: 5000,
-      };
-
       // Capture the webview
-      const canvas = await html2canvasFn(element, options);
+      const canvas = await html2canvasFn(element, ${HTML2CANVAS_OPTIONS_SCRIPT});
       if (!canvas) {
          throw new Error('html2canvas returned null canvas');
       }

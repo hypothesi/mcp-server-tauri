@@ -120,17 +120,20 @@ export function buildKeyEventScript(
 
          const activeElement = document.activeElement || document.body;
 
+         const modStr = modifiers.length ? ' with ' + modifiers.join('+') : '';
+         const dispatch = (type) => activeElement.dispatchEvent(new KeyboardEvent(type, eventOptions));
+
          if (action === 'press') {
-            activeElement.dispatchEvent(new KeyboardEvent('keydown', eventOptions));
-            activeElement.dispatchEvent(new KeyboardEvent('keypress', eventOptions));
-            activeElement.dispatchEvent(new KeyboardEvent('keyup', eventOptions));
-            return 'Pressed key: ' + key + (modifiers.length ? ' with ' + modifiers.join('+') : '');
+            dispatch('keydown');
+            dispatch('keypress');
+            dispatch('keyup');
+            return 'Pressed key: ' + key + modStr;
          } else if (action === 'down') {
-            activeElement.dispatchEvent(new KeyboardEvent('keydown', eventOptions));
-            return 'Key down: ' + key + (modifiers.length ? ' with ' + modifiers.join('+') : '');
+            dispatch('keydown');
+            return 'Key down: ' + key + modStr;
          } else if (action === 'up') {
-            activeElement.dispatchEvent(new KeyboardEvent('keyup', eventOptions));
-            return 'Key up: ' + key + (modifiers.length ? ' with ' + modifiers.join('+') : '');
+            dispatch('keyup');
+            return 'Key up: ' + key + modStr;
          }
 
          throw new Error('Unknown action: ' + action);
