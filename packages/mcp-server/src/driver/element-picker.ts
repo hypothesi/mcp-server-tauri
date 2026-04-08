@@ -199,6 +199,31 @@ async function captureElementScreenshot(
    }
 }
 
+/**
+ * Common helper to format an element and capture its screenshot.
+ */
+async function buildElementContent(
+   element: ElementMetadata,
+   windowId?: string,
+   appIdentifier?: string | number
+): Promise<ToolContent[]> {
+   const content: ToolContent[] = [];
+
+   // Add formatted metadata
+   content.push({ type: 'text', text: formatElementMetadata(element) });
+
+   // Capture element-only screenshot (no picker overlays visible)
+   const screenshot = await captureElementScreenshot(element.cssSelector, windowId, appIdentifier);
+
+   if (screenshot) {
+      content.push(screenshot);
+   } else {
+      content.push({ type: 'text', text: '(Element screenshot capture failed)' });
+   }
+
+   return content;
+}
+
 // ============================================================================
 // selectElement - Agent-initiated picker
 // ============================================================================
@@ -272,21 +297,7 @@ export async function selectElement(options: {
    // Clean up all picker UI BEFORE taking the screenshot
    await cleanupPickerHighlights(windowId, appIdentifier);
 
-   const content: ToolContent[] = [];
-
-   // Add formatted metadata
-   content.push({ type: 'text', text: formatElementMetadata(element) });
-
-   // Capture element-only screenshot (no picker overlays visible)
-   const screenshot = await captureElementScreenshot(element.cssSelector, windowId, appIdentifier);
-
-   if (screenshot) {
-      content.push(screenshot);
-   } else {
-      content.push({ type: 'text', text: '(Element screenshot capture failed)' });
-   }
-
-   return content;
+   return buildElementContent(element, windowId, appIdentifier);
 }
 
 // ============================================================================
@@ -325,19 +336,5 @@ export async function getPointedElement(options: {
       return [ { type: 'text', text: `Failed to parse pointed element data: ${raw.substring(0, 200)}` } ];
    }
 
-   const content: ToolContent[] = [];
-
-   // Add formatted metadata
-   content.push({ type: 'text', text: formatElementMetadata(element) });
-
-   // Capture element-only screenshot (no overlays)
-   const screenshot = await captureElementScreenshot(element.cssSelector, windowId, appIdentifier);
-
-   if (screenshot) {
-      content.push(screenshot);
-   } else {
-      content.push({ type: 'text', text: '(Element screenshot capture failed)' });
-   }
-
-   return content;
+   return buildElementContent(element, windowId, appIdentifier);
 }

@@ -79,19 +79,14 @@ fn native_evaluate_js<R: Runtime>(
 
     let script_for_closure = Arc::clone(&script_ptr);
 
+    if let Err(e) = crate::utils::prepare_window_for_eval(window) {
+        crate::logging::mcp_log_error("EXECUTE_JS", &format!("Failed to prepare window: {e}"));
+    }
+
     window
         .with_webview(move |webview| {
             unsafe {
                 let wkwebview: &WKWebView = &*(webview.inner() as *const _ as *const WKWebView);
-
-                // Make sure the window is visible and ordered front
-                // so WKWebView processes JS even when the app isn't focused.
-                // orderFrontRegardless brings the window forward without
-                // activating the app (won't steal focus from terminal).
-                let ns_window: *mut objc2::runtime::AnyObject = objc2::msg_send![wkwebview, window];
-                if !ns_window.is_null() {
-                    let _: () = objc2::msg_send![ns_window, orderFrontRegardless];
-                }
 
                 let tx_clone = tx.clone();
                 let handler = RcBlock::new(
