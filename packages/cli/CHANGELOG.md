@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-07
+
+### Changed
+- Align marketplace.json with claude-code best practices
+
 ## [0.10.0] - 2026-03-16
 
 - Add Claude Code Plugin packaging for CLI installation

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-07
+
+### Added
+- Improve React compatibility, text strategy fallbacks, and auto-connect
+- Use native WKWebView evaluateJavaScript on macOS
+
+### Fixed
+- Honor windowId in webview tools
+- Keep async JS and Node 24 builds working
+- Keep JS eval working when window is unfocused
+- Handle null-prototype objects in captureLog
+- Use Object.keys fallback for non-serializable objects
+
+### Changed
+- Align marketplace.json with claude-code best practices
+- Documentation and infrastructure updates
+
 ## [0.10.0] - 2026-03-16
 
 ### Added

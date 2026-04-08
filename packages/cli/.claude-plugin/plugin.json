@@ -1,7 +1,7 @@
 {
    "name": "tauri-mcp-cli",
-   "description": "Agent Skills for automating and testing Tauri v2 applications",
-   "version": "0.10.0",
+   "description": "Exposes Tauri MCP skills that can be used to control the webview of a running Tauri app from an AI assistant.",
+   "version": "0.11.0",
    "author": {
       "name": "hypothesi"
    },

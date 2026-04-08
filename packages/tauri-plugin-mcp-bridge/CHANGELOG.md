@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-07
+
+### Added
+- Use native WKWebView evaluateJavaScript on macOS
+
+### Fixed
+- Keep JS eval working when window is unfocused
+- Handle null-prototype objects in captureLog
+- Use Object.keys fallback for non-serializable objects
+- Split overly long comment in bridge.js to fix ESLint max-len error
+
 ## [0.10.0] - 2026-03-16
 
 _No changes to this package._
