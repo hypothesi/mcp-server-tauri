@@ -808,7 +808,6 @@ fn clear_scripts_from_window<R: Runtime>(window: &WebviewWindow<R>) -> Result<()
         .map_err(|e| format!("Failed to clear scripts: {e}"))
 }
 
-
 /// Clears all MCP-managed scripts from the webview DOM.
 /// Returns window context for the response.
 fn clear_scripts_from_webview<R: Runtime>(
