@@ -29,7 +29,6 @@ import {
    selectElement, getPointedElement,
    SelectElementSchema, GetPointedElementSchema,
 } from './driver/element-picker.js';
-import { PLUGIN_VERSION_CARGO } from './version.js';
 import { SETUP_INSTRUCTIONS } from './constants.js';
 
 /**
@@ -103,7 +102,6 @@ export const TOOL_CATEGORIES = {
 } as const;
 
 
-
 /**
  * Complete registry of all available tools
  * This is the single source of truth for tool definitions
@@ -132,7 +130,6 @@ export const TOOLS: ToolDefinition[] = [
          return SETUP_INSTRUCTIONS;
       },
    },
-
    // Mobile Development Tools
    {
       name: 'list_devices',
@@ -153,7 +150,6 @@ export const TOOLS: ToolDefinition[] = [
          return `Android Devices:\n${devices.android.join('\n') || 'None'}\n\niOS Booted Simulators:\n${devices.ios.join('\n') || 'None'}`;
       },
    },
-
    // UI Automation Tools
    {
       name: 'driver_session',
@@ -184,7 +180,6 @@ export const TOOLS: ToolDefinition[] = [
          return await manageDriverSession(parsed.action, parsed.host, parsed.port, parsed.appIdentifier);
       },
    },
-
    {
       name: 'webview_find_element',
       description:
@@ -213,7 +208,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'read_logs',
       description:
@@ -234,7 +228,6 @@ export const TOOLS: ToolDefinition[] = [
          return await readLogs(parsed);
       },
    },
-
    // WebView Interaction Tools
    {
       name: 'webview_interact',
@@ -258,7 +251,6 @@ export const TOOLS: ToolDefinition[] = [
          return await interact(parsed);
       },
    },
-
    {
       name: 'webview_screenshot',
       description:
@@ -295,7 +287,6 @@ export const TOOLS: ToolDefinition[] = [
          return result.content;
       },
    },
-
    {
       name: 'webview_keyboard',
       description:
@@ -335,7 +326,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'webview_wait_for',
       description:
@@ -364,7 +354,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'webview_get_styles',
       description:
@@ -393,7 +382,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'webview_execute_js',
       description:
@@ -422,7 +410,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'webview_dom_snapshot',
       description:
@@ -457,7 +444,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    // Element Picker Tools
    {
       name: 'webview_select_element',
@@ -486,7 +472,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'webview_get_pointed_element',
       description:
@@ -513,7 +498,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    // IPC & Plugin Tools
    {
       name: 'ipc_execute_command',
@@ -539,7 +523,6 @@ export const TOOLS: ToolDefinition[] = [
          });
       },
    },
-
    {
       name: 'ipc_monitor',
       description:
@@ -561,7 +544,6 @@ export const TOOLS: ToolDefinition[] = [
          return await manageIPCMonitoring(parsed.action, parsed.appIdentifier);
       },
    },
-
    {
       name: 'ipc_get_captured',
       description:
@@ -581,7 +563,6 @@ export const TOOLS: ToolDefinition[] = [
          return await getIPCEvents(parsed.filter, parsed.appIdentifier);
       },
    },
-
    {
       name: 'ipc_emit_event',
       description:
@@ -602,7 +583,6 @@ export const TOOLS: ToolDefinition[] = [
          return await emitTestEvent(parsed.eventName, parsed.payload, parsed.appIdentifier);
       },
    },
-
    {
       name: 'ipc_get_backend_state',
       description:
@@ -622,7 +602,6 @@ export const TOOLS: ToolDefinition[] = [
          return await getBackendState({ appIdentifier: parsed.appIdentifier });
       },
    },
-
    // Window Management Tools
    {
       name: 'manage_window',

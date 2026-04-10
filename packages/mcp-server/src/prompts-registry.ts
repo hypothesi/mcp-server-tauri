@@ -3,7 +3,6 @@
  * Prompts are user-controlled templates that appear as slash commands in MCP clients
  */
 
-import { PLUGIN_VERSION_CARGO } from './version.js';
 import { SETUP_INSTRUCTIONS as SETUP_PROMPT } from './constants.js';
 
 export interface PromptArgument {
@@ -49,7 +48,6 @@ Please follow these steps:
 If no errors are found, let me know the app is running cleanly.
 
 If the session fails to start, help me troubleshoot the connection (is the app running? is the MCP bridge plugin installed?).`;
-
 
 
 const SELECT_ELEMENT_PROMPT = (message?: string): string => {
@@ -106,7 +104,6 @@ export const PROMPTS: PromptDefinition[] = [
          ];
       },
    },
-
    {
       name: 'select',
       description:
@@ -132,7 +129,6 @@ export const PROMPTS: PromptDefinition[] = [
          ];
       },
    },
-
    {
       name: 'setup',
       description:

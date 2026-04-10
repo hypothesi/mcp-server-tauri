@@ -56,4 +56,3 @@ pub async fn request_script_injection<R: Runtime>(
         "scriptIds": scripts.iter().map(|s| s.id.clone()).collect::<Vec<_>>()
     }))
 }
-
