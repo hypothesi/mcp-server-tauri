@@ -57,6 +57,7 @@ Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-
 ```bash
 npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
 ```
+
 </details>
 
 <details>
@@ -65,6 +66,7 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
 ```bash
 npx -y install-mcp @hypothesi/tauri-mcp-server --client cursor
 ```
+
 </details>
 
 <details>
@@ -73,6 +75,7 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client cursor
 ```bash
 npx -y install-mcp @hypothesi/tauri-mcp-server --client vscode
 ```
+
 </details>
 
 <details>
@@ -81,6 +84,7 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client vscode
 ```bash
 npx -y install-mcp @hypothesi/tauri-mcp-server --client windsurf
 ```
+
 </details>
 
 <details>
@@ -89,6 +93,7 @@ npx -y install-mcp @hypothesi/tauri-mcp-server --client windsurf
 ```bash
 npx -y install-mcp @hypothesi/tauri-mcp-server --client cline
 ```
+
 </details>
 
 **Restart your AI assistant** after adding the configuration.
@@ -112,6 +117,7 @@ Ask your AI assistant to help configure your Tauri app:
 > "Help me set up the Tauri MCP Bridge plugin"
 
 Your AI will:
+
 1. **Examine your project** to see what's already configured
 2. **Show you what changes are needed** (Cargo.toml, plugin registration, etc.)
 3. **Ask for your permission** before making any modifications
@@ -304,6 +310,10 @@ Contributions are welcome! Please:
 4. Ensure `npm test` and `npm run standards` pass
 
 ---
+
+## Other Notes
+
+This project is tested with BrowserStack.
 
 ## 📄 License
 
