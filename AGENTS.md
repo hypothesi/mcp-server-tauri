@@ -9,6 +9,7 @@ MCP server for Tauri v2 application development. Provides tools for CLI executio
 - `packages/mcp-server/` - Main MCP server implementation
 - `packages/tauri-plugin-mcp-bridge/` - Tauri plugin for automation bridge (Rust)
 - `packages/test-app/` - Test application for E2E testing
+- `packages/cli` - A CLI wrapper for the MCP server funcionality
 
 ## Setup Commands
 
@@ -55,7 +56,7 @@ Tool categories: `PROJECT_MANAGEMENT`, `MOBILE_DEVELOPMENT`, `UI_AUTOMATION`, `I
 
 ## Git Commits
 
-Follow: https://raw.githubusercontent.com/silvermine/standardization/refs/heads/master/commitlint.js
+Follow: <https://raw.githubusercontent.com/silvermine/standardization/refs/heads/master/commitlint.js>
 
 ## Releasing
 
@@ -94,21 +95,26 @@ This monorepo uses a **single version** across all packages. All packages share 
    - Include changes relevant to each package (use `_No changes to this package._` if none)
    - **Do not skip any version numbers** - if v0.2.1 exists, the next must be v0.2.2, not v0.2.3
 4. **Update version in package.json files** using npm (without git tag):
+
    ```bash
    npm version <version> --no-git-tag-version -w @hypothesi/tauri-mcp-server -w @hypothesi/tauri-mcp-cli -w @hypothesi/tauri-plugin-mcp-bridge
    ```
+
 5. **Update version-coupled metadata** manually to match:
    - `packages/cli/package.json` - update the `@hypothesi/tauri-mcp-server` dependency version
    - `packages/cli/.claude-plugin/plugin.json`
    - `gemini-extension.json`
    - `packages/tauri-plugin-mcp-bridge/Cargo.toml`
 6. **Update lock files**:
+
    ```bash
    npm install
    cargo update --package tauri-plugin-mcp-bridge  # in packages/tauri-plugin-mcp-bridge/
    cargo update --package tauri-plugin-mcp-bridge  # in packages/test-app/src-tauri/
    ```
+
 7. **Verify versions** in manifests and lock files match the new version:
+
    ```bash
    grep -n '"version"' packages/cli/.claude-plugin/plugin.json gemini-extension.json
    grep -n '"@hypothesi/tauri-mcp-server"' packages/cli/package.json
@@ -116,6 +122,7 @@ This monorepo uses a **single version** across all packages. All packages share 
    grep -A2 '"@hypothesi/tauri-mcp-cli"' package-lock.json | head -3
    grep -A2 '"@hypothesi/tauri-plugin-mcp-bridge"' package-lock.json | head -3
    ```
+
 8. **Stage all changed files**:
    - All four changelogs
    - `packages/mcp-server/package.json`
