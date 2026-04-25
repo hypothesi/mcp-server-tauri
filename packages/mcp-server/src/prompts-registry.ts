@@ -109,11 +109,19 @@ export const PROMPTS: PromptDefinition[] = [
       description:
          'Visually select an element in the running Tauri app. ' +
          'Activates a picker overlay — click an element to send its metadata and an annotated screenshot to the agent. ' +
-         'Optionally include a message describing what you want to do with the element.',
+         'Optionally include a message describing what you want to do with the element. ' +
+         'Note for Claude Code users: due to upstream bugs ' +
+         '(anthropics/claude-code#5597, #14210), Claude Code requires at least one ' +
+         'character of input and only forwards the first word of the `message` argument. ' +
+         'Type your full message in regular chat before or after invoking the prompt instead.',
       arguments: [
          {
             name: 'message',
-            description: 'What you want to discuss or do with the selected element (e.g. "this button should be green instead of blue")',
+            description:
+               'What you want to discuss or do with the selected element ' +
+               '(e.g. "this button should be green instead of blue"). ' +
+               'In Claude Code, only the first word reaches the server (anthropics/claude-code#14210) — ' +
+               'put your full message in chat instead.',
             required: false,
          },
       ],

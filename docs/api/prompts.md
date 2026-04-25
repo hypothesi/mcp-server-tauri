@@ -153,6 +153,15 @@ Visually select an element in your running Tauri app so you can discuss it with 
 |------|----------|-------------|
 | `message` | No | What you want to discuss or do with the selected element |
 
+::: warning Claude Code limitation
+Claude Code currently has two open bugs that affect this prompt:
+
+- [anthropics/claude-code#5597](https://github.com/anthropics/claude-code/issues/5597) — optional MCP prompt arguments still require at least one character of input.
+- [anthropics/claude-code#14210](https://github.com/anthropics/claude-code/issues/14210) — multi-word arguments are truncated to the first word.
+
+Until these are fixed upstream, Claude Code users should describe what they want in regular chat (before or after invoking the slash command) rather than passing a `message` argument. Other MCP clients (Claude Desktop, Cursor) handle the argument correctly.
+:::
+
 ::: tip When to Use
 Use this prompt when you want to point at a specific element in your running app and tell the AI what you want changed. It's the fastest way to discuss visual issues, styling problems, or element-specific bugs.
 :::

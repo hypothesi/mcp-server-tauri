@@ -71,6 +71,10 @@ AI: I'll help you change the button color. Let me activate the element picker...
 
 You can also use `/select` without a message — the AI will simply ask you what you'd like to do with the selected element.
 
+::: warning Claude Code users
+Claude Code has two open bugs that affect this prompt: optional arguments still require at least one character ([#5597](https://github.com/anthropics/claude-code/issues/5597)), and multi-word arguments get truncated to the first word ([#14210](https://github.com/anthropics/claude-code/issues/14210)). Until those are fixed, type your message in regular chat before invoking `/select` instead of as a slash-command argument. Other MCP clients (Claude Desktop, Cursor) work as expected.
+:::
+
 ---
 
 ### /fix-webview-errors
