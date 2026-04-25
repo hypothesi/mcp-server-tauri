@@ -33,32 +33,21 @@ async function startGlobalTestApp(): Promise<void> {
          return;
       }
 
-      let appReady = false,
-          pluginReady = false;
+      let pluginReady = false;
 
-      const checkReady = (): void => {
-         if (appReady && pluginReady) {
-            console.log('✅ Global test environment ready!');
-            resolve();
-         }
-      };
-
+      // The MCP bridge plugin only initializes after Tauri loads the webview,
+      // which only happens once Vite (beforeDevCommand) is reachable. Treating
+      // pluginReady as the single source of truth avoids a CI race where
+      // Vite's "Local:" output is buffered by the Tauri CLI and never reaches
+      // this listener, even though the app itself starts successfully.
       tauriProcess.stdout.on('data', (data) => {
          const output = data.toString();
 
-         // Only log important messages
          if (output.includes('Local:') || output.includes('MCP Bridge') || output.includes('WebSocket server')) {
             console.log('[App]:', output.trim());
          }
 
-         if (!appReady && (output.includes('Local:') || output.includes('http://localhost:1420'))) {
-            appReady = true;
-            console.log('✓ Vite server ready');
-            checkReady();
-         }
-
          if (!pluginReady && output.includes('WebSocket server listening on:')) {
-            // Extract the port from the log message (e.g., "0.0.0.0:9301")
             const portMatch = output.match(/WebSocket server listening on:.*:(\d+)/);
 
             if (portMatch) {
@@ -68,7 +57,8 @@ async function startGlobalTestApp(): Promise<void> {
                console.log('✓ MCP Bridge plugin ready');
             }
             pluginReady = true;
-            checkReady();
+            console.log('✅ Global test environment ready!');
+            resolve();
          }
       });
 
@@ -97,9 +87,8 @@ async function startGlobalTestApp(): Promise<void> {
          reject(error);
       });
 
-      // Timeout for app startup
       setTimeout(() => {
-         if (!appReady || !pluginReady) {
+         if (!pluginReady) {
             reject(new Error(`Tauri app failed to start within ${STARTUP_TIMEOUT_MS / 1000}s timeout`));
          }
       }, STARTUP_TIMEOUT_MS);
