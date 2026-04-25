@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-04-25
+
+### Changed
+- Extract `prepare_window_for_eval` to a shared `utils` module
+- Reduce duplication in `execute_js` and related command modules
+
+### Fixed
+- Resolve lint and formatting errors in `script_injection` and `websocket` modules
+
 ## [0.11.0] - 2026-04-07
 
 ### Added

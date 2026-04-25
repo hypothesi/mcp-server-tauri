@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-04-25
+
+### Changed
+- Internal refactors to deduplicate webview scripts and extract shared utilities
+- Extract `SETUP_INSTRUCTIONS` constant to a dedicated module
+- Extract `prepare_window_for_eval` to a shared utils module in the bridge plugin
+
+### Fixed
+- Resolve lint and formatting errors in CI
+- Add Rust and system dependencies to the `test-cli` CI job
+
+### Documentation
+- Add BrowserStack statement to README
+- Add CLI folder description to `AGENTS.md`
+
 ## [0.11.0] - 2026-04-07
 
 ### Added

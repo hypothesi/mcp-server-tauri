@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-04-25
+
+_No changes to this package._
+
 ## [0.11.0] - 2026-04-07
 
 ### Changed
