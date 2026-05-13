@@ -53,6 +53,7 @@
    "devDependencies": {
       "@tanstack/intent": "^0.0.14",
       "@types/node": "22.19.1",
+      "vite": "^7.3.3",
       "vitest": "4.0.13"
    },
    "publishConfig": {
