@@ -48,6 +48,34 @@ Tool categories: `PROJECT_MANAGEMENT`, `MOBILE_DEVELOPMENT`, `UI_AUTOMATION`, `I
 - Prefer E2E tests over unit tests
 - CI timeout is 8 minutes; local is 1 minute
 
+## Manual MCP Testing (local dev MCP server)
+
+Create `.mcp.json` at the workspace root (it's covered by a global `.gitignore` so it stays local):
+
+```json
+{
+   "mcpServers": {
+      "tauri-dev": {
+         "type": "stdio",
+         "command": "node",
+         "args": ["packages/mcp-server/dist/index.js"]
+      }
+   }
+}
+```
+
+This registers a project-scoped MCP server named `tauri-dev` that runs the local-built `packages/mcp-server/dist/index.js`, so edits to the MCP server show up the next time the agent reconnects. Do **not** invoke the published `mcp-server-tauri` from the global config for dev work — those tools run a different build.
+
+Workflow:
+
+1. Run `npm run dev` in a terminal. This starts the `tsc --watch` rebuild of `packages/mcp-server/dist/` and `tauri dev` for `test-app` on port 9300.
+2. In Claude Code (this workspace), the `tauri-dev` MCP server is auto-launched on session start. Tool names are namespaced as `mcp__tauri-dev__<tool>` (e.g. `mcp__tauri-dev__webview_screenshot`).
+3. To test plugin (Rust) changes: edit Rust → `tauri dev` rebuilds and relaunches `test-app` automatically.
+4. To test server (TS) changes: edit TS → `tsc --watch` rewrites `dist/` → restart the MCP server connection in Claude Code (`/mcp` reconnect) so the spawned subprocess picks up the new build.
+5. Plugin stderr/stdout (including `mcp_log_error` and `mcp_log_info`) appears in the `npm run dev` terminal under `[app]`. MCP server stderr appears in Claude Code's MCP debug pane.
+
+This replaces ad-hoc Node scripts that talk raw WebSocket to `localhost:9300`. Reach for raw WS only when probing plugin behavior that isn't exposed as an MCP tool.
+
 ## Session Management
 
 - Call `driver_session` with `action: 'start'` before using driver tools
