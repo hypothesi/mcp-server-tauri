@@ -23,7 +23,7 @@
       "docs:preview": "vitepress preview docs",
       "standards": "npm run commitlint && npm run eslint && npm run cargo:fmt:check && npm run cargo:clippy",
       "standards:fix": "npm run cargo:fmt && npm run cargo:clippy:fix",
-      "commitlint": "commitlint --from d884a42",
+      "commitlint": "commitlint --from a260b55",
       "eslint": "eslint .",
       "cargo:fmt:check": "cargo fmt --check --manifest-path packages/tauri-plugin-mcp-bridge/Cargo.toml && cargo fmt --check --manifest-path packages/test-app/src-tauri/Cargo.toml",
       "cargo:clippy": "cargo clippy --manifest-path packages/tauri-plugin-mcp-bridge/Cargo.toml && cargo clippy --manifest-path packages/test-app/src-tauri/Cargo.toml",

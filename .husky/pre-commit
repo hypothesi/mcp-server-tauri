@@ -1,7 +1,1 @@
-# JS/TS checks
 npm run standards
-
-# Commitlint (skip if no commits yet)
-if git rev-parse HEAD~1 >/dev/null 2>&1; then
-  npm run commitlint
-fi
