@@ -1,6 +1,9 @@
 use super::{Screenshot, ScreenshotError};
 use tauri::{Runtime, WebviewWindow};
 
+#[cfg(target_os = "macos")]
+const LOG_SCOPE: &str = "SCREENSHOT_MACOS";
+
 /// macOS-specific screenshot implementation using WKWebView's takeSnapshot
 ///
 /// This implementation captures only the visible viewport, not the full document.
@@ -38,6 +41,10 @@ pub fn capture_viewport<R: Runtime>(
                                 let err = &*error;
                                 let desc = err.localizedDescription();
                                 let error_string = desc.to_string();
+                                crate::logging::mcp_log_error(
+                                    LOG_SCOPE,
+                                    &format!("takeSnapshot returned NSError: {error_string}"),
+                                );
                                 let _ = tx.send(Err(ScreenshotError::CaptureFailed(error_string)));
                             } else if !image.is_null() {
                                 let img = &*image;
@@ -47,10 +54,18 @@ pub fn capture_viewport<R: Runtime>(
                                         let _ = tx.send(Ok(Screenshot { data }));
                                     }
                                     Err(e) => {
+                                        crate::logging::mcp_log_error(
+                                            LOG_SCOPE,
+                                            &format!("NSImage -> PNG conversion failed: {e}"),
+                                        );
                                         let _ = tx.send(Err(e));
                                     }
                                 }
                             } else {
+                                crate::logging::mcp_log_error(
+                                    LOG_SCOPE,
+                                    "takeSnapshot completion handler received nil image and nil error",
+                                );
                                 let _ = tx.send(Err(ScreenshotError::CaptureFailed(
                                     "No image returned from snapshot".to_string(),
                                 )));
@@ -64,13 +79,23 @@ pub fn capture_viewport<R: Runtime>(
                 }
             })
             .map_err(|e| {
+                crate::logging::mcp_log_error(
+                    LOG_SCOPE,
+                    &format!("with_webview failed before scheduling takeSnapshot: {e}"),
+                );
                 ScreenshotError::CaptureFailed(format!("Failed to access webview: {e}"))
             })?;
 
         // Wait for result
         match rx.recv_timeout(std::time::Duration::from_secs(10)) {
             Ok(result) => result,
-            Err(_) => Err(ScreenshotError::Timeout),
+            Err(_) => {
+                crate::logging::mcp_log_error(
+                    LOG_SCOPE,
+                    "Timed out waiting 10s for takeSnapshot completion handler",
+                );
+                Err(ScreenshotError::Timeout)
+            }
         }
     }
 
