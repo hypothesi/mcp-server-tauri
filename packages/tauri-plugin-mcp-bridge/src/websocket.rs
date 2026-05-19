@@ -7,7 +7,6 @@
 use crate::commands::{self, resolve_window_with_context, ScriptExecutor, WindowContext};
 use crate::logging::{mcp_log_error, mcp_log_info};
 use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
-use crate::utils::prepare_window_for_eval;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{self, Value};
 use std::net::SocketAddr;
@@ -729,8 +728,6 @@ fn inject_script_to_window<R: Runtime>(
         ),
     };
 
-    prepare_window_for_eval(window)?;
-
     window
         .eval(&script)
         .map_err(|e| format!("Failed to inject script: {e}"))
@@ -769,8 +766,6 @@ fn remove_script_from_window<R: Runtime>(
         "#
     );
 
-    prepare_window_for_eval(window)?;
-
     window
         .eval(&script)
         .map_err(|e| format!("Failed to remove script: {e}"))
@@ -800,8 +795,6 @@ fn clear_scripts_from_window<R: Runtime>(window: &WebviewWindow<R>) -> Result<()
             scripts.forEach(function(s) { s.remove(); });
         })();
     "#;
-
-    prepare_window_for_eval(window)?;
 
     window
         .eval(script)

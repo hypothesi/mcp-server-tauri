@@ -122,9 +122,14 @@ Returns a base64-encoded image, or if `filePath` is provided, returns the path w
 
 You can set a default `maxWidth` for all screenshots using the `TAURI_MCP_SCREENSHOT_MAX_WIDTH` environment variable. The tool parameter takes precedence over the environment variable.
 
+On macOS, native screenshots may bring a fully occluded Tauri window forward so WKWebView can paint a fresh frame. Set `TAURI_MCP_NO_FOREGROUND=1` to disable that behavior.
+
 ```bash
 # Set default max width to 800 pixels
 export TAURI_MCP_SCREENSHOT_MAX_WIDTH=800
+
+# Never foreground the Tauri window for screenshots
+export TAURI_MCP_NO_FOREGROUND=1
 ```
 
 ::: tip

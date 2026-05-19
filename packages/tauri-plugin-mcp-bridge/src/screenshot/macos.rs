@@ -23,6 +23,10 @@ pub fn capture_viewport<R: Runtime>(
         let (tx, rx) = mpsc::channel::<Result<Screenshot, ScreenshotError>>();
         let tx = Arc::new(Mutex::new(Some(tx)));
 
+        if let Err(e) = crate::utils::prepare_window_for_screenshot(window) {
+            crate::logging::mcp_log_error(LOG_SCOPE, &format!("Failed to prepare window: {e}"));
+        }
+
         // Use Tauri's with_webview to access the platform-specific webview
         window
             .with_webview(move |webview| {

@@ -1,7 +1,6 @@
 //! Script injection command for re-injecting registered scripts on page load.
 
 use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
-use crate::utils::prepare_window_for_eval;
 use tauri::{command, Runtime, State, WebviewWindow};
 
 /// Request script injection - called by bridge.js when a page loads.
@@ -44,8 +43,6 @@ pub async fn request_script_injection<R: Runtime>(
         "if (window.__MCP_INJECT_SCRIPTS__) {{ window.__MCP_INJECT_SCRIPTS__({}); }}",
         serde_json::to_string(&scripts_json).unwrap_or_else(|_| "[]".to_string())
     );
-
-    prepare_window_for_eval(&window)?;
 
     window
         .eval(&inject_script)

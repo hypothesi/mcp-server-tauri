@@ -79,10 +79,6 @@ fn native_evaluate_js<R: Runtime>(
 
     let script_for_closure = Arc::clone(&script_ptr);
 
-    if let Err(e) = crate::utils::prepare_window_for_eval(window) {
-        crate::logging::mcp_log_error("EXECUTE_JS", &format!("Failed to prepare window: {e}"));
-    }
-
     window
         .with_webview(move |webview| {
             unsafe {
