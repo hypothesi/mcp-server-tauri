@@ -111,7 +111,7 @@ describe('Session Manager E2E Tests', () => {
          // Second start on same port (should not timeout due to stale session cache)
          const result2 = await manageDriverSession('start');
 
-         expect(result2).toContain('Session started');
+         expect(result2).toContain('Already connected to app on port');
       }, TIMEOUT);
 
       afterAll(async () => {
