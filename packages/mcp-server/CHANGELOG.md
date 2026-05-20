@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-05-19
+
+### Changed
+- Warn about Claude Code `/select` argument bugs in prompt docs
+
+### Fixed
+- Wait for bridge plugin readiness in global test setup
+- Align session restart E2E test expectations with idempotent start behavior
+
 ## [0.11.1] - 2026-04-25
 
 ### Changed

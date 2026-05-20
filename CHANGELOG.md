@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-05-19
+
+### Changed
+- Move commit message linting to the commit-msg hook
+- Document the local-dev MCP testing workflow in `AGENTS.md`
+- Warn about Claude Code `/select` argument bugs in prompt docs
+
 ### Fixed
 - Avoid bringing macOS Tauri windows to the front during JS eval and script injection; screenshot capture only foregrounds a fully occluded window unless `TAURI_MCP_NO_FOREGROUND` is set
+- Log macOS screenshot capture failure modes from the bridge plugin
+- Wait for bridge plugin readiness in global test setup
+- Align session restart E2E test expectations with idempotent start behavior
 
 ## [0.11.1] - 2026-04-25
 

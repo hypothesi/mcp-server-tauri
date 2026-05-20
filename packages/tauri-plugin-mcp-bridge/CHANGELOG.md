@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-05-19
+
 ### Fixed
 - Avoid bringing macOS Tauri windows to the front during JS eval and script injection; screenshot capture only foregrounds a fully occluded window unless `TAURI_MCP_NO_FOREGROUND` is set
+- Log macOS screenshot capture failure modes
 
 ## [0.11.1] - 2026-04-25
 
