@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { getDefaultHost, getDefaultPort, getConfig, buildWebSocketURL } from '../../src/config.js';
+import { getCwdHint, getDefaultHost, getDefaultPort, getConfig, buildWebSocketURL } from '../../src/config.js';
 
 describe('config', () => {
    const originalEnv = process.env;
@@ -11,6 +11,7 @@ describe('config', () => {
       process.env = { ...originalEnv };
       delete process.env.MCP_BRIDGE_HOST;
       delete process.env.MCP_BRIDGE_PORT;
+      delete process.env.MCP_BRIDGE_CWD;
       delete process.env.TAURI_DEV_HOST;
    });
 
@@ -92,6 +93,24 @@ describe('config', () => {
 
       it('builds correct URL for 0.0.0.0', () => {
          expect(buildWebSocketURL('0.0.0.0', 9223)).toBe('ws://0.0.0.0:9223');
+      });
+   });
+
+   describe('getCwdHint', () => {
+      it('returns process.cwd() when no env var is set', () => {
+         expect(getCwdHint()).toBe(process.cwd());
+      });
+
+      it('returns MCP_BRIDGE_CWD when set', () => {
+         process.env.MCP_BRIDGE_CWD = '/some/worktree/path';
+
+         expect(getCwdHint()).toBe('/some/worktree/path');
+      });
+
+      it('ignores an empty MCP_BRIDGE_CWD and falls back to process.cwd()', () => {
+         process.env.MCP_BRIDGE_CWD = '';
+
+         expect(getCwdHint()).toBe(process.cwd());
       });
    });
 });

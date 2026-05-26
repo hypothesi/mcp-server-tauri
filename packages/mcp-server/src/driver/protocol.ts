@@ -129,6 +129,13 @@ export interface BackendState {
       visible: boolean;
    }>;
    window_count: number;
+   /**
+    * Working directory of the host Tauri process. Optional for backward
+    * compat with plugin versions before this field was added. Used by the
+    * TS server to disambiguate concurrent Tauri instances (e.g. moss
+    * running from multiple worktrees) that share the same bundle id.
+    */
+   cwd?: string | null;
    timestamp: number;
 }
 
