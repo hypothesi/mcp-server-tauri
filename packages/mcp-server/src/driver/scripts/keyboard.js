@@ -16,9 +16,6 @@ function typeText(params) {
       throw new Error(`Element not found: ${selector}`);
    }
 
-   // Focus the element
-   element.focus();
-
    // Set the value
    element.value = text;
 

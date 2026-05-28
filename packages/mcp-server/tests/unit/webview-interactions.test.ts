@@ -161,8 +161,11 @@ describe('Webview Interactions Unit Tests', () => {
 
          const result = await keyboard({ action: 'type', selectorOrKey: '#input', textOrModifiers: 'Hello World' });
 
+         const callArg = mockExecuteInWebview.mock.calls[0][0] as string;
+
          expect(mockExecuteInWebview).toHaveBeenCalledOnce();
-         expect(mockExecuteInWebview).toHaveBeenCalledWith(expect.stringContaining('__MCP__'), undefined, undefined);
+         expect(callArg).toContain('__MCP__');
+         expect(callArg).not.toContain('.focus(');
          expect(result).toContain('Typed');
       });
 

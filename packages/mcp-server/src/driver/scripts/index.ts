@@ -64,8 +64,6 @@ export function buildTypeScript(selector: string, text: string, strategy?: strin
          var element = window.__MCP__.resolveRef(selector, strategy);
          if (!element) throw new Error('Element not found: ' + selector);
 
-         element.focus();
-
          // Use native prototype setter to bypass React's value tracker
          var proto = element.tagName === 'TEXTAREA'
             ? HTMLTextAreaElement.prototype
