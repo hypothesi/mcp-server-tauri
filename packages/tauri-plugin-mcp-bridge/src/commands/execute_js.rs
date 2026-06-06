@@ -54,6 +54,28 @@ pub async fn execute_js<R: Runtime>(
         }
     }
 
+    // Non-macOS (Windows/WebView2, Linux/WebKitGTK): use Tauri's result-returning
+    // `eval_with_callback`, which wires the webview engine's native eval-completion
+    // handler (WebView2 `ICoreWebView2::ExecuteScript`) straight back to Rust —
+    // bypassing the JS->IPC postback (`invoke('plugin:mcp-bridge|script_result')`)
+    // that silently fails on WebView2 (the same "fails on some setups" reason macOS
+    // went native). Synchronous scripts only — the callback captures the script's
+    // sync return value, so async/Promise scripts keep the IPC-callback fallback.
+    #[cfg(not(target_os = "macos"))]
+    {
+        if should_use_callback_evaluation(&script) {
+            match eval_with_native_callback(&window, &script).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    mcp_log_error(
+                        "EXECUTE_JS",
+                        &format!("eval_with_callback failed, falling back: {e}"),
+                    );
+                }
+            }
+        }
+    }
+
     // Fallback: eval + event listener approach
     eval_with_ipc_callback(&window, &script, &state).await
 }
@@ -174,6 +196,82 @@ fn should_use_native_evaluation(script: &str) -> bool {
         && !trimmed.contains(".then(")
         && !trimmed.contains("Promise.")
         && !trimmed.contains("new Promise(")
+}
+
+/// Non-macOS heuristic mirroring `should_use_native_evaluation`: only take the
+/// synchronous `eval_with_callback` path for scripts without async/Promise, since
+/// the callback captures the script's synchronous return value.
+#[cfg(not(target_os = "macos"))]
+fn should_use_callback_evaluation(script: &str) -> bool {
+    let t = script.trim();
+    !t.contains("await ")
+        && !t.contains("async ")
+        && !t.contains("(async")
+        && !t.contains(".then(")
+        && !t.contains("Promise.")
+        && !t.contains("new Promise(")
+}
+
+/// Non-macOS: evaluate `script` via Tauri's `WebviewWindow::eval_with_callback`,
+/// which JSON-serializes the script's result and hands it back through the webview
+/// engine's native completion handler (WebView2 `ExecuteScript`). No JS->IPC
+/// postback, so it returns reliably on WebView2 where `eval_with_ipc_callback`
+/// hangs. Returns the same `{ success, data }` / `{ success, error }` shape as the
+/// macOS native path.
+#[cfg(not(target_os = "macos"))]
+async fn eval_with_native_callback<R: Runtime>(
+    window: &WebviewWindow<R>,
+    script: &str,
+) -> Result<Value, String> {
+    use std::sync::{Arc, Mutex};
+
+    let prepared_script = prepare_script(script);
+    // Return the actual value (eval_with_callback JSON-serializes it). Wrap in
+    // try/catch and tag errors: WebView2 silently ignores thrown exceptions, so
+    // they must be surfaced as a value (per Tauri's eval_with_callback docs).
+    let wrapped_script = format!(
+        r#"
+        (function() {{
+            try {{
+                var __result = (function() {{ {prepared_script} }})();
+                return (__result === undefined) ? null : __result;
+            }} catch (error) {{
+                return {{ "__mcp_error__": (error && error.message) ? error.message : String(error) }};
+            }}
+        }})()
+        "#
+    );
+
+    let (tx, rx) = oneshot::channel::<String>();
+    let tx = Arc::new(Mutex::new(Some(tx)));
+    let tx_cb = tx.clone();
+    window
+        .eval_with_callback(&wrapped_script, move |json: String| {
+            if let Some(tx) = tx_cb.lock().unwrap().take() {
+                let _ = tx.send(json);
+            }
+        })
+        .map_err(|e| format!("Failed to execute script: {e}"))?;
+
+    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(json)) => {
+            // `json` is the JSON-serialized evaluation result.
+            let val: Value = serde_json::from_str(&json).unwrap_or(Value::Null);
+            if let Some(err) = val.get("__mcp_error__").and_then(|v| v.as_str()) {
+                Ok(serde_json::json!({ "success": false, "error": err }))
+            } else {
+                Ok(serde_json::json!({ "success": true, "data": val }))
+            }
+        }
+        Ok(Err(_)) => Ok(serde_json::json!({
+            "success": false,
+            "error": "Script execution failed: channel closed"
+        })),
+        Err(_) => Ok(serde_json::json!({
+            "success": false,
+            "error": "Script execution timeout (callback)"
+        })),
+    }
 }
 
 /// Fallback: eval + IPC event listener approach.
