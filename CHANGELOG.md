@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `execute_js` (and the `dom_snapshot` / html2canvas-screenshot tools built on it)
+  no longer time out on Windows/WebView2. The non-macOS path relied on a JS->IPC
+  postback (`invoke('plugin:mcp-bridge|script_result')`) that never completes on
+  WebView2 — the same class of failure that #12 fixed for macOS via native eval.
+  Synchronous scripts now use Tauri's `WebviewWindow::eval_with_callback` (a real
+  result channel through WebView2's `ExecuteScript` completion handler); async
+  scripts keep the IPC-callback fallback.
+
 ## [0.11.2] - 2026-05-19
 
 ### Changed
