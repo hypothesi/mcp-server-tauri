@@ -375,7 +375,7 @@ export const TOOLS: ToolDefinition[] = [
          return await getStyles({
             selector: parsed.selector,
             strategy: parsed.strategy,
-            properties: parsed.properties,
+            cssProperties: parsed.cssProperties,
             multiple: parsed.multiple,
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,

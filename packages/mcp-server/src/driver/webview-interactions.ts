@@ -97,7 +97,7 @@ export const WaitForSchema = WindowTargetSchema.extend({
 export const GetStylesSchema = WindowTargetSchema.extend({
    selector: z.string().describe('Element selector: CSS selector (default), XPath expression, text content, or ref ID'),
    strategy: selectorStrategyField,
-   properties: z.array(z.string()).optional().describe('Specific CSS properties to retrieve. If omitted, returns all computed styles'),
+   cssProperties: z.array(z.string()).optional().describe('Specific CSS properties to retrieve. If omitted, returns all computed styles'),
    multiple: z.boolean().optional().default(false)
       .describe('Whether to get styles for all matching elements (true) or just the first (false)'),
 });
@@ -338,19 +338,19 @@ export async function waitFor(options: WaitForOptions): Promise<string> {
 export interface GetStylesOptions {
    selector: string;
    strategy?: string;
-   properties?: string[];
+   cssProperties?: string[];
    multiple?: boolean;
    windowId?: string;
    appIdentifier?: string | number;
 }
 
 export async function getStyles(options: GetStylesOptions): Promise<string> {
-   const { selector, strategy, properties, multiple = false, windowId, appIdentifier } = options;
+   const { selector, strategy, cssProperties, multiple = false, windowId, appIdentifier } = options;
 
    const script = buildScript(SCRIPTS.getStyles, {
       selector,
       strategy: strategy ?? 'css',
-      properties: properties || [],
+      properties: cssProperties || [],
       multiple,
    });
 
