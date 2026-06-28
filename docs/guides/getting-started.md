@@ -93,10 +93,10 @@ Before you begin, ensure you have:
 
 ## Step 1: Configure Your AI Assistant
 
-First, add the MCP server to your AI assistant using [install-mcp](https://www.npmjs.com/package/install-mcp):
+First, add the MCP server to your AI assistant using [aix](https://aix.a1st.dev/cli/add/#aix-add-mcp):
 
 ```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
+npx -y @a1st/aix add mcp tauri --command 'npx @hypothesi/tauri-mcp-server' --user
 ```
 
 Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
