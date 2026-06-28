@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `tauri-plugin-mcp-bridge`: `get_backend_state` now includes the host process's current working directory (`cwd` field). Lets MCP clients disambiguate concurrent Tauri instances running from different worktrees or checkouts.
+- `tauri-mcp-server`: `resolveTargetApp` falls back to CWD-based routing when no `appIdentifier` is passed and multiple apps are connected, picking the session whose `cwd` best matches `MCP_BRIDGE_CWD` or `process.cwd()`. Removes the need to manually pass `appIdentifier` per-tool-call when working across multiple worktrees with their own MCP sessions.
+- `tauri-mcp-server`: new `getCwdHint()` config helper and `MCP_BRIDGE_CWD` env override.
+- `driver_session` status output now includes the `cwd` of each connected app.
+
 ## [0.11.2] - 2026-05-19
 
 ### Changed

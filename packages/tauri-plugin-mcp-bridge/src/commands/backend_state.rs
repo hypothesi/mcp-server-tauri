@@ -16,6 +16,7 @@ use tauri::{command, AppHandle, Manager, Runtime};
 ///   - `tauri`: Tauri framework version
 ///   - `environment`: Runtime environment info (debug mode, OS, arch)
 ///   - `windows`: List of window labels and their states
+///   - `cwd`: Current working directory of the host process (string or null)
 ///   - `timestamp`: Current timestamp in milliseconds
 #[command]
 pub async fn get_backend_state<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
@@ -39,6 +40,13 @@ pub async fn get_backend_state<R: Runtime>(app: AppHandle<R>) -> Result<Value, S
         })
         .collect();
 
+    // Host-process CWD. Lets MCP clients disambiguate concurrent Tauri
+    // instances running from different worktrees or checkouts (bundle id
+    // is identical across them).
+    let cwd: Option<String> = std::env::current_dir()
+        .ok()
+        .map(|p| p.display().to_string());
+
     Ok(serde_json::json!({
         "app": {
             "name": config.product_name.clone().unwrap_or_else(|| "Unknown".to_string()),
@@ -56,6 +64,7 @@ pub async fn get_backend_state<R: Runtime>(app: AppHandle<R>) -> Result<Value, S
         },
         "windows": windows,
         "window_count": windows.len(),
+        "cwd": cwd,
         "timestamp": current_timestamp(),
     }))
 }

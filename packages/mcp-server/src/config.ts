@@ -38,6 +38,33 @@ export function getDefaultPort(): number {
 }
 
 /**
+ * Gets the CWD hint used to route tool calls to the right Tauri instance
+ * when multiple are connected at once.
+ *
+ * Resolution priority:
+ * 1. MCP_BRIDGE_CWD environment variable (explicit override; useful when a
+ *    wrapper script wants to pin routing to a specific worktree regardless
+ *    of where the TS server happened to be launched from)
+ * 2. process.cwd() (natural inheritance from the calling shell / IDE)
+ *
+ * Returns null only when both are unavailable, which is extremely rare:
+ * process.cwd() is set on every healthy POSIX process.
+ */
+export function getCwdHint(): string | null {
+   // eslint-disable-next-line no-process-env
+   const override = process.env.MCP_BRIDGE_CWD;
+
+   if (override && override.length > 0) {
+      return override;
+   }
+   try {
+      return process.cwd();
+   } catch {
+      return null;
+   }
+}
+
+/**
  * Gets the full bridge configuration from environment variables.
  */
 export function getConfig(): BridgeConfig {

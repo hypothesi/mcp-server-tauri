@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getDefaultHost, getDefaultPort } from '../config.js';
+import { getCwdHint, getDefaultHost, getDefaultPort } from '../config.js';
 import { AppDiscovery } from './app-discovery.js';
 import { PluginClient } from './plugin-client.js';
 import { resetInitialization } from './webview-executor.js';
@@ -42,6 +42,13 @@ export const ManageDriverSessionSchema = z.object({
 export interface SessionInfo {
    name: string;
    identifier: string | null;
+   /**
+    * Working directory of the host Tauri process at session-start time.
+    * `null` when the plugin is too old to advertise it (pre-v0.11) or
+    * when the lookup failed; in that case CWD-based routing skips this
+    * session and falls back to default behavior.
+    */
+   cwd: string | null;
    host: string;
    port: number;
    client: PluginClient;
@@ -104,8 +111,71 @@ function getAppDiscovery(host: string): AppDiscovery {
 }
 
 /**
+ * Find the session whose `cwd` best matches `hintCwd`.
+ *
+ * Used to disambiguate multiple concurrent Tauri instances when the caller
+ * did not pass an explicit appIdentifier. The "best match" is the longest
+ * shared prefix between the hint and a session's CWD, in either direction:
+ *
+ *   - `session.cwd === hintCwd` (exact)
+ *   - `hintCwd.startsWith(session.cwd + '/')` (TS server runs inside a
+ *     subdirectory of the host process's CWD; rare)
+ *   - `session.cwd.startsWith(hintCwd + '/')` (host process runs inside
+ *     the workspace the TS server was launched from; the common case
+ *     when VSCode opens a parent dir and moss runs from a worktree)
+ *
+ * Sessions whose `cwd` is null (older plugin without CWD support) are
+ * skipped — they cannot be matched and stay eligible for the existing
+ * "use default app" fallback in `resolveTargetApp`.
+ *
+ * Pure function (takes `sessions` as a parameter) so it can be unit-tested
+ * without touching module state.
+ *
+ * @returns The best-matching session, or null if no session matches.
+ */
+export function findSessionByCwd(
+   sessions: Iterable<SessionInfo>,
+   hintCwd: string | null
+): SessionInfo | null {
+   if (!hintCwd) {
+      return null;
+   }
+
+   let best: SessionInfo | null = null;
+   let bestScore = -1;
+
+   for (const session of sessions) {
+      if (!session.cwd) continue;
+
+      let score = -1;
+
+      if (session.cwd === hintCwd) {
+         score = session.cwd.length;
+      } else if (hintCwd.startsWith(session.cwd + '/')) {
+         score = session.cwd.length;
+      } else if (session.cwd.startsWith(hintCwd + '/')) {
+         score = hintCwd.length;
+      }
+
+      if (score > bestScore) {
+         best = session;
+         bestScore = score;
+      }
+   }
+
+   return best;
+}
+
+/**
  * Resolve target app from port or identifier.
  * Returns the appropriate session based on the routing logic.
+ *
+ * Order of precedence:
+ * 1. Explicit `portOrIdentifier` (port number or bundle id)
+ * 2. CWD match via `findSessionByCwd` against `MCP_BRIDGE_CWD` or
+ *    `process.cwd()` — lets each MCP client target the Tauri instance
+ *    running in its own workspace/worktree without manual routing
+ * 3. The default app (most-recently-connected)
  */
 export function resolveTargetApp(portOrIdentifier?: string | number): SessionInfo {
    if (activeSessions.size === 0) {
@@ -147,6 +217,14 @@ export function resolveTargetApp(portOrIdentifier?: string | number): SessionInf
       }
 
       throw new Error(formatAppNotFoundError(portOrIdentifier));
+   }
+
+   // No explicit identifier: try CWD-based routing before falling back to
+   // "default app". If no session matches, behave as before.
+   const cwdMatch = findSessionByCwd(activeSessions.values(), getCwdHint());
+
+   if (cwdMatch) {
+      return cwdMatch;
    }
 
    // Use default app
@@ -230,6 +308,7 @@ async function handleStatusAction(): Promise<string> {
          connected: true,
          app: session.name,
          identifier: session.identifier,
+         cwd: session.cwd,
          host: session.host,
          port: session.port,
       });
@@ -239,6 +318,7 @@ async function handleStatusAction(): Promise<string> {
       return {
          name: session.name,
          identifier: session.identifier,
+         cwd: session.cwd,
          host: session.host,
          port: session.port,
          isDefault: session.port === defaultPort,
@@ -302,11 +382,12 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
 
    await client.connect();
 
-   const identifier = await fetchAppIdentifier(client);
+   const { identifier, cwd } = await fetchAppMetadata(client);
 
    const sessionInfo: SessionInfo = {
       name: connectedSession.name,
       identifier,
+      cwd,
       host: connectedSession.host,
       port: connectedSession.port,
       client,
@@ -380,12 +461,18 @@ async function tryConnect(host: string, port: number): Promise<{ name: string; h
  * Must be called after a PluginClient is connected.
  *
  * @param client - The PluginClient to query
- * @returns The app identifier (bundle ID) or null if not available. Returns null when:
- *          - The plugin doesn't support the identifier field (older versions)
+ * @returns `{ identifier, cwd }`. Each field is null when:
+ *          - The plugin is too old to advertise it
  *          - The backend state request fails
- *          - The identifier field is missing from the response
+ *          - The field is missing from the response
+ *
+ *          Older plugins (pre-identifier) return `{ identifier: null, cwd: null }`.
+ *          Newer plugins without the cwd field return a real identifier and a null cwd.
+ *          Routing degrades gracefully in either case.
  */
-async function fetchAppIdentifier(client: PluginClient): Promise<string | null> {
+async function fetchAppMetadata(
+   client: PluginClient
+): Promise<{ identifier: string | null; cwd: string | null }> {
    try {
       const response = await client.sendCommand({
          command: 'invoke_tauri',
@@ -393,16 +480,20 @@ async function fetchAppIdentifier(client: PluginClient): Promise<string | null> 
       });
 
       if (!response.success || !response.data) {
-         return null;
+         return { identifier: null, cwd: null };
       }
 
-      const state = response.data as { app?: { identifier?: string } };
+      const state = response.data as {
+         app?: { identifier?: string };
+         cwd?: string | null;
+      };
 
-      // Return null if identifier is not present (backward compat with older plugins)
-      return state.app?.identifier ?? null;
-   } catch{
-      // Return null on any error (e.g., older plugin version that doesn't support this)
-      return null;
+      return {
+         identifier: state.app?.identifier ?? null,
+         cwd: typeof state.cwd === 'string' && state.cwd.length > 0 ? state.cwd : null,
+      };
+   } catch {
+      return { identifier: null, cwd: null };
    }
 }
 
