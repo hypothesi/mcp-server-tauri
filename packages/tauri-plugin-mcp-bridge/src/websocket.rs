@@ -606,6 +606,24 @@ async fn dispatch_command<R: Runtime>(app: &AppHandle<R>, command: &Value) -> Va
     }
 }
 
+/// True for the benign "client went away mid-handshake" errors: a TCP connection that never
+/// completes the WebSocket upgrade. These are routine (port scanners, health checks, reconnecting
+/// clients) and not worth surfacing as connection errors.
+fn is_benign_handshake_error(err: &tokio_tungstenite::tungstenite::Error) -> bool {
+    use std::io::ErrorKind;
+    use tokio_tungstenite::tungstenite::{error::ProtocolError, Error};
+
+    match err {
+        Error::ConnectionClosed | Error::AlreadyClosed => true,
+        Error::Protocol(ProtocolError::HandshakeIncomplete) => true,
+        Error::Io(io_err) => matches!(
+            io_err.kind(),
+            ErrorKind::ConnectionReset | ErrorKind::UnexpectedEof | ErrorKind::BrokenPipe
+        ),
+        _ => false,
+    }
+}
+
 /// Handles a single WebSocket client connection.
 ///
 /// This function manages the lifecycle of a WebSocket connection, including:
@@ -628,7 +646,15 @@ async fn handle_connection<R: Runtime>(
     event_tx: broadcast::Sender<String>,
     app: AppHandle<R>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let ws_stream = accept_async(stream).await?;
+    let ws_stream = match accept_async(stream).await {
+        Ok(ws_stream) => ws_stream,
+        // A client that opens the TCP connection but drops before completing the WebSocket
+        // upgrade (port probes, health checks, browsers/agents reconnecting) surfaces here as a
+        // benign handshake/connection error, e.g. "Handshake not finished". Swallow those so
+        // they don't spam the connection-error log; propagate anything genuinely unexpected.
+        Err(e) if is_benign_handshake_error(&e) => return Ok(()),
+        Err(e) => return Err(e.into()),
+    };
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
     let mut event_rx = event_tx.subscribe();
 
