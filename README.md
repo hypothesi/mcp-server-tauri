@@ -43,58 +43,16 @@ A **Model Context Protocol (MCP) server** that enables AI assistants like Claude
 
 ### 1. Configure Your AI Assistant
 
-Use [install-mcp](https://www.npmjs.com/package/install-mcp) to add the server to your AI assistant:
+Use [aix](https://aix.a1st.dev/cli/add/#aix-add-mcp) to add the server to your AI assistant:
 
 ```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
+npx -y @a1st/aix add mcp @hypothesi/tauri-mcp-server --user
 ```
 
 Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
 
-<details>
-<summary><strong>Claude Code</strong></summary>
-
-```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client claude-code
-```
-
-</details>
-
-<details>
-<summary><strong>Cursor</strong></summary>
-
-```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client cursor
-```
-
-</details>
-
-<details>
-<summary><strong>VS Code / Copilot</strong></summary>
-
-```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client vscode
-```
-
-</details>
-
-<details>
-<summary><strong>Windsurf</strong></summary>
-
-```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client windsurf
-```
-
-</details>
-
-<details>
-<summary><strong>Cline</strong></summary>
-
-```bash
-npx -y install-mcp @hypothesi/tauri-mcp-server --client cline
-```
-
-</details>
+> [!TIP]
+> `aix` automatically detects your installed AI assistants and configures them.
 
 **Restart your AI assistant** after adding the configuration.
 
