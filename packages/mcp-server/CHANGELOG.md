@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `webview_screenshot` only uses the interactive Screen Capture API fallback when `allowScreenCapture` is explicitly enabled.
+
+### Fixed
+- Constrain html2canvas fallback output to the visible viewport instead of allocating a full-document canvas.
+
 ## [0.12.0] - 2026-07-05
 
 ### Added

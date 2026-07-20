@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Capture Linux screenshots through WebKitGTK's native visible-region snapshot API instead of falling back to JavaScript.
+
 ## [0.12.0] - 2026-07-05
 
 ### Added
