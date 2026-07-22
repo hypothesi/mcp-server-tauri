@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add Windows UI Automation dialog discovery and interaction on a dedicated COM MTA thread, restricted to same-process dialog ownership chains rooted at the connected Tauri window and supporting multi-file, folder, navigation, and nested confirmation workflows.
+
 ## [0.12.0] - 2026-07-05
 
 ### Added

@@ -124,6 +124,8 @@ Just type the command in your AI assistant to start a guided workflow.
 | `read_logs` | Read console, Android, iOS, or system logs |
 | `webview_interact` | Click, scroll, swipe, focus, long-press |
 | `webview_screenshot` | Capture webview screenshots |
+| `native_dialog_snapshot` | Inspect app-owned native Windows dialog chains and navigation controls |
+| `native_dialog_interact` | Invoke, set single/multiple paths, or select native Windows dialog controls |
 | `webview_keyboard` | Type text or send key events |
 | `webview_wait_for` | Wait for elements, text, or events |
 | `webview_get_styles` | Get computed CSS styles |
@@ -134,6 +136,8 @@ Just type the command in your AI assistant to start a guided workflow.
 | `manage_window` | List windows, get info, or resize |
 
 > **Multi-Window Support**: All webview tools accept an optional `windowId` parameter to target specific windows. Use `manage_window` with `action: "list"` to discover available windows.
+
+> **Native Windows dialogs**: `native_dialog_*` tools require an interactive desktop and expose only same-process dialogs whose owner chain leads to the targeted Tauri window. They support single/multi-file Open, Save, folder selection, nested confirmations, and advertised navigation controls, but not toast notifications or other applications.
 
 </details>
 

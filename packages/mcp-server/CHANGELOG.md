@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add `native_dialog_snapshot` and `native_dialog_interact` MCP tools for semantic Windows native-dialog automation, including multiple paths, folder pickers, navigation controls, and nested confirmations.
+
 ## [0.12.0] - 2026-07-05
 
 ### Added

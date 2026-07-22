@@ -6,10 +6,14 @@
 
 use crate::commands::{self, resolve_window_with_context, ScriptExecutor, WindowContext};
 use crate::logging::{mcp_log_error, mcp_log_info};
+use crate::native_dialog::{
+    bounded_timeout, InteractRequest, NativeDialogAction, NativeDialogAutomation, SnapshotRequest,
+};
 use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{self, Value};
 use std::net::SocketAddr;
+use std::time::Duration;
 use tauri::{AppHandle, Manager, Runtime, WebviewWindow};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc};
@@ -360,6 +364,155 @@ async fn handle_capture_screenshot<R: Runtime>(
     }
 }
 
+#[cfg(target_os = "windows")]
+fn native_owner_handle<R: Runtime>(window: &WebviewWindow<R>) -> Result<usize, String> {
+    window
+        .hwnd()
+        .map(|hwnd| hwnd.0 as usize)
+        .map_err(|_| "Failed to resolve the targeted Tauri window handle".to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn native_owner_handle<R: Runtime>(_window: &WebviewWindow<R>) -> Result<usize, String> {
+    Ok(0)
+}
+
+fn native_dialog_timeout(args: &Value) -> Duration {
+    let requested = args
+        .get("timeoutMs")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(2_000)
+        .max(100);
+    bounded_timeout(Duration::from_millis(requested))
+}
+
+/// Handles bounded native dialog discovery on the dedicated UI Automation thread.
+async fn handle_native_dialog_snapshot<R: Runtime>(
+    app: &AppHandle<R>,
+    id: &str,
+    args: &Value,
+) -> Value {
+    let Some(scope_id) = args.get("scopeId").and_then(|value| value.as_str()) else {
+        return error_response(id, "Missing native dialog session scope");
+    };
+    let window_label = args
+        .get("windowLabel")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let resolved = match resolve_window_with_context(app, window_label) {
+        Ok(resolved) => resolved,
+        Err(error) => return error_response(id, error),
+    };
+    let owner_window = match native_owner_handle(&resolved.window) {
+        Ok(owner_window) => owner_window,
+        Err(error) => return error_response(id, error),
+    };
+    let context = resolved.context;
+    let automation = app.state::<NativeDialogAutomation>().inner().clone();
+    let request = SnapshotRequest {
+        process_id: std::process::id(),
+        owner_window,
+        scope_id: scope_id.to_string(),
+        min_owner_depth: args
+            .get("minOwnerDepth")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(1)
+            .clamp(1, 8) as usize,
+        timeout: native_dialog_timeout(args),
+    };
+
+    match tokio::task::spawn_blocking(move || automation.snapshot(request)).await {
+        Ok(Ok(snapshot)) => serde_json::json!({
+            "id": id,
+            "success": true,
+            "data": snapshot,
+            "windowContext": context
+        }),
+        Ok(Err(error)) => serde_json::json!({
+            "id": id,
+            "success": false,
+            "error": error,
+            "windowContext": context
+        }),
+        Err(_) => error_response(id, "Native dialog automation worker failed"),
+    }
+}
+
+/// Handles semantic UI Automation patterns for a previously discovered element.
+async fn handle_native_dialog_interact<R: Runtime>(
+    app: &AppHandle<R>,
+    id: &str,
+    args: &Value,
+) -> Value {
+    let Some(scope_id) = args.get("scopeId").and_then(|value| value.as_str()) else {
+        return error_response(id, "Missing native dialog session scope");
+    };
+    let Some(element_ref) = args.get("elementRef").and_then(|value| value.as_str()) else {
+        return error_response(id, "Missing native dialog elementRef");
+    };
+    let Some(action_name) = args.get("action").and_then(|value| value.as_str()) else {
+        return error_response(id, "Missing native dialog action");
+    };
+    let action = match NativeDialogAction::parse(action_name) {
+        Ok(action) => action,
+        Err(error) => return error_response(id, error),
+    };
+    let paths = match args.get("paths") {
+        None => None,
+        Some(Value::Array(values)) if values.iter().all(Value::is_string) => Some(
+            values
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect(),
+        ),
+        Some(_) => return error_response(id, "Native dialog paths must be an array of strings"),
+    };
+    let window_label = args
+        .get("windowLabel")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let resolved = match resolve_window_with_context(app, window_label) {
+        Ok(resolved) => resolved,
+        Err(error) => return error_response(id, error),
+    };
+    let owner_window = match native_owner_handle(&resolved.window) {
+        Ok(owner_window) => owner_window,
+        Err(error) => return error_response(id, error),
+    };
+    let context = resolved.context;
+    let automation = app.state::<NativeDialogAutomation>().inner().clone();
+    let request = InteractRequest {
+        process_id: std::process::id(),
+        owner_window,
+        scope_id: scope_id.to_string(),
+        element_ref: element_ref.to_string(),
+        action,
+        value: args
+            .get("value")
+            .and_then(|value| value.as_str())
+            .map(str::to_string),
+        paths,
+        timeout: native_dialog_timeout(args),
+    };
+
+    match tokio::task::spawn_blocking(move || automation.interact(request)).await {
+        Ok(Ok(result)) => serde_json::json!({
+            "id": id,
+            "success": true,
+            "data": result,
+            "windowContext": context
+        }),
+        Ok(Err(error)) => serde_json::json!({
+            "id": id,
+            "success": false,
+            "error": error,
+            "windowContext": context
+        }),
+        Err(_) => error_response(id, "Native dialog automation worker failed"),
+    }
+}
+
 /// Handles the resize_window command.
 async fn handle_resize_window<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Value) -> Value {
     let width = args.get("width").and_then(|v| v.as_u64()).map(|w| w as u32);
@@ -579,6 +732,20 @@ async fn dispatch_command<R: Runtime>(app: &AppHandle<R>, command: &Value) -> Va
             }
         }
         "capture_native_screenshot" => handle_capture_screenshot(app, id, args).await,
+        "native_dialog_snapshot" => {
+            if let Some(args) = args {
+                handle_native_dialog_snapshot(app, id, args).await
+            } else {
+                error_response(id, "Missing args for native_dialog_snapshot")
+            }
+        }
+        "native_dialog_interact" => {
+            if let Some(args) = args {
+                handle_native_dialog_interact(app, id, args).await
+            } else {
+                error_response(id, "Missing args for native_dialog_interact")
+            }
+        }
         "resize_window" => {
             if let Some(args) = args {
                 handle_resize_window(app, id, args).await
@@ -687,7 +854,9 @@ async fn handle_connection<R: Runtime>(
                     let response = dispatch_command(&app, &command).await;
                     let _ = response_tx.send(response.to_string());
                 } else {
-                    eprintln!("Failed to parse command: {text}");
+                    // Command payloads can contain paths and other private data.
+                    // Never include them in plugin logs.
+                    eprintln!("Failed to parse WebSocket command");
                 }
             }
             Ok(Message::Close(_)) => {

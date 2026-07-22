@@ -98,7 +98,7 @@ await driver_session({ action: "stop", appIdentifier: 9223 })
 await driver_session({ action: "stop" })
 ```
 
-## Available Tools (20 total)
+## Available Tools (22 total)
 
 ### Setup & Configuration
 
@@ -115,6 +115,8 @@ await driver_session({ action: "stop" })
 | `read_logs` | Read console, Android, iOS, or system logs |
 | `webview_interact` | Click, scroll, swipe, focus, long-press |
 | `webview_screenshot` | Capture webview screenshots (JPEG default) |
+| `native_dialog_snapshot` | Inspect app-owned native Windows dialog chains and navigation controls |
+| `native_dialog_interact` | Invoke, set paths, or select native Windows dialog controls |
 | `webview_keyboard` | Type text or send key events |
 | `webview_wait_for` | Wait for elements, text, or events |
 | `webview_get_styles` | Get computed CSS styles |

@@ -29,6 +29,10 @@ import {
    selectElement, getPointedElement,
    SelectElementSchema, GetPointedElementSchema,
 } from './driver/element-picker.js';
+import {
+   interactWithNativeDialog, snapshotNativeDialog,
+   NativeDialogInteractSchema, NativeDialogSnapshotSchema,
+} from './driver/native-dialog.js';
 import { SETUP_INSTRUCTIONS } from './constants.js';
 
 /**
@@ -285,6 +289,53 @@ export const TOOLS: ToolDefinition[] = [
 
          // Return the content array directly for proper image handling
          return result.content;
+      },
+   },
+   {
+      name: 'native_dialog_snapshot',
+      description:
+         '[Windows Tauri Apps Only] Discover native message, confirmation, Open, or Save dialogs ' +
+         'in the ownership chain of a targeted Tauri window. Returns a bounded semantic UI Automation snapshot ' +
+         'with ownership depth, navigation and file-system controls, automation IDs, semantic roles, supported patterns, ' +
+         'and ephemeral elementRef values. Set minOwnerDepth to 2 to wait for a child confirmation such as Save overwrite. ' +
+         'Requires an active driver_session and an interactive Windows desktop. ' +
+         MULTI_APP_DESC + ' Native dialogs are outside the webview DOM; Windows toast notifications are not supported.',
+      category: TOOL_CATEGORIES.UI_AUTOMATION,
+      schema: NativeDialogSnapshotSchema,
+      annotations: {
+         title: 'Inspect Native Windows Dialog',
+         readOnlyHint: true,
+         destructiveHint: false,
+         openWorldHint: false,
+      },
+      handler: async (args) => {
+         const parsed = NativeDialogSnapshotSchema.parse(args);
+
+         return await snapshotNativeDialog(parsed);
+      },
+   },
+   {
+      name: 'native_dialog_interact',
+      description:
+         '[Windows Tauri Apps Only] Interact with an elementRef from the latest native_dialog_snapshot ' +
+         'using UI Automation InvokePattern, ValuePattern, or SelectionItemPattern. Use invoke for dialog buttons, ' +
+         'setValue with a complete absolute file or folder path, setPaths with complete absolute existing file paths ' +
+         'for multi-select Open dialogs, and select for advertised navigation or file-system controls. ' +
+         'References are session-bound, expire after 30 seconds, and are otherwise ephemeral; ' +
+         'take a new snapshot after a stale-reference error. ' +
+         'Requires an active driver_session and an interactive Windows desktop. ' + MULTI_APP_DESC,
+      category: TOOL_CATEGORIES.UI_AUTOMATION,
+      schema: NativeDialogInteractSchema,
+      annotations: {
+         title: 'Interact with Native Windows Dialog',
+         readOnlyHint: false,
+         destructiveHint: false,
+         openWorldHint: false,
+      },
+      handler: async (args) => {
+         const parsed = NativeDialogInteractSchema.parse(args);
+
+         return await interactWithNativeDialog(parsed);
       },
    },
    {

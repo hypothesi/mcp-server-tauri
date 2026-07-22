@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Windows-only `native_dialog_snapshot` and `native_dialog_interact` tools use Microsoft UI Automation to inspect and control native dialogs owned by the connected Tauri application, including multi-file Open, folder selection, navigation controls, nested ownership chains, and Save overwrite confirmations.
+
 ## [0.12.0] - 2026-07-05
 
 ### Added

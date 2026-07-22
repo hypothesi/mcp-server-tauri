@@ -117,13 +117,13 @@ await invoke('plugin:mcp-bridge|emit_event', {
 
 ## MCP Server Integration
 
-This plugin is part of the larger MCP Server for Tauri, which provides **20 total MCP tools** for comprehensive Tauri development and testing. The plugin specifically enables the following tools:
+This plugin is part of the larger MCP Server for Tauri, which provides **22 total MCP tools** for comprehensive Tauri development and testing. The plugin specifically enables the following tools:
 
 ### Mobile Development Tools (1)
 
 1. **list_devices** - List connected Android devices and iOS simulators
 
-### UI Automation & WebView Tools (14)
+### UI Automation & WebView Tools (16)
 
 Tools for UI automation and webview interaction via the plugin's WebSocket connection:
 
@@ -133,14 +133,16 @@ Tools for UI automation and webview interaction via the plugin's WebSocket conne
 4. **read_logs** - Read logs (console, Android logcat, iOS, system)
 5. **webview_interact** - Perform gestures (click, double-click, long-press, swipe, scroll, focus)
 6. **webview_screenshot** - Take screenshots (JPEG default, with optional resizing)
-7. **webview_keyboard** - Type text or simulate keyboard events with optional modifiers
-8. **webview_wait_for** - Wait for element selectors, text content, or IPC events
-9. **webview_get_styles** - Get computed CSS styles for element(s)
-10. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
-11. **webview_dom_snapshot** - Get structured DOM snapshot (accessibility or structure type)
-12. **webview_select_element** - Visual element picker — user clicks an element, returns metadata + screenshot
-13. **webview_get_pointed_element** - Retrieve metadata for element user Alt+Shift+Clicked
-14. **get_setup_instructions** - Get setup/update instructions for the MCP Bridge plugin
+7. **native_dialog_snapshot** - Inspect same-process native Windows dialog ownership chains and navigation controls through UI Automation
+8. **native_dialog_interact** - Invoke, set single/multiple paths, or select native Windows dialog controls
+9. **webview_keyboard** - Type text or simulate keyboard events with optional modifiers
+10. **webview_wait_for** - Wait for element selectors, text content, or IPC events
+11. **webview_get_styles** - Get computed CSS styles for element(s)
+12. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
+13. **webview_dom_snapshot** - Get structured DOM snapshot (accessibility or structure type)
+14. **webview_select_element** - Visual element picker — user clicks an element, returns metadata + screenshot
+15. **webview_get_pointed_element** - Retrieve metadata for element user Alt+Shift+Clicked
+16. **get_setup_instructions** - Get setup/update instructions for the MCP Bridge plugin
 
 ### IPC Tools (5)
 
