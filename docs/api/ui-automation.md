@@ -9,7 +9,7 @@ head:
 
 # UI Automation
 
-Control and automate your Tauri application's UI. These tools provide comprehensive automation capabilities for testing and interaction, working seamlessly across all platforms (Linux, Windows, macOS).
+Control and automate your Tauri application's UI. Webview tools work across Linux, Windows, and macOS. Native dialog automation is Windows-only.
 
 ## Multi-Window Support
 
@@ -221,6 +221,79 @@ For real iOS/Android devices on the network:
 **Android alternative**: Use `adb reverse tcp:9223 tcp:9223` to forward the port, then connect to localhost.
 
 **Note**: No external driver process required.
+
+## Native Windows Dialogs
+
+`native_dialog_snapshot` and `native_dialog_interact` automate native message, confirmation, single- or multi-file Open, folder selection, and Save dialogs. These windows are outside the webview DOM, so `webview_interact`, `webview_keyboard`, and `webview_screenshot` cannot inspect or control them.
+
+The tools require an active `driver_session` and an interactive Windows desktop. Discovery is restricted to visible dialogs in the connected Tauri process whose bounded owner chain leads back to the targeted Tauri window. This includes nested prompts such as a Save overwrite confirmation without exposing desktop-wide automation or dialogs from other applications. Windows toast notifications are not dialogs and are not supported.
+
+### native_dialog_snapshot
+
+Returns a bounded semantic snapshot containing control types, automation IDs, names, semantic roles, supported UI Automation patterns, owner depth, parent-dialog references, and opaque `elementRef` values. File-dialog snapshots include actionable navigation controls, the current-location control, navigation-tree items, and selectable file-system entries. Use `windowId` and `appIdentifier` with the same targeting behavior as webview tools. `timeoutMs` accepts 100–10000 milliseconds.
+
+```javascript
+{
+  "tool": "native_dialog_snapshot",
+  "windowId": "main",
+  "minOwnerDepth": 1,
+  "timeoutMs": 2000
+}
+```
+
+`minOwnerDepth` defaults to `1`, where the Tauri window directly owns the dialog. Set it to `2` to wait for a prompt owned by another app-owned dialog, such as an overwrite confirmation. Nested dialogs are returned before their parents.
+
+Controls advertise one or more supported actions:
+
+- `invoke` — `InvokePattern`, typically buttons such as accept, cancel, yes, or no
+- `setValue` — `ValuePattern`, used for a complete absolute filename/path
+- `setPaths` — `ValuePattern`, used for up to 100 complete absolute existing file paths in a multi-select Open dialog
+- `select` — `SelectionItemPattern`, where the dialog exposes a selectable control
+
+Semantic roles are derived from automation IDs and control patterns rather than localized button text. Names and dialog text are returned to the caller for inspection but are not written to bridge logs.
+
+### native_dialog_interact
+
+Apply one advertised action to an `elementRef` from the latest snapshot:
+
+```javascript
+{
+  "tool": "native_dialog_interact",
+  "action": "invoke",
+  "elementRef": "native_..."
+}
+```
+
+For Open or Save dialogs, set the filename field to a complete absolute path, then invoke the accept button:
+
+```javascript
+{
+  "tool": "native_dialog_interact",
+  "action": "setValue",
+  "elementRef": "native_...",
+  "value": "C:\\tmp\\fixture.txt"
+}
+```
+
+For a multi-file Open dialog, use the filename field's advertised `setPaths` action and then invoke accept:
+
+```javascript
+{
+  "tool": "native_dialog_interact",
+  "action": "setPaths",
+  "elementRef": "native_...",
+  "paths": [
+    "C:\\tmp\\first.txt",
+    "C:\\tmp\\second.txt"
+  ]
+}
+```
+
+For a folder picker, use `setValue` with a complete absolute directory path and invoke accept. To respond to a Save overwrite prompt, invoke Save, take a new snapshot with `minOwnerDepth: 2`, and invoke the confirmation's advertised affirmative action. Back, forward, up, address/current-location, navigation-tree, and file-system entry controls are included when Windows exposes their corresponding UI Automation patterns.
+
+Element references are session-bound, expire after 30 seconds, and are otherwise ephemeral. A new snapshot replaces the previous reference set; invoking or selecting a control invalidates references for that dialog, while `setValue` and `setPaths` preserve them so the previously discovered accept control can be invoked. If the dialog changes or closes, the tool returns a stale-reference error and the caller must take another snapshot.
+
+Supported scope includes single- and multi-file Open, Save, folder selection, overwrite confirmation, message acknowledgement, ask/confirm responses, absolute-path entry, cancellation, nested app-owned dialogs, and navigation controls that expose the patterns above. Arbitrary custom controls without UI Automation patterns, permission prompts outside the app's ownership chain, notification/toast automation, image recognition, and coordinate-based native control remain out of scope.
 
 ## webview_find_element
 

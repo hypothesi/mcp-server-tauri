@@ -83,6 +83,7 @@ pub mod config;
 pub mod discovery;
 mod logging;
 pub mod monitor;
+pub mod native_dialog;
 pub mod screenshot;
 pub mod script_registry;
 pub mod utils;
@@ -186,6 +187,10 @@ pub fn init_with_config<R: Runtime>(config: Config) -> TauriPlugin<R> {
             // Initialize script registry for persistent script injection
             let script_registry = create_shared_registry();
             app.manage(script_registry);
+
+            // UI Automation stays on its own COM MTA thread. The managed value
+            // contains only the request channel used by WebSocket handlers.
+            app.manage(native_dialog::NativeDialogAutomation::new());
 
             // Find an available port for WebSocket server
             let port = find_available_port(&bind_address, base_port);

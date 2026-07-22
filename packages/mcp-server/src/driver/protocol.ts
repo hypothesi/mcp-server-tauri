@@ -15,7 +15,9 @@ export type PluginCommandType =
    | 'stop_ipc_monitor'
    | 'get_ipc_events'
    | 'execute_js'
-   | 'capture_native_screenshot';
+   | 'capture_native_screenshot'
+   | 'native_dialog_snapshot'
+   | 'native_dialog_interact';
 
 /** Request message sent from MCP server to Tauri plugin */
 export interface PluginRequest {
