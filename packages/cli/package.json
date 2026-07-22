@@ -10,7 +10,7 @@
       "intent": "./bin/intent.js"
    },
    "scripts": {
-      "build": "tsc && chmod +x dist/index.js",
+      "build": "tsc && node ../../scripts/prepare-node-dist.js --executable dist/index.js",
       "test": "vitest run",
       "dev": "tsc --watch",
       "skills:validate": "node bin/intent.js list",
