@@ -4,6 +4,8 @@
 
 # MCP Server Tauri
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.hypothesi%2Fmcp-server-tauri.svg)](https://mcptoplist.com/server/io.github.hypothesi%2Fmcp-server-tauri)
+
 **Give your AI assistant superpowers for Tauri development**
 
 [![npm version](https://img.shields.io/npm/v/@hypothesi/tauri-mcp-server?style=flat-square&color=0ea5e9)](https://www.npmjs.com/package/@hypothesi/tauri-mcp-server)
