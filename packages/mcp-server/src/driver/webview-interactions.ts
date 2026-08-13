@@ -450,6 +450,7 @@ export async function findElement(options: FindElementOptions): Promise<string> 
 }
 
 export interface GetConsoleLogsOptions {
+   lines?: number;
    filter?: string;
    since?: string;
    windowId?: string;
@@ -460,10 +461,10 @@ export interface GetConsoleLogsOptions {
  * Get console logs from the webview.
  */
 export async function getConsoleLogs(options: GetConsoleLogsOptions = {}): Promise<string> {
-   const { filter, since, windowId, appIdentifier } = options;
+   const { lines = 50, filter, since, windowId, appIdentifier } = options;
 
    try {
-      return await getConsoleLogsFromCapture(filter, since, windowId, appIdentifier);
+      return await getConsoleLogsFromCapture(filter, since, lines, windowId, appIdentifier);
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 

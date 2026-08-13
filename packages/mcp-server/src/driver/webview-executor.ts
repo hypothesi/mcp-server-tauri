@@ -273,6 +273,7 @@ export async function initializeConsoleCapture(): Promise<string> {
  *
  * @param filter - Optional regex pattern to filter log messages
  * @param since - Optional ISO timestamp to filter logs after this time
+ * @param lines - Maximum number of newest matching logs to return
  * @param windowId - Optional window label to target (defaults to "main")
  * @param appIdentifier - Optional app identifier to target specific app
  * @returns Formatted console logs as string
@@ -280,10 +281,12 @@ export async function initializeConsoleCapture(): Promise<string> {
 export async function getConsoleLogs(
    filter?: string,
    since?: string,
+   lines?: number,
    windowId?: string,
    appIdentifier?: string | number
 ): Promise<string> {
-   const filterStr = filter ? filter.replace(/'/g, '\\\'') : '';
+   const resolvedLines = lines ?? 50,
+         filterStr = filter ? filter.replace(/'/g, '\\\'') : '';
 
    const sinceStr = since || '';
 
@@ -304,6 +307,8 @@ export async function getConsoleLogs(
             throw new Error('Invalid filter regex: ' + e.message);
          }
       }
+
+      filtered = filtered.slice(-${resolvedLines});
 
       return filtered.map(l =>
          '[ ' + new Date(l.timestamp).toISOString() + ' ] [ ' + l.level.toUpperCase() + ' ] ' + l.message
