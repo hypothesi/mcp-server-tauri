@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `webview_screenshot` only uses the interactive Screen Capture API fallback when `allowScreenCapture` is explicitly enabled.
+- Constrain html2canvas fallback output to the visible viewport instead of allocating a full-document canvas.
 - Keep bridge WebSockets alive with ping/pong heartbeats and reconnect stale cached sessions when `driver_session start` is called again.
 
 ## [0.12.0] - 2026-07-05

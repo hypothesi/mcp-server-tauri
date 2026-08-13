@@ -65,15 +65,10 @@ webview2-com = "0.38"
 windows = { version = "0.61", features = ["Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_Foundation"] }
 windows-core = "0.61"
 
-# Linux: Native screenshot not yet implemented due to webkit2gtk/glib version conflicts
-# The webkit2gtk crate uses glib 0.18.x while newer GTK crates use 0.20.x
-# Screenshots fall back to JavaScript (html2canvas) on Linux
-# [target.'cfg(target_os = "linux")'.dependencies]
-# gtk = "0.18"
-# webkit2gtk = "2.0"
-# cairo-rs = "0.20"
-# gio = "0.20"
-# glib = "0.20"
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "2.0"
+cairo-rs = { version = "0.18", features = ["png"] }
+gio = "0.18"
 
 # Android: Native screenshot using WebView.draw() via JNI
 [target.'cfg(target_os = "android")'.dependencies]

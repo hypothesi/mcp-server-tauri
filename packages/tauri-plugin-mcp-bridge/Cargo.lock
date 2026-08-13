@@ -3580,7 +3580,9 @@ version = "0.12.0"
 dependencies = [
  "base64 0.22.1",
  "block2 0.5.1",
+ "cairo-rs",
  "futures-util",
+ "gio",
  "image",
  "jni",
  "objc2 0.5.2",
@@ -3596,6 +3598,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "uuid",
+ "webkit2gtk",
  "webview2-com",
  "windows",
  "windows-core 0.61.2",

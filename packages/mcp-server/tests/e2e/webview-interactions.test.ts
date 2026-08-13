@@ -188,6 +188,50 @@ describe('Webview Interactions E2E Tests', () => {
             }
          }
       }, TIMEOUT);
+
+      it('should capture the viewport with a large offscreen DOM', async () => {
+         await executeJavaScript({
+            script: `
+               const root = document.createElement('div');
+               const fragment = document.createDocumentFragment();
+
+               root.id = 'screenshot-stress-test';
+               for (let index = 0; index < 10000; index++) {
+                  const row = document.createElement('div');
+
+                  row.textContent = 'Offscreen row ' + index;
+                  row.style.height = '32px';
+                  fragment.appendChild(row);
+               }
+               root.appendChild(fragment);
+               document.body.appendChild(root);
+               return document.querySelectorAll('*').length;
+            `,
+         });
+
+         try {
+            const result = await screenshot({ format: 'png' });
+
+            expect('content' in result).toBe(true);
+            if (!('content' in result)) {
+               throw new Error('Expected ScreenshotResult with content');
+            }
+
+            const context = result.content.find((item) => { return item.type === 'text'; });
+
+            expect(context?.type).toBe('text');
+            if (process.platform === 'linux' && context?.type === 'text') {
+               expect(context.text).toContain('native API');
+            }
+         } finally {
+            await executeJavaScript({
+               script: `
+                  document.querySelector('#screenshot-stress-test')?.remove();
+                  return true;
+               `,
+            });
+         }
+      }, TIMEOUT);
    });
 
    describe('Keyboard Interactions', () => {

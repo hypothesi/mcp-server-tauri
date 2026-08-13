@@ -400,6 +400,7 @@ export interface CaptureScreenshotOptions {
    windowId?: string;
    appIdentifier?: string | number;
    maxWidth?: number;
+   allowScreenCapture?: boolean;
 }
 
 /**
@@ -432,13 +433,17 @@ async function prepareHtml2canvasScript(
 }
 
 /**
- * Capture a screenshot of the entire webview.
+ * Capture a screenshot of the visible webview viewport.
  *
  * @param options - Screenshot options (format, quality, windowId, appIdentifier, etc.)
  * @returns Screenshot result with image content
  */
 export async function captureScreenshot(options: CaptureScreenshotOptions = {}): Promise<ScreenshotResult> {
-   const { format = 'jpeg', quality = 80, windowId, appIdentifier, maxWidth } = options;
+   const {
+      format = 'jpeg', quality = 80, windowId, appIdentifier, maxWidth, allowScreenCapture = false,
+   } = options;
+
+   let nativeErrorMsg = 'Native screenshot unavailable';
 
    // Primary implementation: Use native platform-specific APIs
    // - macOS: WKWebView takeSnapshot
@@ -479,9 +484,9 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
       return buildScreenshotResult(dataUrl, 'native API', response.windowContext);
    } catch(nativeError: unknown) {
       // Log the native error for debugging, then fall back
-      const nativeMsg = nativeError instanceof Error ? nativeError.message : String(nativeError);
+      nativeErrorMsg = nativeError instanceof Error ? nativeError.message : String(nativeError);
 
-      driverLogger.error(`Native screenshot failed: ${nativeMsg}, falling back to html2canvas`);
+      driverLogger.error(`Native screenshot failed: ${nativeErrorMsg}, falling back to html2canvas`);
    }
 
    // Fallback 1: Use html2canvas library for high-quality DOM rendering
@@ -556,6 +561,16 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
 
       throw new Error(`html2canvas returned invalid result: ${result?.substring(0, 100) || 'null'}`);
    } catch(html2canvasError: unknown) {
+      const html2canvasMsg = html2canvasError instanceof Error ? html2canvasError.message : 'html2canvas failed';
+
+      if (!allowScreenCapture) {
+         throw new Error(
+            `Screenshot capture failed. Native API error: ${nativeErrorMsg}, ` +
+            `html2canvas error: ${html2canvasMsg}. ` +
+            'Screen Capture API fallback is disabled; set allowScreenCapture to true to request interactive permission.'
+         );
+      }
+
       try {
          // Fallback to Screen Capture API
          const result = await executeAsyncInWebview(screenCaptureScript, windowId, 5000, appIdentifier);
@@ -568,12 +583,10 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
          throw new Error(`Screen Capture API returned invalid result: ${result?.substring(0, 50) || 'null'}`);
       } catch(screenCaptureError: unknown) {
          // All methods failed - throw a proper error
-         const html2canvasMsg = html2canvasError instanceof Error ? html2canvasError.message : 'html2canvas failed';
-
          const screenCaptureMsg = screenCaptureError instanceof Error ? screenCaptureError.message : 'Screen Capture API failed';
 
          throw new Error(
-            'Screenshot capture failed. Native API not available, ' +
+            `Screenshot capture failed. Native API error: ${nativeErrorMsg}, ` +
             `html2canvas error: ${html2canvasMsg}, ` +
             `Screen Capture API error: ${screenCaptureMsg}`
          );
@@ -597,4 +610,7 @@ export const GetConsoleLogsSchema = z.object({
 export const CaptureScreenshotSchema = z.object({
    format: z.enum([ 'png', 'jpeg' ]).optional().default('jpeg').describe('Image format'),
    quality: z.number().min(0).max(100).optional().describe('JPEG quality (0-100)'),
+   allowScreenCapture: z.boolean().optional().default(false).describe(
+      'Allow the Screen Capture API fallback, which opens an interactive OS permission prompt'
+   ),
 });
