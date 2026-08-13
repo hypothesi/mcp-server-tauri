@@ -283,6 +283,35 @@ function promoteNextDefault(): void {
    }
 }
 
+/**
+ * Return whether a cached session is responsive, removing it when stale.
+ */
+async function keepResponsiveSession(port: number): Promise<boolean> {
+   const session = activeSessions.get(port);
+
+   if (!session) {
+      return false;
+   }
+
+   try {
+      if (await session.client.checkConnection()) {
+         return true;
+      }
+   } catch{
+      // Treat probe errors like missed pongs and replace the stale client below.
+   }
+
+   session.client.disconnect();
+   activeSessions.delete(port);
+
+   if (port === defaultPort) {
+      promoteNextDefault();
+   }
+
+   sessionLogger.info(`Removed stale session: ${session.name} (${session.host}:${session.port})`);
+   return false;
+}
+
 async function handleStatusAction(): Promise<string> {
    if (activeSessions.size === 0) {
       return JSON.stringify({
@@ -341,7 +370,7 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
 
    const configuredPort = port ?? getDefaultPort();
 
-   if (activeSessions.has(configuredPort)) {
+   if (await keepResponsiveSession(configuredPort)) {
       return `Already connected to app on port ${configuredPort}`;
    }
 
@@ -381,7 +410,7 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
       return `Session start failed - no Tauri app found at localhost or ${configuredHost}:${configuredPort}`;
    }
 
-   if (activeSessions.has(connectedSession.port)) {
+   if (await keepResponsiveSession(connectedSession.port)) {
       return `Already connected to app on port ${connectedSession.port}`;
    }
 
