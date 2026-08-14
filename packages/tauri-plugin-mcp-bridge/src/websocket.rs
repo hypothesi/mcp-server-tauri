@@ -13,7 +13,17 @@ use std::net::SocketAddr;
 use tauri::{AppHandle, Manager, Runtime, WebviewWindow};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc};
-use tokio_tungstenite::{accept_async, tungstenite::Message};
+use tokio_tungstenite::{
+    accept_hdr_async,
+    tungstenite::{
+        handshake::server::{ErrorResponse, Request, Response},
+        http::{header::ORIGIN, StatusCode},
+        Error, Message,
+    },
+    WebSocketStream,
+};
+
+const LEGACY_ORIGIN_HEADER: &str = "sec-websocket-origin";
 
 /// WebSocket server for real-time event streaming to MCP clients.
 ///
@@ -624,6 +634,29 @@ fn is_benign_handshake_error(err: &tokio_tungstenite::tungstenite::Error) -> boo
     }
 }
 
+/// Rejects WebSocket handshakes initiated by browser contexts.
+///
+/// RFC 6455 browsers send `Origin`; older protocol drafts used
+/// `Sec-WebSocket-Origin`. Header names are matched case-insensitively.
+// The return type is required by tungstenite's handshake callback API.
+#[allow(clippy::result_large_err)]
+fn validate_origin(request: &Request, response: Response) -> Result<Response, ErrorResponse> {
+    let headers = request.headers();
+
+    if !headers.contains_key(ORIGIN) && !headers.contains_key(LEGACY_ORIGIN_HEADER) {
+        return Ok(response);
+    }
+
+    let mut forbidden = ErrorResponse::new(None);
+
+    *forbidden.status_mut() = StatusCode::FORBIDDEN;
+    Err(forbidden)
+}
+
+async fn accept_connection(stream: TcpStream) -> Result<WebSocketStream<TcpStream>, Error> {
+    accept_hdr_async(stream, validate_origin).await
+}
+
 /// Handles a single WebSocket client connection.
 ///
 /// This function manages the lifecycle of a WebSocket connection, including:
@@ -646,7 +679,7 @@ async fn handle_connection<R: Runtime>(
     event_tx: broadcast::Sender<String>,
     app: AppHandle<R>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let ws_stream = match accept_async(stream).await {
+    let ws_stream = match accept_connection(stream).await {
         Ok(ws_stream) => ws_stream,
         // A client that opens the TCP connection but drops before completing the WebSocket
         // upgrade (port probes, health checks, browsers/agents reconnecting) surfaces here as a
@@ -861,4 +894,94 @@ pub fn inject_all_scripts<R: Runtime>(
     }
 
     Ok(scripts.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
+    use tokio_tungstenite::{
+        connect_async,
+        tungstenite::{client::IntoClientRequest, http::HeaderValue},
+    };
+
+    #[tokio::test]
+    async fn accepts_headerless_websocket_clients() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut websocket = accept_connection(stream).await.unwrap();
+
+            websocket.next().await.unwrap().unwrap()
+        });
+
+        let (mut client, response) = connect_async(format!("ws://{addr}")).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::SWITCHING_PROTOCOLS);
+        client
+            .send(Message::Text(
+                r#"{"command":"list_windows"}"#.to_string().into(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            server.await.unwrap(),
+            Message::Text(r#"{"command":"list_windows"}"#.to_string().into())
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_origin_before_command_dispatch() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let dispatch_called = Arc::new(AtomicBool::new(false));
+        let server_dispatch_called = Arc::clone(&dispatch_called);
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+
+            match accept_connection(stream).await {
+                Ok(mut websocket) => {
+                    if websocket.next().await.is_some() {
+                        server_dispatch_called.store(true, Ordering::SeqCst);
+                    }
+                    None
+                }
+                Err(Error::Http(response)) => Some(response.status()),
+                Err(error) => panic!("unexpected server error: {error}"),
+            }
+        });
+
+        let mut request = format!("ws://{addr}").into_client_request().unwrap();
+
+        request
+            .headers_mut()
+            .insert(ORIGIN, HeaderValue::from_static("https://attacker.example"));
+
+        match connect_async(request).await {
+            Err(Error::Http(response)) => {
+                assert_eq!(response.status(), StatusCode::FORBIDDEN);
+            }
+            Err(error) => panic!("unexpected client error: {error}"),
+            Ok(_) => panic!("origin-bearing WebSocket connection was accepted"),
+        }
+
+        assert_eq!(server.await.unwrap(), Some(StatusCode::FORBIDDEN));
+        assert!(!dispatch_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn rejects_legacy_origin_header() {
+        let request = Request::builder()
+            .header(LEGACY_ORIGIN_HEADER, "https://attacker.example")
+            .body(())
+            .unwrap();
+
+        let error = validate_origin(&request, Response::new(())).unwrap_err();
+
+        assert_eq!(error.status(), StatusCode::FORBIDDEN);
+    }
 }

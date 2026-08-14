@@ -68,6 +68,13 @@ fn main() {
 }
 ```
 
+### WebSocket Security
+
+The control WebSocket is unauthenticated and intended only for development on trusted hosts and networks. The plugin
+rejects browser-style handshakes containing `Origin` (or the legacy `Sec-WebSocket-Origin`) with HTTP 403. Headerless
+Node and native MCP clients remain supported, including remote-device connections. Binding to `127.0.0.1` limits LAN
+exposure; when binding to `0.0.0.0`, any non-browser client on the reachable network can still attempt to connect.
+
 ## Features
 
 ### 1. IPC Monitoring
