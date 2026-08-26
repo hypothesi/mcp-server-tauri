@@ -68,14 +68,32 @@ export function buildScreenshotCaptureScript(format: 'png' | 'jpeg', quality: nu
    return `
       ${HTML2CANVAS_RESOLVER_SCRIPT}
 
-      // Capture the entire document
+      // Render the document, but crop the output to the visible viewport. Without
+      // explicit bounds html2canvas allocates a canvas for the full scrollable
+      // document, which is both inconsistent with the native implementations and
+      // can time out on long pages.
       const element = document.documentElement;
       if (!element) {
          throw new Error('document.documentElement is null');
       }
 
+      const viewportWidth = Math.max(element.clientWidth, window.innerWidth || 0);
+      const viewportHeight = Math.max(element.clientHeight, window.innerHeight || 0);
+      const viewportX = window.scrollX || window.pageXOffset || 0;
+      const viewportY = window.scrollY || window.pageYOffset || 0;
+
       // Capture the webview
-      const canvas = await html2canvasFn(element, ${HTML2CANVAS_OPTIONS_SCRIPT});
+      const canvas = await html2canvasFn(element, {
+         ...${HTML2CANVAS_OPTIONS_SCRIPT},
+         x: viewportX,
+         y: viewportY,
+         width: viewportWidth,
+         height: viewportHeight,
+         windowWidth: viewportWidth,
+         windowHeight: viewportHeight,
+         scrollX: viewportX,
+         scrollY: viewportY,
+      });
       if (!canvas) {
          throw new Error('html2canvas returned null canvas');
       }

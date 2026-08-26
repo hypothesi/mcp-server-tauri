@@ -90,6 +90,7 @@ Capture a screenshot of the current viewport (visible area) of the webview.
 | `filePath` | string | No | File path to save the screenshot to instead of returning base64 |
 | `windowId` | string | No | Window label to target (defaults to 'main') |
 | `maxWidth` | number | No | Maximum width in pixels. Images wider than this will be scaled down proportionally |
+| `allowScreenCapture` | boolean | No | Allow an interactive OS screen-sharing prompt if native and html2canvas capture fail (default: false) |
 
 ### Example
 
@@ -112,11 +113,19 @@ Capture a screenshot of the current viewport (visible area) of the webview.
   "tool": "webview_screenshot",
   "maxWidth": 800
 }
+
+// Explicitly allow the interactive Screen Capture API fallback
+{
+  "tool": "webview_screenshot",
+  "allowScreenCapture": true
+}
 ```
 
 ### Response
 
 Returns a base64-encoded image, or if `filePath` is provided, returns the path where the screenshot was saved.
+
+The Screen Capture API fallback is disabled by default because it opens an operating-system permission prompt and may share more than the target webview. Set `allowScreenCapture` only when that interactive fallback is desired.
 
 ### Environment Variable
 

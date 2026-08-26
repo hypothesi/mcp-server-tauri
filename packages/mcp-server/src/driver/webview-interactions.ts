@@ -70,6 +70,9 @@ export const ScreenshotSchema = WindowTargetSchema.extend({
       'Maximum width in pixels. Images wider than this will be scaled down proportionally. ' +
       'Can also be set via TAURI_MCP_SCREENSHOT_MAX_WIDTH environment variable.'
    ),
+   allowScreenCapture: z.boolean().optional().default(false).describe(
+      'Allow an interactive OS screen-sharing permission prompt if native and html2canvas capture fail'
+   ),
 });
 
 export const KeyboardSchema = WindowTargetSchema.extend({
@@ -226,6 +229,7 @@ export interface ScreenshotOptions {
    filePath?: string;
    appIdentifier?: string | number;
    maxWidth?: number;
+   allowScreenCapture?: boolean;
 }
 
 export interface ScreenshotFileResult {
@@ -234,10 +238,12 @@ export interface ScreenshotFileResult {
 }
 
 export async function screenshot(options: ScreenshotOptions = {}): Promise<ScreenshotResult | ScreenshotFileResult> {
-   const { quality, format = 'jpeg', windowId, filePath, appIdentifier, maxWidth } = options;
+   const { quality, format = 'jpeg', windowId, filePath, appIdentifier, maxWidth, allowScreenCapture } = options;
 
    // Use the native screenshot function from webview-executor
-   const result = await captureScreenshot({ format, quality, windowId, appIdentifier, maxWidth });
+   const result = await captureScreenshot({
+      format, quality, windowId, appIdentifier, maxWidth, allowScreenCapture,
+   });
 
    // If filePath is provided, write to file instead of returning base64
    if (filePath) {
@@ -450,6 +456,7 @@ export async function findElement(options: FindElementOptions): Promise<string> 
 }
 
 export interface GetConsoleLogsOptions {
+   lines?: number;
    filter?: string;
    since?: string;
    windowId?: string;
@@ -460,10 +467,10 @@ export interface GetConsoleLogsOptions {
  * Get console logs from the webview.
  */
 export async function getConsoleLogs(options: GetConsoleLogsOptions = {}): Promise<string> {
-   const { filter, since, windowId, appIdentifier } = options;
+   const { lines = 50, filter, since, windowId, appIdentifier } = options;
 
    try {
-      return await getConsoleLogsFromCapture(filter, since, windowId, appIdentifier);
+      return await getConsoleLogsFromCapture(filter, since, lines, windowId, appIdentifier);
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 

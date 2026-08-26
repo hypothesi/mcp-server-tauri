@@ -3,6 +3,10 @@ import { EventEmitter } from 'events';
 
 import { buildWebSocketURL, getDefaultHost, getDefaultPort } from '../config.js';
 
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 30000,
+      DEFAULT_HEARTBEAT_TIMEOUT_MS = 10000,
+      DEFAULT_CONNECTION_CHECK_TIMEOUT_MS = 1000;
+
 
 interface PluginCommand {
    id?: string;
@@ -22,6 +26,15 @@ export interface PluginResponse {
    };
 }
 
+export interface PluginClientOptions {
+
+   /** How often to ping an idle bridge connection. */
+   readonly heartbeatIntervalMs?: number;
+
+   /** How long to wait for a heartbeat pong before terminating the socket. */
+   readonly heartbeatTimeoutMs?: number;
+}
+
 /**
  * Client to communicate with the MCP Bridge plugin's WebSocket server
  */
@@ -34,6 +47,11 @@ export class PluginClient extends EventEmitter {
    private _reconnectAttempts = 0;
    private _shouldReconnect = true; // Keep trying forever until explicitly disconnected
    private _reconnectDelay = 1000; // Start with 1s, max 30s
+   private _reconnectTimer: NodeJS.Timeout | null = null;
+   private _heartbeatTimer: NodeJS.Timeout | null = null;
+   private _heartbeatTimeout: NodeJS.Timeout | null = null;
+   private readonly _heartbeatIntervalMs: number;
+   private readonly _heartbeatTimeoutMs: number;
    private _pendingRequests: Map<string, {
       resolve: (value: PluginResponse) => void;
       reject: (reason: Error) => void;
@@ -44,12 +62,15 @@ export class PluginClient extends EventEmitter {
     * Constructor for PluginClient
     * @param host Host address of the WebSocket server
     * @param port Port number of the WebSocket server
+    * @param options Optional connection liveness settings
     */
-   public constructor(host: string, port: number) {
+   public constructor(host: string, port: number, options: PluginClientOptions = {}) {
       super();
       this._host = host;
       this._port = port;
       this._url = buildWebSocketURL(host, port);
+      this._heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+      this._heartbeatTimeoutMs = options.heartbeatTimeoutMs ?? DEFAULT_HEARTBEAT_TIMEOUT_MS;
 
       // CRITICAL: Attach a default error handler to prevent crashes.
       // In Node.js, if an EventEmitter emits 'error' with no listeners, it throws
@@ -96,8 +117,13 @@ export class PluginClient extends EventEmitter {
          this._ws.on('open', () => {
             // Connected to MCP Bridge plugin
             this._reconnectAttempts = 0;
+            this._startHeartbeat();
             this.emit('connected');
             resolve();
+         });
+
+         this._ws.on('pong', () => {
+            this._clearHeartbeatTimeout();
          });
 
          this._ws.on('message', (data: WebSocket.Data) => {
@@ -131,6 +157,7 @@ export class PluginClient extends EventEmitter {
 
          this._ws.on('close', () => {
             // Disconnected from MCP Bridge plugin
+            this._stopHeartbeat();
             this.emit('disconnected');
             this._ws = null;
 
@@ -146,11 +173,18 @@ export class PluginClient extends EventEmitter {
                this._reconnectAttempts++;
                const delay = Math.min(this._reconnectDelay * this._reconnectAttempts, 30000);
 
-               setTimeout(() => {
+               this._reconnectTimer = setTimeout(() => {
+                  this._reconnectTimer = null;
+
+                  if (!this._shouldReconnect) {
+                     return;
+                  }
+
                   this.connect().catch(() => {
                      // Reconnection failed - will retry on next close event
                   });
                }, delay);
+               this._reconnectTimer.unref();
             }
          });
       });
@@ -161,10 +195,84 @@ export class PluginClient extends EventEmitter {
     */
    public disconnect(): void {
       this._shouldReconnect = false; // Prevent auto-reconnect
+      this._stopHeartbeat();
+
+      if (this._reconnectTimer) {
+         clearTimeout(this._reconnectTimer);
+         this._reconnectTimer = null;
+      }
+
       if (this._ws) {
          this._ws.close();
          this._ws = null;
       }
+   }
+
+   /**
+    * Probe the current WebSocket with a ping/pong exchange.
+    *
+    * `readyState === OPEN` is insufficient for half-open TCP connections, so
+    * session reuse calls this before trusting a cached client.
+    */
+   public async checkConnection(timeoutMs = DEFAULT_CONNECTION_CHECK_TIMEOUT_MS): Promise<boolean> {
+      const socket = this._ws;
+
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+         return false;
+      }
+
+      const openSocket = socket;
+
+      return new Promise<boolean>((resolve) => {
+         const probeState: {
+            settled: boolean;
+            timeout: NodeJS.Timeout | null;
+         } = {
+            settled: false,
+            timeout: null,
+         };
+
+         function finish(isAlive: boolean): void {
+            if (probeState.settled) {
+               return;
+            }
+
+            probeState.settled = true;
+
+            if (probeState.timeout) {
+               clearTimeout(probeState.timeout);
+            }
+
+            openSocket.off('pong', handlePong);
+            openSocket.off('close', handleDisconnect);
+            openSocket.off('error', handleDisconnect);
+            resolve(isAlive);
+         }
+
+         function handlePong(): void {
+            finish(true);
+         }
+
+         function handleDisconnect(): void {
+            finish(false);
+         }
+
+         probeState.timeout = setTimeout(() => { finish(false); }, timeoutMs);
+
+         openSocket.once('pong', handlePong);
+         openSocket.once('close', handleDisconnect);
+         openSocket.once('error', handleDisconnect);
+
+         try {
+            openSocket.ping(undefined, undefined, (error) => {
+               if (error) {
+                  finish(false);
+               }
+            });
+         } catch{
+            finish(false);
+         }
+      });
    }
 
    /**
@@ -237,6 +345,65 @@ export class PluginClient extends EventEmitter {
     */
    public isConnected(): boolean {
       return this._ws?.readyState === WebSocket.OPEN;
+   }
+
+   private _clearHeartbeatTimeout(): void {
+      if (this._heartbeatTimeout) {
+         clearTimeout(this._heartbeatTimeout);
+         this._heartbeatTimeout = null;
+      }
+   }
+
+   private _stopHeartbeat(): void {
+      if (this._heartbeatTimer) {
+         clearInterval(this._heartbeatTimer);
+         this._heartbeatTimer = null;
+      }
+
+      this._clearHeartbeatTimeout();
+   }
+
+   private _startHeartbeat(): void {
+      this._stopHeartbeat();
+
+      this._heartbeatTimer = setInterval(() => {
+         const socket = this._ws;
+
+         if (!socket || socket.readyState !== WebSocket.OPEN) {
+            return;
+         }
+
+         // A previous ping is still unanswered. Terminate instead of letting an
+         // OPEN-but-half-dead socket stay in the session cache indefinitely.
+         if (this._heartbeatTimeout) {
+            socket.terminate();
+            return;
+         }
+
+         this._heartbeatTimeout = setTimeout(() => {
+            this._heartbeatTimeout = null;
+
+            if (this._ws === socket && socket.readyState === WebSocket.OPEN) {
+               socket.terminate();
+            }
+         }, this._heartbeatTimeoutMs);
+         this._heartbeatTimeout.unref();
+
+         try {
+            socket.ping(undefined, undefined, (error) => {
+               if (error && this._ws === socket && socket.readyState === WebSocket.OPEN) {
+                  socket.terminate();
+               }
+            });
+         } catch{
+            this._clearHeartbeatTimeout();
+
+            if (this._ws === socket && socket.readyState === WebSocket.OPEN) {
+               socket.terminate();
+            }
+         }
+      }, this._heartbeatIntervalMs);
+      this._heartbeatTimer.unref();
    }
 }
 

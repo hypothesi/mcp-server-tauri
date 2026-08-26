@@ -55,7 +55,7 @@ function findAdbPath(): string {
 export const ReadLogsSchema = z.object({
    source: z.enum([ 'console', 'android', 'ios', 'system' ])
       .describe('Log source: "console" for webview JS logs, "android" for logcat, "ios" for simulator, "system" for desktop'),
-   lines: z.number().default(50),
+   lines: z.number().int().positive().default(50),
    filter: z.string().optional().describe('Regex or keyword to filter logs'),
    since: z.string().optional().describe('ISO timestamp to filter logs since (e.g. 2023-10-27T10:00:00Z)'),
    windowId: z.string().optional().describe('Window label for console logs (defaults to "main")'),
@@ -81,7 +81,7 @@ export async function readLogs(options: ReadLogsOptions): Promise<string> {
 
       // Handle console logs (webview JS logs)
       if (source === 'console') {
-         return await getConsoleLogs({ filter, since, windowId, appIdentifier });
+         return await getConsoleLogs({ lines, filter, since, windowId, appIdentifier });
       }
 
       if (source === 'android') {

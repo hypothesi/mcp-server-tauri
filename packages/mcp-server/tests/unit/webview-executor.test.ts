@@ -170,4 +170,51 @@ describe('Webview Executor Unit Tests', () => {
          mimeType: 'image/png',
       });
    });
+
+   it('does not request screen-sharing permission without explicit opt-in', async () => {
+      const executor = await import('../../src/driver/webview-executor.js');
+
+      executor.resetInitialization();
+
+      mockSendCommand
+         .mockResolvedValueOnce({ success: true, data: true })
+         .mockResolvedValueOnce({ success: false, error: 'Native screenshot unavailable on Linux' })
+         .mockResolvedValueOnce({ success: false, error: 'Script execution timeout' });
+
+      await expect(executor.captureScreenshot()).rejects.toThrow(
+         'Screen Capture API fallback is disabled'
+      );
+
+      expect(mockSendCommand).toHaveBeenCalledTimes(3);
+
+      const scripts = mockSendCommand.mock.calls
+         .map(([ command ]) => { return command.args?.script; })
+         .filter((script): script is string => { return typeof script === 'string'; });
+
+      expect(scripts.every((script) => { return !script.includes('getDisplayMedia'); })).toBe(true);
+   });
+
+   it('uses Screen Capture API only after explicit opt-in', async () => {
+      const executor = await import('../../src/driver/webview-executor.js');
+
+      executor.resetInitialization();
+
+      mockSendCommand
+         .mockResolvedValueOnce({ success: true, data: true })
+         .mockResolvedValueOnce({ success: false, error: 'Native screenshot unavailable on Linux' })
+         .mockResolvedValueOnce({ success: false, error: 'html2canvas failed' })
+         .mockResolvedValueOnce({ success: true, data: 'data:image/png;base64,ZmFrZQ==' });
+
+      const result = await executor.captureScreenshot({ format: 'png', allowScreenCapture: true });
+
+      expect(mockSendCommand).toHaveBeenCalledTimes(4);
+      expect(mockSendCommand).toHaveBeenLastCalledWith(expect.objectContaining({
+         command: 'execute_js',
+         args: expect.objectContaining({ script: expect.stringContaining('getDisplayMedia') }),
+      }), 7000);
+      expect(result.content[0]).toEqual({
+         type: 'text',
+         text: 'Screenshot captured via Screen Capture API',
+      });
+   });
 });
