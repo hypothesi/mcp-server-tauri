@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Replace the Unix-only executable-permission command with cross-platform Node-based dist preparation.
+
 ## [0.12.0] - 2026-07-05
 
 ### Changed

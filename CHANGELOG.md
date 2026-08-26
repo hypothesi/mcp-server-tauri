@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Node package builds no longer depend on Unix-only `cp` and `chmod` commands, allowing the server, CLI, and root workspace builds to run under native Windows shells.
 - `webview_screenshot` no longer opens an interactive screen-sharing permission prompt unless `allowScreenCapture` is explicitly enabled.
 - `tauri-plugin-mcp-bridge`: capture Linux screenshots through WebKitGTK's native visible-region snapshot API.
 - `tauri-mcp-server`: constrain html2canvas fallback output to the visible viewport instead of allocating a full-document canvas.

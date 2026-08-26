@@ -160,6 +160,32 @@ jobs:
           projectPath: packages/test-app
           args: ${{ matrix.args }}
 
+  test-cli-build:
+    name: Build @hypothesi/tauri-mcp-cli (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --workspace=@hypothesi/tauri-mcp-cli --include-workspace-root
+
+      - name: Build CLI dependencies
+        run: npm run build --workspace=@hypothesi/tauri-mcp-server
+
+      - name: Build CLI
+        run: npm run build --workspace=@hypothesi/tauri-mcp-cli
+
   lint-and-standards:
     name: Lint and Standards Check
     runs-on: ubuntu-latest
@@ -205,7 +231,7 @@ jobs:
 
   all-tests-pass:
     name: All Tests Pass
-    needs: [test-plugin, test-server, test-app, lint-and-standards, validate-cli-skills]
+    needs: [test-plugin, test-server, test-app, test-cli-build, lint-and-standards, validate-cli-skills]
     runs-on: ubuntu-latest
     steps:
       - name: Success
