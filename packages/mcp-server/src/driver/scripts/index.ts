@@ -20,9 +20,7 @@ export const SCRIPTS = {
    resolveRef: loadScript('resolve-ref'),
    interact: loadScript('interact'),
    swipe: loadScript('swipe'),
-   keyboard: loadScript('keyboard'),
    waitFor: loadScript('wait-for'),
-   getStyles: loadScript('get-styles'),
    focus: loadScript('focus'),
    findElement: loadScript('find-element'),
    domSnapshot: loadScript('dom-snapshot'),
@@ -48,22 +46,53 @@ export function buildScript(script: string, params: Record<string, unknown>): st
 }
 
 /**
- * Build a script for typing text (uses the keyboard script's typeText function)
+ * Build a script for typing text
  */
-export function buildTypeScript(selector: string, text: string, strategy?: string): string {
-   const escapedText = text.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-   const escapedSelector = selector.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+export function buildTypeScript(selector: string, text: string, strategy?: string, nth?: number | null): string {
    const strat = strategy || 'css';
+   const nthValue = nth ?? null;
 
    return `
       (function() {
-         const selector = '${escapedSelector}';
-         const strategy = '${strat}';
-         const text = '${escapedText}';
+         const selector = ${JSON.stringify(selector)};
+         const strategy = ${JSON.stringify(strat)};
+         const text = ${JSON.stringify(text)};
+         const nth = ${JSON.stringify(nthValue)};
 
-         var element = window.__MCP__.resolveRef(selector, strategy);
-         if (!element) throw new Error('Element not found: ' + selector);
+         function resolveElement(selectorOrRef) {
+            if (!selectorOrRef) return null;
+            var matches = window.__MCP__.resolveAll(selectorOrRef, strategy);
 
+            if (matches.length === 0) throw new Error('Element not found: ' + selectorOrRef);
+            if (typeof nth === 'number') {
+               if (!matches[nth]) {
+                  throw new Error('nth=' + nth + ' is out of range, ' + matches.length + ' matches for ' + selectorOrRef);
+               }
+               return matches[nth];
+            }
+            if (matches.length > 1 && strategy === 'text') {
+               throw new Error(describeAmbiguity(selectorOrRef, matches));
+            }
+            return matches[0];
+         }
+
+         function describeAmbiguity(selectorOrRef, matches) {
+            var lines = ['Ambiguous text selector "' + selectorOrRef + '" matched ' + matches.length + ' visible elements. Pass nth, or use a CSS selector or ref.'];
+            for (var i = 0; i < Math.min(matches.length, 5); i++) {
+               var el = matches[i];
+               var rect = el.getBoundingClientRect();
+               var text = (el.textContent || '').trim().substring(0, 50);
+               var tag = el.tagName.toLowerCase();
+               var className = el.className || '';
+               lines.push('  nth=' + i + '  ' + tag + (className ? '.' + className.split(' ')[0] : '') + '  "' + text + '"  rect ' + Math.round(rect.left) + ',' + Math.round(rect.top) + ' ' + Math.round(rect.width) + 'x' + Math.round(rect.height));
+            }
+            if (matches.length > 5) {
+               lines.push('  ... and ' + (matches.length - 5) + ' more');
+            }
+            return lines.join('\\n');
+         }
+
+         var element = resolveElement(selector);
          element.focus();
 
          // Use native prototype setter to bypass React's value tracker

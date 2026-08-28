@@ -1,36 +1,78 @@
 import { z } from 'zod';
 import { ensureSessionAndConnect, getExistingPluginClient } from './plugin-client.js';
+import { executeInWebview } from './webview-executor.js';
+
+const BRIDGE_COMMAND_PREFIX = 'plugin:mcp-bridge|';
 
 export const ExecuteIPCCommandSchema = z.object({
    command: z.string(),
    args: z.unknown().optional(),
+   windowId: z.string().optional().describe('Window label to target (defaults to "main") for app commands'),
    appIdentifier: z.union([ z.string(), z.number() ]).optional().describe(
       'App port or bundle ID to target. Defaults to the only connected app or the default app if multiple are connected.'
    ),
 });
 
+async function invokeBridgeCommand(command: string, args: unknown, appIdentifier?: string | number): Promise<string> {
+   const client = await ensureSessionAndConnect(appIdentifier);
+
+   // Send IPC command via WebSocket to the mcp-bridge plugin
+   const response = await client.sendCommand({
+      command: 'invoke_tauri',
+      args: { command, args },
+   });
+
+   if (!response.success) {
+      return JSON.stringify({ success: false, error: response.error || 'Unknown error' });
+   }
+
+   return JSON.stringify({ success: true, result: response.data });
+}
+
+async function invokeAppCommand(
+   command: string,
+   args: unknown,
+   windowId?: string,
+   appIdentifier?: string | number
+): Promise<string> {
+   const script = `
+      return (async () => {
+         const internals = window.__TAURI_INTERNALS__;
+
+         if (!internals || typeof internals.invoke !== 'function') {
+            throw new Error('Tauri IPC is not available in this webview');
+         }
+         return await internals.invoke(${JSON.stringify(command)}, ${JSON.stringify(args ?? {})});
+      })();
+   `;
+
+   const result = await executeInWebview(script, windowId, appIdentifier);
+
+   const safeParse = (str: string): unknown => {
+      try {
+         return JSON.parse(str);
+      } catch{
+         return str;
+      }
+   };
+
+   return JSON.stringify({ success: true, result: safeParse(result) });
+}
+
 export async function executeIPCCommand(options: {
    command: string;
    args?: unknown;
+   windowId?: string;
    appIdentifier?: string | number;
 }): Promise<string> {
+   const { command, args = {}, windowId, appIdentifier } = options;
+
    try {
-      const { command, args = {}, appIdentifier } = options;
-
-      // Ensure we have an active session and are connected
-      const client = await ensureSessionAndConnect(appIdentifier);
-
-      // Send IPC command via WebSocket to the mcp-bridge plugin
-      const response = await client.sendCommand({
-         command: 'invoke_tauri',
-         args: { command, args },
-      });
-
-      if (!response.success) {
-         return JSON.stringify({ success: false, error: response.error || 'Unknown error' });
+      if (command.startsWith(BRIDGE_COMMAND_PREFIX)) {
+         return await invokeBridgeCommand(command, args, appIdentifier);
       }
 
-      return JSON.stringify({ success: true, result: response.data });
+      return await invokeAppCommand(command, args, windowId, appIdentifier);
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -361,10 +403,14 @@ export async function resizeWindow(options: {
 }
 
 export const ManageWindowSchema = z.object({
-   action: z.enum([ 'list', 'info', 'resize' ])
-      .describe('Action: "list" all windows, get "info" for one window, or "resize" a window'),
-   windowId: z.string().optional()
-      .describe('Window label to target (defaults to "main"). Required for "info", optional for "resize"'),
+   action: z.enum([ 'list', 'info', 'resize', 'focus', 'minimize', 'maximize' ]).describe(
+      'Action: "list" all windows, get "info" for one window, "resize" a window, ' +
+      '"focus" a window, "minimize" a window, or "maximize" a window'
+   ),
+   windowId: z.string().optional().describe(
+      'Window label to target (defaults to "main"). Required for "info", ' +
+      'optional for "resize", "focus", "minimize", "maximize"'
+   ),
    width: z.number().int().positive().optional()
       .describe('Width in pixels (required for "resize" action)'),
    height: z.number().int().positive().optional()
@@ -372,7 +418,8 @@ export const ManageWindowSchema = z.object({
    logical: z.boolean().optional().default(true)
       .describe('Use logical pixels (true, default) or physical pixels (false). Only for "resize"'),
    appIdentifier: z.union([ z.string(), z.number() ]).optional().describe(
-      'App port or bundle ID to target. Defaults to the only connected app or the default app if multiple are connected.'
+      'App port or bundle ID to target. Defaults to the only connected app ' +
+      'or the default app if multiple are connected.'
    ),
 });
 
@@ -388,7 +435,7 @@ export const ManageWindowSchema = z.object({
  * @returns JSON string with the result
  */
 export async function manageWindow(options: {
-   action: 'list' | 'info' | 'resize';
+   action: 'list' | 'info' | 'resize' | 'focus' | 'minimize' | 'maximize';
    windowId?: string;
    width?: number;
    height?: number;
@@ -429,6 +476,36 @@ export async function manageWindow(options: {
          }
 
          return resizeWindow({ width, height, windowId, logical, appIdentifier });
+      }
+
+      case 'focus':
+      case 'minimize':
+      case 'maximize': {
+         try {
+            const client = await ensureSessionAndConnect(appIdentifier);
+
+            const response = await client.sendCommand({
+               command: 'set_window_state',
+               args: { action, windowId: windowId ?? 'main' },
+            });
+
+            if (!response.success) {
+               // Translate unknown command error to version mismatch message
+               if (response.error && response.error.includes('Unknown command')) {
+                  throw new Error(
+                     `manage_window action "${action}" needs tauri-plugin-mcp-bridge 0.13.0 or newer. ` +
+                     'The connected app is running an older plugin. Update the plugin in Cargo.toml and rebuild the app.'
+                  );
+               }
+               throw new Error(response.error || 'Unknown error');
+            }
+
+            return JSON.stringify(response.data);
+         } catch(error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+
+            throw new Error(`Failed to ${action} window: ${message}`);
+         }
       }
 
       default: {

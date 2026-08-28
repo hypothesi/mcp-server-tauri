@@ -10,6 +10,7 @@ vi.mock('../../src/driver/webview-executor', () => {
          windowLabel: 'main',
          warning: undefined,
       }),
+      executeAsyncInWebview: vi.fn(),
       captureScreenshot: vi.fn(),
    };
 });
@@ -79,18 +80,6 @@ describe('Webview Interactions Unit Tests', () => {
          };
 
          expect(() => { return WaitForSchema.parse(validInput); }).not.toThrow();
-      });
-
-      it('should validate GetStylesSchema', async () => {
-         const { GetStylesSchema } = await import('../../src/driver/webview-interactions');
-
-         const validInput = {
-            selector: 'div',
-            properties: [ 'color', 'background-color' ],
-            multiple: true,
-         };
-
-         expect(() => { return GetStylesSchema.parse(validInput); }).not.toThrow();
       });
 
       it('should validate ExecuteJavaScriptSchema', async () => {
@@ -192,19 +181,6 @@ describe('Webview Interactions Unit Tests', () => {
          expect(mockExecuteInWebview).toHaveBeenCalledWith(expect.stringContaining('focus'), undefined, undefined);
       });
 
-      it('should call executeScript when getStyles is called', async () => {
-         const { getStyles } = await import('../../src/driver/webview-interactions');
-
-         const mockExecuteInWebview = vi.mocked(webviewExecutor.executeInWebview);
-
-         mockExecuteInWebview.mockResolvedValue('{"color":"red"}');
-
-         await getStyles({ selector: 'div', properties: [ 'color' ] });
-
-         expect(mockExecuteInWebview).toHaveBeenCalledOnce();
-         expect(mockExecuteInWebview).toHaveBeenCalledWith(expect.stringContaining('getComputedStyle'), undefined, undefined);
-      });
-
       it('should call executeInWebviewWithContext when executeJavaScript is called', async () => {
          const { executeJavaScript } = await import('../../src/driver/webview-interactions');
 
@@ -233,6 +209,24 @@ describe('Webview Interactions Unit Tests', () => {
 
          expect(callArg).toContain('args');
          expect(callArg).toContain('[5,3]');
+      });
+
+      it('should use bounded async execution when executeJavaScript has a timeout', async () => {
+         const { executeJavaScript } = await import('../../src/driver/webview-interactions');
+
+         const mockExecuteAsync = vi.mocked(webviewExecutor.executeAsyncInWebview);
+
+         mockExecuteAsync.mockResolvedValue('done');
+
+         const result = await executeJavaScript({ script: 'new Promise(() => {})', timeout: 25 });
+
+         expect(mockExecuteAsync).toHaveBeenCalledWith(
+            expect.stringContaining('return (new Promise'),
+            undefined,
+            25,
+            undefined
+         );
+         expect(result).toContain('done');
       });
    });
 

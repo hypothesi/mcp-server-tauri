@@ -1,11 +1,12 @@
 /**
- * Webview interaction script - handles click, double-click, long-press, and scroll actions
+ * Webview interaction script - handles click, double-click, long-press, scroll, swipe, hover, and right-click actions
  * This script is injected into the webview and executed with parameters.
  *
  * @param {Object} params
  * @param {string} params.action - The action to perform
  * @param {string|null} params.selector - CSS selector, XPath, text, or ref ID (e.g., "ref=e3") for the element
  * @param {string} params.strategy - Selector strategy: 'css', 'xpath', or 'text'
+ * @param {number|null} params.nth - Zero-based index to pick one of several matching elements
  * @param {number|null} params.x - X coordinate
  * @param {number|null} params.y - Y coordinate
  * @param {number} params.duration - Duration for long-press
@@ -13,13 +14,39 @@
  * @param {number} params.scrollY - Vertical scroll amount
  */
 (function(params) {
-   const { action, selector, strategy, x, y, duration, scrollX, scrollY } = params;
+   const { action, selector, strategy, nth, x, y, duration, scrollX, scrollY } = params;
 
    function resolveElement(selectorOrRef) {
       if (!selectorOrRef) return null;
-      var el = window.__MCP__.resolveRef(selectorOrRef, strategy);
-      if (!el) throw new Error('Element not found: ' + selectorOrRef);
-      return el;
+      var matches = window.__MCP__.resolveAll(selectorOrRef, strategy);
+
+      if (matches.length === 0) throw new Error('Element not found: ' + selectorOrRef);
+      if (typeof nth === 'number') {
+         if (!matches[nth]) {
+            throw new Error('nth=' + nth + ' is out of range, ' + matches.length + ' matches for ' + selectorOrRef);
+         }
+         return matches[nth];
+      }
+      if (matches.length > 1 && strategy === 'text') {
+         throw new Error(describeAmbiguity(selectorOrRef, matches));
+      }
+      return matches[0];
+   }
+
+   function describeAmbiguity(selectorOrRef, matches) {
+      var lines = ['Ambiguous text selector "' + selectorOrRef + '" matched ' + matches.length + ' visible elements. Pass nth, or use a CSS selector or ref.'];
+      for (var i = 0; i < Math.min(matches.length, 5); i++) {
+         var el = matches[i];
+         var rect = el.getBoundingClientRect();
+         var text = (el.textContent || '').trim().substring(0, 50);
+         var tag = el.tagName.toLowerCase();
+         var className = el.className || '';
+         lines.push('  nth=' + i + '  ' + tag + (className ? '.' + className.split(' ')[0] : '') + '  "' + text + '"  rect ' + Math.round(rect.left) + ',' + Math.round(rect.top) + ' ' + Math.round(rect.width) + 'x' + Math.round(rect.height));
+      }
+      if (matches.length > 5) {
+         lines.push('  ... and ' + (matches.length - 5) + ' more');
+      }
+      return lines.join('\n');
    }
 
    function matchHint() {
@@ -62,6 +89,19 @@
       clientY: targetY,
    };
 
+   const pointerOptions = {
+      ...eventOptions,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+   };
+
+   const rightButtonOptions = {
+      ...eventOptions,
+      button: 2,
+      buttons: 2,
+   };
+
    if (action === 'click') {
       if (element) {
          element.dispatchEvent(new MouseEvent('mousedown', eventOptions));
@@ -92,6 +132,27 @@
          }, duration);
       }
       return `Long-pressed at (${targetX}, ${targetY}) for ${duration}ms` + matchHint();
+   }
+
+   if (action === 'hover') {
+      if (element) {
+         element.dispatchEvent(new PointerEvent('pointerover', pointerOptions));
+         element.dispatchEvent(new PointerEvent('pointerenter', pointerOptions));
+         element.dispatchEvent(new MouseEvent('mouseover', eventOptions));
+         element.dispatchEvent(new MouseEvent('mouseenter', eventOptions));
+         element.dispatchEvent(new PointerEvent('pointermove', pointerOptions));
+         element.dispatchEvent(new MouseEvent('mousemove', eventOptions));
+      }
+      return `Hovered at (${targetX}, ${targetY})` + matchHint();
+   }
+
+   if (action === 'right-click') {
+      if (element) {
+         element.dispatchEvent(new MouseEvent('mousedown', rightButtonOptions));
+         element.dispatchEvent(new MouseEvent('mouseup', rightButtonOptions));
+         element.dispatchEvent(new MouseEvent('contextmenu', rightButtonOptions));
+      }
+      return `Right-clicked at (${targetX}, ${targetY})` + matchHint();
    }
 
    if (action === 'scroll') {

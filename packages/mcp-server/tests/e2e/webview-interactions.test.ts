@@ -5,7 +5,6 @@ import {
    screenshot,
    keyboard,
    waitFor,
-   getStyles,
    executeJavaScript,
 } from '../../src/driver/webview-interactions';
 import { getTestAppPort } from '../test-utils';
@@ -279,63 +278,6 @@ describe('Webview Interactions E2E Tests', () => {
 
          expect(result).toBeDefined();
          expect(result).toContain('Text found');
-      }, TIMEOUT);
-   });
-
-   describe('Style Operations', () => {
-      it('should get computed styles for single element', async () => {
-         const result = await getStyles({ selector: 'body', properties: [ 'color', 'background-color' ] });
-
-         expect(result).toBeDefined();
-         expect(result).not.toBe('');
-
-         // Should contain style information as JSON
-         const styles = JSON.parse(result);
-
-         expect(styles).toHaveProperty('color');
-         expect(styles).toHaveProperty('background-color');
-
-         // Verify the values are non-empty strings (actual CSS values)
-         expect(typeof styles.color).toBe('string');
-         expect(styles.color.length).toBeGreaterThan(0);
-         expect(typeof styles['background-color']).toBe('string');
-      }, TIMEOUT);
-
-      it('should get all computed styles', async () => {
-         const result = await getStyles({ selector: 'body' });
-
-         expect(result).toBeDefined();
-         expect(result).not.toBe('');
-
-         // Should contain many style properties
-         const styles = JSON.parse(result);
-
-         const styleKeys = Object.keys(styles);
-
-         // Should have many CSS properties (typically 200+)
-         expect(styleKeys.length).toBeGreaterThan(50);
-
-         // Check for some common properties
-         expect(styles).toHaveProperty('display');
-         expect(styles).toHaveProperty('position');
-         expect(styles).toHaveProperty('margin-top'); // CSS splits margin into individual sides
-      }, TIMEOUT);
-
-      it('should get styles for multiple elements', async () => {
-         const result = await getStyles({ selector: 'div', multiple: true });
-
-         expect(result).toBeDefined();
-         expect(result).not.toBe('');
-
-         // Should be an array of style objects
-         const stylesArray = JSON.parse(result);
-
-         expect(Array.isArray(stylesArray)).toBe(true);
-
-         if (stylesArray.length > 0) {
-            // Each element should have style properties
-            expect(Object.keys(stylesArray[0]).length).toBeGreaterThan(50);
-         }
       }, TIMEOUT);
    });
 

@@ -29,6 +29,17 @@ const initializedTargets = new Set<string>();
 
 const driverLogger = createMcpLogger('DRIVER');
 
+const MCP_HELPER_MISSING = /__MCP__|resolveRef|resolveAll|countAll/;
+
+function isHelperMissingError(message: string): boolean {
+   return MCP_HELPER_MISSING.test(message) &&
+      /undefined is not an object|is not a function|Cannot read propert/.test(message);
+}
+
+function targetKeyFor(session: { host: string; port: number }, windowId?: string): string {
+   return `${session.host}:${session.port}:${windowId ?? 'main'}`;
+}
+
 /**
  * Ensures the MCP server is fully initialized and ready to use.
  * This is called automatically by all tool functions.
@@ -60,7 +71,7 @@ export async function ensureReady(windowId?: string, appIdentifier?: string | nu
       await session.client.connect();
    }
 
-   const targetKey = `${session.host}:${session.port}:${windowId ?? 'main'}`;
+   const targetKey = targetKeyFor(session, windowId);
 
    if (initializedTargets.has(targetKey)) {
       return;
@@ -121,10 +132,11 @@ export interface ExecuteInWebviewResult {
  * @param script - JavaScript code to execute in the webview context
  * @param windowId - Optional window label to target (defaults to "main")
  * @param appIdentifier - Optional app identifier to target specific app
+ * @param timeoutMs - Optional timeout in milliseconds
  * @returns Result of the script execution with window context
  */
-export async function executeInWebview(script: string, windowId?: string, appIdentifier?: string | number): Promise<string> {
-   const { result } = await executeInWebviewWithContext(script, windowId, appIdentifier);
+export async function executeInWebview(script: string, windowId?: string, appIdentifier?: string | number, timeoutMs?: number): Promise<string> {
+   const { result } = await executeInWebviewWithContext(script, windowId, appIdentifier, timeoutMs);
 
    return result;
 }
@@ -135,28 +147,56 @@ export async function executeInWebview(script: string, windowId?: string, appIde
  * @param script - JavaScript code to execute in the webview context
  * @param windowId - Optional window label to target (defaults to "main")
  * @param appIdentifier - Optional app identifier to target specific app
+ * @param timeoutMs - Optional timeout in milliseconds
  * @returns Result of the script execution with window context
  */
 export async function executeInWebviewWithContext(
    script: string,
    windowId?: string,
-   appIdentifier?: string | number
+   appIdentifier?: string | number,
+   timeoutMs?: number,
+   isRetry = false
 ): Promise<ExecuteInWebviewResult> {
    try {
-      // Ensure we're fully initialized
-      await ensureReady(windowId, appIdentifier);
+      return await runInWebview(script, windowId, appIdentifier, timeoutMs);
+   } catch(error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
 
-      // Resolve target session
+      if (isRetry || !isHelperMissingError(message)) {
+         throw new Error(`WebView execution failed: ${message}`);
+      }
+
+      driverLogger.warn(`__MCP__ helper missing, re-injecting and retrying once: ${message}`);
       const session = resolveTargetApp(appIdentifier);
 
-      const client = session.client;
+      initializedTargets.delete(targetKeyFor(session, windowId));
+      await ensureReady(windowId, appIdentifier);
 
-      // Send script directly - Rust handles wrapping and IPC callbacks.
-      // Use 7s timeout (longer than Rust's 5s) so errors return before Node times out.
+      return executeInWebviewWithContext(script, windowId, appIdentifier, timeoutMs, true);
+   }
+}
+
+async function runInWebview(
+   script: string,
+   windowId?: string,
+   appIdentifier?: string | number,
+   timeoutMs?: number
+): Promise<ExecuteInWebviewResult> {
+   // Ensure we're fully initialized
+   await ensureReady(windowId, appIdentifier);
+
+   // Resolve target session
+   const session = resolveTargetApp(appIdentifier);
+
+   const client = session.client;
+
+   // Send script directly - Rust handles wrapping and IPC callbacks.
+   // Use timeoutMs if provided, otherwise default 7s timeout (longer than Rust's 5s)
+   try {
       const response = await client.sendCommand({
          command: 'execute_js',
          args: { script, windowLabel: windowId },
-      }, 7000);
+      }, timeoutMs ?? 7000);
 
       if (!response.success) {
          throw new Error(response.error || 'Unknown execution error');
@@ -186,7 +226,40 @@ export async function executeInWebviewWithContext(
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 
-      throw new Error(`WebView execution failed: ${message}`);
+      // Check for transport timeout
+      if (/^Request timeout after \d+ms$/.test(message)) {
+         const probeResult = await probeBridge(session, windowId);
+
+         if (probeResult) {
+            throw new Error(
+               `Bridge did not respond within ${timeoutMs ?? 7000}ms. A follow-up probe succeeded, so the bridge is alive and this ` +
+               'specific script was too slow. Raise `timeout`, or split the work across calls.'
+            );
+         } else {
+            throw new Error(
+               `Bridge did not respond within ${timeoutMs ?? 7000}ms and a follow-up probe also timed out. The webview is wedged. ` +
+               'Call driver_session with action "stop" then "start". A runaway loop in a previous script is the usual cause.'
+            );
+         }
+      }
+
+      throw error;
+   }
+}
+
+async function probeBridge(session: ReturnType<typeof getDefaultSession> | null, windowId?: string): Promise<boolean> {
+   if (!session) {
+      return false;
+   }
+   try {
+      const response = await session.client.sendCommand({
+         command: 'execute_js',
+         args: { script: 'return 1', windowLabel: windowId },
+      }, 2000);
+
+      return (response as { success: boolean }).success === true;
+   } catch{
+      return false;
    }
 }
 
@@ -206,6 +279,8 @@ export async function executeAsyncInWebview(
 ): Promise<string> {
    const resolvedTimeout = timeout ?? 5000;
 
+   const transportTimeout = resolvedTimeout + 2000;
+
    const wrappedScript = `
       return (async () => {
          const timeoutPromise = new Promise((_, reject) => {
@@ -220,7 +295,7 @@ export async function executeAsyncInWebview(
       })();
    `;
 
-   return executeInWebview(wrappedScript, windowId, appIdentifier);
+   return executeInWebview(wrappedScript, windowId, appIdentifier, transportTimeout);
 }
 
 // ============================================================================
@@ -271,22 +346,27 @@ export async function initializeConsoleCapture(): Promise<string> {
 /**
  * Retrieve captured console logs with optional filtering.
  *
- * @param filter - Optional regex pattern to filter log messages
- * @param since - Optional ISO timestamp to filter logs after this time
- * @param lines - Maximum number of newest matching logs to return
- * @param windowId - Optional window label to target (defaults to "main")
- * @param appIdentifier - Optional app identifier to target specific app
+ * @param options - Filtering and formatting options
  * @returns Formatted console logs as string
  */
-export async function getConsoleLogs(
-   filter?: string,
-   since?: string,
-   lines?: number,
-   windowId?: string,
-   appIdentifier?: string | number
-): Promise<string> {
-   const resolvedLines = lines ?? 50,
-         filterStr = filter ? filter.replace(/'/g, '\\\'') : '';
+export async function getConsoleLogs(options: {
+   filter?: string;
+   since?: string;
+   lines?: number;
+   windowId?: string;
+   appIdentifier?: string | number;
+   level?: string;
+   maxChars?: number;
+   maxCharsPerEntry?: number;
+} = {}): Promise<string> {
+   const { filter, since, lines = 50, windowId, appIdentifier, level, maxChars = 20000, maxCharsPerEntry = 2000 } = options;
+
+   const resolvedLines = lines,
+         resolvedMaxChars = maxChars,
+         resolvedMaxCharsPerEntry = maxCharsPerEntry,
+         resolvedLevel = level ?? '',
+         filterStr = filter ? filter.replace(/'/g, '\\\'') : '',
+         levelStr = resolvedLevel;
 
    const sinceStr = since || '';
 
@@ -297,6 +377,10 @@ export async function getConsoleLogs(
       if ('${sinceStr}') {
          const sinceTime = new Date('${sinceStr}').getTime();
          filtered = filtered.filter(l => l.timestamp > sinceTime);
+      }
+
+      if ('${levelStr}') {
+         filtered = filtered.filter(l => l.level === '${levelStr}');
       }
 
       if ('${filterStr}') {
@@ -310,9 +394,32 @@ export async function getConsoleLogs(
 
       filtered = filtered.slice(-${resolvedLines});
 
-      return filtered.map(l =>
-         '[ ' + new Date(l.timestamp).toISOString() + ' ] [ ' + l.level.toUpperCase() + ' ] ' + l.message
-      ).join('\\n');
+      var budget = ${resolvedMaxChars};
+      var dropped = 0;
+      var out = [];
+
+      for (var i = filtered.length - 1; i >= 0; i--) {
+         var entry = filtered[i],
+             excess = entry.message.length - ${resolvedMaxCharsPerEntry},
+             message = entry.message.length > ${resolvedMaxCharsPerEntry}
+                ? entry.message.slice(0, ${resolvedMaxCharsPerEntry}) + '…[' + excess + ' more chars]'
+                : entry.message,
+             prefix = '[ ' + new Date(entry.timestamp).toISOString() + ' ] [ ' + entry.level.toUpperCase() + ' ] ',
+             line = prefix + message;
+
+         if (line.length > budget) { dropped = i + 1; break; }
+         budget -= line.length + 1;
+         out.unshift(line);
+      }
+
+      if (dropped > 0) {
+         out.unshift(
+            '[ ' + dropped + ' older entries dropped to fit maxChars=' + ${resolvedMaxChars} +
+            '. Narrow with level, filter, or since. ]'
+         );
+      }
+
+      return out.join('\\n');
    `;
 
    return executeInWebview(script, windowId, appIdentifier);
@@ -364,7 +471,12 @@ function parseDataUrl(dataUrl: string): { data: string; mimeType: string } | nul
 /**
  * Build screenshot result with image content and optional text context.
  */
-function buildScreenshotResult(dataUrl: string, method: string, windowContext?: WindowContextInfo): ScreenshotResult {
+function buildScreenshotResult(dataUrl: string, method: string, windowContext?: WindowContextInfo, metadata?: {
+   imageWidth: number;
+   imageHeight: number;
+   cssWidth: number;
+   cssHeight: number;
+}): ScreenshotResult {
    const parsed = parseDataUrl(dataUrl);
 
    if (!parsed) {
@@ -382,6 +494,20 @@ function buildScreenshotResult(dataUrl: string, method: string, windowContext?: 
          contextText += `\n\n⚠️ ${windowContext.warning}`;
       }
    }
+
+   // Add screenshot metadata if available
+   if (metadata) {
+      const scale = metadata.cssWidth > 0 ? metadata.imageWidth / metadata.cssWidth : 0;
+
+      const inverseScale = scale > 0 ? (1 / scale).toFixed(1) : '1.0';
+
+      contextText += `\nImage is ${metadata.imageWidth}x${metadata.imageHeight} px. ` +
+         `Webview viewport is ${Math.round(metadata.cssWidth)}x${Math.round(metadata.cssHeight)} CSS px. ` +
+         `Scale ${scale.toFixed(3)}.`;
+      contextText += '\nwebview_interact x and y are CSS pixels: ' +
+         `multiply image coordinates by ${inverseScale}.`;
+   }
+
    content.push({ type: 'text', text: contextText });
 
    // Add the image content
@@ -432,6 +558,70 @@ async function prepareHtml2canvasScript(
    }
 }
 
+interface NativeScreenshotPayload {
+   dataUrl: string;
+   imageWidth?: number;
+   imageHeight?: number;
+   cssWidth?: number;
+   cssHeight?: number;
+}
+
+function parseNativeScreenshotPayload(rawPayload: unknown): {
+   dataUrl: string;
+   metadata?: { imageWidth: number; imageHeight: number; cssWidth: number; cssHeight: number };
+} {
+   if (typeof rawPayload === 'string') {
+      return { dataUrl: rawPayload };
+   }
+
+   const payload = rawPayload as NativeScreenshotPayload,
+         dimensions = [ payload.imageWidth, payload.imageHeight, payload.cssWidth, payload.cssHeight ],
+         hasMetadata = dimensions.every((value) => { return typeof value === 'number'; });
+
+   if (!hasMetadata) {
+      return { dataUrl: payload.dataUrl };
+   }
+
+   return {
+      dataUrl: payload.dataUrl,
+      metadata: {
+         imageWidth: payload.imageWidth as number,
+         imageHeight: payload.imageHeight as number,
+         cssWidth: payload.cssWidth as number,
+         cssHeight: payload.cssHeight as number,
+      },
+   };
+}
+
+async function captureNativeScreenshot(options: {
+   format: 'png' | 'jpeg';
+   quality: number;
+   windowId?: string;
+   appIdentifier?: string | number;
+   maxWidth?: number;
+}): Promise<ScreenshotResult> {
+   const { format, quality, windowId, appIdentifier, maxWidth } = options;
+
+   await ensureReady(windowId, appIdentifier);
+
+   const session = resolveTargetApp(appIdentifier),
+         args = { format, quality, windowLabel: windowId, maxWidth },
+         command = { command: 'capture_native_screenshot' as const, args },
+         response = await session.client.sendCommand(command, 15000);
+
+   if (!response.success || !response.data) {
+      throw new Error(response.error || 'Native screenshot returned invalid data');
+   }
+
+   const { dataUrl, metadata } = parseNativeScreenshotPayload(response.data);
+
+   if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+      throw new Error('Native screenshot returned invalid data');
+   }
+
+   return buildScreenshotResult(dataUrl, 'native API', response.windowContext, metadata);
+}
+
 /**
  * Capture a screenshot of the visible webview viewport.
  *
@@ -445,43 +635,8 @@ export async function captureScreenshot(options: CaptureScreenshotOptions = {}):
 
    let nativeErrorMsg = 'Native screenshot unavailable';
 
-   // Primary implementation: Use native platform-specific APIs
-   // - macOS: WKWebView takeSnapshot
-   // - Windows: WebView2 CapturePreview
-   // - Linux: Chromium/WebKit screenshot APIs
    try {
-      // Ensure we're fully initialized
-      await ensureReady(windowId, appIdentifier);
-
-      // Resolve target session
-      const session = resolveTargetApp(appIdentifier);
-
-      const client = session.client;
-
-      // Use longer timeout (15s) for native screenshot - the Rust code waits up to 10s
-      const response = await client.sendCommand({
-         command: 'capture_native_screenshot',
-         args: {
-            format,
-            quality,
-            windowLabel: windowId,
-            maxWidth,
-         },
-      }, 15000);
-
-      if (!response.success || !response.data) {
-         throw new Error(response.error || 'Native screenshot returned invalid data');
-      }
-
-      // The native command returns a base64 data URL
-      const dataUrl = response.data as string;
-
-      if (!dataUrl || !dataUrl.startsWith('data:image/')) {
-         throw new Error('Native screenshot returned invalid data');
-      }
-
-      // Build response with window context
-      return buildScreenshotResult(dataUrl, 'native API', response.windowContext);
+      return await captureNativeScreenshot({ format, quality, windowId, appIdentifier, maxWidth });
    } catch(nativeError: unknown) {
       // Log the native error for debugging, then fall back
       nativeErrorMsg = nativeError instanceof Error ? nativeError.message : String(nativeError);

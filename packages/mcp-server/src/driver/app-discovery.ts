@@ -21,6 +21,8 @@ export interface SessionInfo {
    port: number;
    client?: PluginClient;
    connected: boolean;
+   cwd: string | null;
+   pluginVersion: string | null;
 }
 
 /**
@@ -71,8 +73,8 @@ export class AppDiscovery {
 
 
    /**
-    * Connects to a specific app on a host and port
-    */
+     * Connects to a specific app on a host and port
+     */
    public async connectToPort(port: number, appName?: string, host?: string): Promise<SessionInfo> {
       const targetHost = host ?? this._host;
 
@@ -90,13 +92,43 @@ export class AppDiscovery {
       try {
          await client.connect();
 
+         // Get backend state to retrieve app info and plugin version
+         const backendState = await client.sendCommand({
+            command: 'get_backend_state',
+            args: {},
+         });
+
+         let name = appName || `Tauri App (${targetHost}:${port})`,
+             cwd: string | null = null,
+             pluginVersion: string | null = null;
+
+         if (backendState.success && backendState.data) {
+            const data = backendState.data as {
+               app?: { name?: string; identifier?: string; version?: string };
+               cwd?: string | null;
+               bridge?: { pluginVersion?: string };
+            };
+
+            if (data.app?.name) {
+               name = data.app.name;
+            }
+            if (data.app?.identifier) {
+               // Use identifier if name not available
+               name = data.app.name || data.app.identifier;
+            }
+            cwd = data.cwd ?? null;
+            pluginVersion = data.bridge?.pluginVersion ?? null;
+         }
+
          const session: SessionInfo = {
             appId: sessionId,
-            name: appName || `Tauri App (${targetHost}:${port})`,
+            name,
             host: targetHost,
             port,
             client,
             connected: true,
+            cwd,
+            pluginVersion,
          };
 
          this._activeSessions.set(sessionId, session);

@@ -19,10 +19,10 @@ import {
    GetBackendStateSchema, ManageWindowSchema,
 } from './driver/plugin-commands.js';
 import {
-   interact, screenshot, keyboard, waitFor, getStyles,
+   interact, screenshot, keyboard, waitFor,
    executeJavaScript, findElement, domSnapshot,
    InteractSchema, ScreenshotSchema, KeyboardSchema,
-   WaitForSchema, GetStylesSchema, ExecuteJavaScriptSchema,
+   WaitForSchema, ExecuteJavaScriptSchema,
    FindElementSchema, DomSnapshotSchema,
 } from './driver/webview-interactions.js';
 import {
@@ -183,10 +183,16 @@ export const TOOLS: ToolDefinition[] = [
    {
       name: 'webview_find_element',
       description:
-         '[Tauri Apps Only] Find DOM elements in a running Tauri app\'s webview. ' +
+         '[Tauri Apps Only] Find elements in a running Tauri app\'s webview and return their geometry, text, ' +
+         'accessible name, attributes, visibility, and optionally their computed styles. ' +
          'Supports CSS selectors (default), XPath expressions, and text content matching via the strategy parameter. ' +
-         'The "text" strategy first searches element text content, then falls back to placeholder, aria-label, and title attributes. ' +
-         'Returns the element\'s HTML. ' +
+         'The "text" strategy searches element text content (not just direct text nodes), prefers exact matches over ' +
+         'substring matches, prefers innermost elements, and prefers interactive ancestors. ' +
+         'Returns structured JSON with totalMatches, returned count, and array of matches each containing: ' +
+         'nth index, ref ID, tag, trimmed text, accessible name, attributes, bounding rect, visibility, interactability, ' +
+         'optional computed styles, and optional truncated outerHTML. ' +
+         'Use this instead of webview_execute_js for querySelector, getBoundingClientRect, textContent, ' +
+         'and getComputedStyle reads. ' +
          'Requires active driver_session. ' +
          MULTI_APP_DESC + ' ' +
          'For browser pages or documentation sites, use Chrome DevTools MCP instead.',
@@ -203,6 +209,11 @@ export const TOOLS: ToolDefinition[] = [
          return await findElement({
             selector: parsed.selector,
             strategy: parsed.strategy,
+            nth: parsed.nth,
+            limit: parsed.limit,
+            properties: parsed.properties,
+            visibleOnly: parsed.visibleOnly,
+            includeHtml: parsed.includeHtml,
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
          });
@@ -232,9 +243,11 @@ export const TOOLS: ToolDefinition[] = [
    {
       name: 'webview_interact',
       description:
-         '[Tauri Apps Only] Click, scroll, swipe, focus, or perform gestures in a Tauri app webview. ' +
-         'Supported actions: click, double-click, long-press, scroll, swipe, focus. ' +
+         '[Tauri Apps Only] Click, hover, right-click, scroll, swipe, focus, or perform gestures in a Tauri app webview. ' +
+         'Supported actions: click, double-click, long-press, scroll, swipe, focus, hover, right-click. ' +
          'Supports CSS selectors (default), XPath, and text content matching via the strategy parameter. ' +
+         'When using a text selector that matches multiple visible elements, you must provide the nth parameter ' +
+         'to disambiguate, or the tool will throw an error listing the candidates. ' +
          'Requires active driver_session. ' +
          'For browser interaction, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -313,6 +326,7 @@ export const TOOLS: ToolDefinition[] = [
                action: parsed.action,
                selectorOrKey: parsed.selector,
                strategy: parsed.strategy,
+               nth: parsed.nth,
                textOrModifiers: parsed.text,
                windowId: parsed.windowId,
                appIdentifier: parsed.appIdentifier,
@@ -356,40 +370,14 @@ export const TOOLS: ToolDefinition[] = [
       },
    },
    {
-      name: 'webview_get_styles',
-      description:
-         '[Tauri Apps Only] Get computed CSS styles from elements in a Tauri app. ' +
-         'Supports CSS selectors (default), XPath, and text content matching via the strategy parameter. ' +
-         'Requires active driver_session. ' +
-         MULTI_APP_DESC + ' ' +
-         'For browser style inspection, use Chrome DevTools MCP instead.',
-      category: TOOL_CATEGORIES.UI_AUTOMATION,
-      schema: GetStylesSchema,
-      annotations: {
-         title: 'Get Styles in Tauri Webview',
-         readOnlyHint: true,
-         openWorldHint: false,
-      },
-      handler: async (args) => {
-         const parsed = GetStylesSchema.parse(args);
-
-         return await getStyles({
-            selector: parsed.selector,
-            strategy: parsed.strategy,
-            properties: parsed.properties,
-            multiple: parsed.multiple,
-            windowId: parsed.windowId,
-            appIdentifier: parsed.appIdentifier,
-         });
-      },
-   },
-   {
       name: 'webview_execute_js',
       description:
          '[Tauri Apps Only] Execute JavaScript in a Tauri app\'s webview context. ' +
          'Requires active driver_session. Has access to window.__TAURI__. ' +
          'If you need a return value, it must be JSON-serializable. ' +
          'For functions that return values, use an IIFE: "(() => { return 5; })()" not "() => { return 5; }". ' +
+         'Accepts an optional timeout parameter (milliseconds) for long-running scripts. ' +
+         'Timeout errors will identify which layer timed out (transport, script self-race, or Rust eval). ' +
          MULTI_APP_DESC + ' ' +
          'For browser JS execution, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,
@@ -406,6 +394,7 @@ export const TOOLS: ToolDefinition[] = [
          return await executeJavaScript({
             script: parsed.script,
             args: parsed.args,
+            timeout: parsed.timeout,
             windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
          });
@@ -505,6 +494,9 @@ export const TOOLS: ToolDefinition[] = [
       description:
          '[Tauri Apps Only] Execute Tauri IPC commands (invoke Rust backend functions). ' +
          'Requires active driver_session. This is Tauri-specific IPC, not browser APIs. ' +
+         'Plugin commands (plugin:mcp-bridge|*) are routed through the bridge; all other commands ' +
+         'are executed via the webview using window.__TAURI_INTERNALS__.invoke, which keeps ' +
+         'the application\'s Tauri capability rules in force. ' +
          'For Electron IPC or browser APIs, use appropriate tools for those frameworks.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
       schema: ExecuteIPCCommandSchema,
@@ -520,6 +512,7 @@ export const TOOLS: ToolDefinition[] = [
          return await executeIPCCommand({
             command: parsed.command,
             args: parsed.args,
+            windowId: parsed.windowId,
             appIdentifier: parsed.appIdentifier,
          });
       },
@@ -528,7 +521,8 @@ export const TOOLS: ToolDefinition[] = [
       name: 'ipc_monitor',
       description:
          '[Tauri Apps Only] Monitor Tauri IPC calls between frontend and Rust backend. ' +
-         'Requires active driver_session. Captures invoke() calls and responses. ' +
+         'Requires active driver_session. Captures invoke() calls made through window.__TAURI__.core. ' +
+         'Bridge-internal commands (plugin:mcp-bridge|*) are excluded from capture. ' +
          'This is Tauri-specific; for browser network monitoring, use Chrome DevTools MCP.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
       schema: ManageIPCMonitoringSchema,
@@ -611,6 +605,11 @@ export const TOOLS: ToolDefinition[] = [
          '"list" - List all windows with labels, titles, URLs, and state. ' +
          '"info" - Get detailed info for a window (size, position, title, focus, visibility). ' +
          '"resize" - Resize a window (requires width/height, uses logical pixels by default). ' +
+         '"focus" - Focus a window (bring to front). ' +
+         '"minimize" - Minimize a window. ' +
+         '"maximize" - Maximize a window. ' +
+         'Desktop-only actions (focus, minimize, maximize) require tauri-plugin-mcp-bridge 0.13.0+ ' +
+         'and return a version error on older plugins. ' +
          'Requires active driver_session. ' +
          'For browser windows, use Chrome DevTools MCP instead.',
       category: TOOL_CATEGORIES.UI_AUTOMATION,

@@ -17,6 +17,7 @@ use tauri::{command, AppHandle, Manager, Runtime};
 ///   - `environment`: Runtime environment info (debug mode, OS, arch)
 ///   - `windows`: List of window labels and their states
 ///   - `cwd`: Current working directory of the host process (string or null)
+///   - `bridge`: MCP Bridge plugin version
 ///   - `timestamp`: Current timestamp in milliseconds
 #[command]
 pub async fn get_backend_state<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
@@ -65,6 +66,9 @@ pub async fn get_backend_state<R: Runtime>(app: AppHandle<R>) -> Result<Value, S
         "windows": windows,
         "window_count": windows.len(),
         "cwd": cwd,
+        "bridge": {
+            "pluginVersion": env!("CARGO_PKG_VERSION"),
+        },
         "timestamp": current_timestamp(),
     }))
 }

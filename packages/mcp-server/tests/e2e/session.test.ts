@@ -16,7 +16,7 @@ describe('Session Manager E2E Tests', () => {
 
    describe('Session Start with Default Settings', () => {
       it('should start session with localhost by default', async () => {
-         const result = await manageDriverSession('start');
+         const result = await manageDriverSession('start', undefined, getTestAppPort());
 
          expect(result).toContain('Session started');
          // Should connect to localhost since the test app is running locally
@@ -61,7 +61,7 @@ describe('Session Manager E2E Tests', () => {
 
    describe('Session Start with localhost Host', () => {
       it('should connect directly to localhost without fallback', async () => {
-         const result = await manageDriverSession('start', 'localhost');
+         const result = await manageDriverSession('start', 'localhost', getTestAppPort());
 
          expect(result).toContain('Session started');
          expect(result).toContain('localhost');
@@ -74,7 +74,7 @@ describe('Session Manager E2E Tests', () => {
 
    describe('Session Start with 127.0.0.1 Host', () => {
       it('should connect directly to 127.0.0.1 without fallback', async () => {
-         const result = await manageDriverSession('start', '127.0.0.1');
+         const result = await manageDriverSession('start', '127.0.0.1', getTestAppPort());
 
          expect(result).toContain('Session started');
          // Should work since 127.0.0.1 is localhost
@@ -103,13 +103,15 @@ describe('Session Manager E2E Tests', () => {
 
    describe('Session Restart on Same Port', () => {
       it('should not timeout when starting session twice on the same port', async () => {
+         const port = getTestAppPort();
+
          // First start
-         const result1 = await manageDriverSession('start');
+         const result1 = await manageDriverSession('start', undefined, port);
 
          expect(result1).toContain('Session started');
 
          // Second start on same port (should not timeout due to stale session cache)
-         const result2 = await manageDriverSession('start');
+         const result2 = await manageDriverSession('start', undefined, port);
 
          expect(result2).toContain('Already connected to app on port');
       }, TIMEOUT);

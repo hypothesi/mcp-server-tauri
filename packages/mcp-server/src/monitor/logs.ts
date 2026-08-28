@@ -56,6 +56,12 @@ export const ReadLogsSchema = z.object({
    source: z.enum([ 'console', 'android', 'ios', 'system' ])
       .describe('Log source: "console" for webview JS logs, "android" for logcat, "ios" for simulator, "system" for desktop'),
    lines: z.number().int().positive().default(50),
+   level: z.enum([ 'log', 'debug', 'info', 'warn', 'error' ]).optional()
+      .describe('Only return entries at this console level.'),
+   maxChars: z.number().int().min(500).max(100000).optional().default(20000)
+      .describe('Maximum characters in the response. Entries are truncated and the oldest are dropped to fit.'),
+   maxCharsPerEntry: z.number().int().min(100).max(20000).optional().default(2000)
+      .describe('Maximum characters kept from each log entry.'),
    filter: z.string().optional().describe('Regex or keyword to filter logs'),
    since: z.string().optional().describe('ISO timestamp to filter logs since (e.g. 2023-10-27T10:00:00Z)'),
    windowId: z.string().optional().describe('Window label for console logs (defaults to "main")'),
@@ -67,6 +73,9 @@ export const ReadLogsSchema = z.object({
 export interface ReadLogsOptions {
    source: 'console' | 'android' | 'ios' | 'system';
    lines?: number;
+   level?: 'log' | 'debug' | 'info' | 'warn' | 'error';
+   maxChars?: number;
+   maxCharsPerEntry?: number;
    filter?: string;
    since?: string;
    windowId?: string;
@@ -74,14 +83,14 @@ export interface ReadLogsOptions {
 }
 
 export async function readLogs(options: ReadLogsOptions): Promise<string> {
-   const { source, lines = 50, filter, since, windowId, appIdentifier } = options;
+   const { source, lines = 50, level, maxChars = 20000, maxCharsPerEntry = 2000, filter, since, windowId, appIdentifier } = options;
 
    try {
       let output = '';
 
       // Handle console logs (webview JS logs)
       if (source === 'console') {
-         return await getConsoleLogs({ lines, filter, since, windowId, appIdentifier });
+         return await getConsoleLogs({ lines, level, maxChars, maxCharsPerEntry, filter, since, windowId, appIdentifier });
       }
 
       if (source === 'android') {
@@ -172,16 +181,54 @@ export async function readLogs(options: ReadLogsOptions): Promise<string> {
          }
       }
 
+      // Apply level filter
+      if (level) {
+         const levelPrefix = `[ ${level.toUpperCase()} ]`;
+
+         output = output.split('\n').filter((line) => { return line.includes(levelPrefix); }).join('\n');
+      }
+
+      // Apply regex filter
       if (filter) {
          try {
             const regex = new RegExp(filter, 'i');
 
-            return output.split('\n').filter((line) => { return regex.test(line); }).join('\n');
+            output = output.split('\n').filter((line) => { return regex.test(line); }).join('\n');
          } catch(e) {
             return `Invalid filter regex: ${e}`;
          }
       }
-      return output;
+
+      // Apply character budget
+      const outputLines = output.split('\n');
+
+      let budget = maxChars,
+          dropped = 0;
+
+      const finalLines = [];
+
+      for (let i = outputLines.length - 1; i >= 0; i--) {
+         let line = outputLines[i];
+
+         if (line.length > maxCharsPerEntry) {
+            line = line.slice(0, maxCharsPerEntry) + '…[' + (line.length - maxCharsPerEntry) + ' more chars]';
+         }
+         if (line.length > budget) {
+            dropped = i + 1;
+            break;
+         }
+         budget -= line.length + 1; // +1 for newline
+         finalLines.unshift(line);
+      }
+
+      if (dropped > 0) {
+         finalLines.unshift(
+            '[ ' + dropped + ' older entries dropped to fit maxChars=' + maxChars +
+            '. Narrow with level, filter, or since. ]'
+         );
+      }
+
+      return finalLines.join('\n');
    } catch(error) {
       return `Error reading logs: ${error}`;
    }

@@ -5,6 +5,7 @@ import { AppDiscovery } from './app-discovery.js';
 import { PluginClient } from './plugin-client.js';
 import { resetInitialization } from './webview-executor.js';
 import { createMcpLogger } from '../logger.js';
+import { PLUGIN_VERSION_FULL, describeVersionSkew } from '../version.js';
 
 const sessionLogger = createMcpLogger('SESSION');
 
@@ -54,6 +55,7 @@ export interface SessionInfo {
    port: number;
    client: PluginClient;
    connected: boolean;
+   pluginVersion: string | null;
 }
 
 // ============================================================================
@@ -320,6 +322,9 @@ async function handleStatusAction(): Promise<string> {
          identifier: null,
          host: null,
          port: null,
+         pluginVersion: null,
+         serverVersion: PLUGIN_VERSION_FULL,
+         versionWarning: describeVersionSkew(null),
       });
    }
 
@@ -333,8 +338,13 @@ async function handleStatusAction(): Promise<string> {
             identifier: null,
             host: null,
             port: null,
+            pluginVersion: null,
+            serverVersion: PLUGIN_VERSION_FULL,
+            versionWarning: describeVersionSkew(null),
          });
       }
+
+      const versionWarning = describeVersionSkew(session.pluginVersion);
 
       return JSON.stringify({
          connected: true,
@@ -343,16 +353,24 @@ async function handleStatusAction(): Promise<string> {
          cwd: session.cwd,
          host: session.host,
          port: session.port,
+         pluginVersion: session.pluginVersion,
+         serverVersion: PLUGIN_VERSION_FULL,
+         versionWarning,
       });
    }
 
    const apps = Array.from(activeSessions.values()).map((session) => {
+      const versionWarning = describeVersionSkew(session.pluginVersion);
+
       return {
          name: session.name,
          identifier: session.identifier,
          cwd: session.cwd,
          host: session.host,
          port: session.port,
+         pluginVersion: session.pluginVersion,
+         serverVersion: PLUGIN_VERSION_FULL,
+         versionWarning,
          isDefault: session.port === defaultPort,
       };
    });
@@ -362,6 +380,7 @@ async function handleStatusAction(): Promise<string> {
       apps,
       totalCount: apps.length,
       defaultPort,
+      serverVersion: PLUGIN_VERSION_FULL,
    });
 }
 
@@ -418,7 +437,7 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
 
    await client.connect();
 
-   const { identifier, cwd } = await fetchAppMetadata(client);
+   const { identifier, cwd, pluginVersion } = await fetchAppMetadata(client);
 
    const sessionInfo: SessionInfo = {
       name: connectedSession.name,
@@ -428,6 +447,7 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
       port: connectedSession.port,
       client,
       connected: true,
+      pluginVersion,
    };
 
    activeSessions.set(connectedSession.port, sessionInfo);
@@ -437,7 +457,15 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
       `Session started: ${sessionInfo.name} (${sessionInfo.host}:${sessionInfo.port}) [DEFAULT]`
    );
 
-   return `Session started with app: ${sessionInfo.name} (${sessionInfo.host}:${sessionInfo.port}) [DEFAULT]`;
+   let result = `Session started with app: ${sessionInfo.name} (${sessionInfo.host}:${sessionInfo.port}) [DEFAULT]`;
+
+   const versionWarning = describeVersionSkew(sessionInfo.pluginVersion);
+
+   if (versionWarning) {
+      result = `${versionWarning}\n\n${result}`;
+   }
+
+   return result;
 }
 
 async function handleStopAction(appIdentifier?: string | number): Promise<string> {
@@ -508,7 +536,7 @@ async function tryConnect(host: string, port: number): Promise<{ name: string; h
  */
 async function fetchAppMetadata(
    client: PluginClient
-): Promise<{ identifier: string | null; cwd: string | null }> {
+): Promise<{ identifier: string | null; cwd: string | null; pluginVersion: string | null }> {
    try {
       const response = await client.sendCommand({
          command: 'invoke_tauri',
@@ -516,20 +544,22 @@ async function fetchAppMetadata(
       });
 
       if (!response.success || !response.data) {
-         return { identifier: null, cwd: null };
+         return { identifier: null, cwd: null, pluginVersion: null };
       }
 
       const state = response.data as {
          app?: { identifier?: string };
          cwd?: string | null;
+         bridge?: { pluginVersion?: string };
       };
 
       return {
          identifier: state.app?.identifier ?? null,
          cwd: typeof state.cwd === 'string' && state.cwd.length > 0 ? state.cwd : null,
+         pluginVersion: state.bridge?.pluginVersion ?? null,
       };
    } catch{
-      return { identifier: null, cwd: null };
+      return { identifier: null, cwd: null, pluginVersion: null };
    }
 }
 

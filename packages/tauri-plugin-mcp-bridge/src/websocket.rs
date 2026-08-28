@@ -249,6 +249,35 @@ async fn handle_invoke_tauri<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Va
     }
 }
 
+/// Handles desktop window focus, minimize, and maximize actions.
+async fn handle_set_window_state<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Value) -> Value {
+    let window_label = args
+        .get("windowId")
+        .and_then(|value| value.as_str())
+        .unwrap_or("main");
+    let Some(action) = args.get("action").and_then(|value| value.as_str()) else {
+        return error_response(id, "Missing action in args");
+    };
+    let Some(window) = app.get_webview_window(window_label) else {
+        return error_response(id, format!("Window not found: {window_label}"));
+    };
+
+    let result = match action {
+        "focus" => window.set_focus(),
+        "minimize" => window.minimize(),
+        "maximize" => window.maximize(),
+        _ => return error_response(id, format!("Unknown window state action: {action}")),
+    };
+
+    match result {
+        Ok(()) => success_response(
+            id,
+            serde_json::json!({ "action": action, "windowId": window_label }),
+        ),
+        Err(error) => error_response(id, error.to_string()),
+    }
+}
+
 /// Handles the list_windows command.
 async fn handle_list_windows<R: Runtime>(app: &AppHandle<R>, id: &str) -> Value {
     match commands::list_windows(app.clone()).await {
@@ -584,6 +613,13 @@ async fn dispatch_command<R: Runtime>(app: &AppHandle<R>, command: &Value) -> Va
                 handle_resize_window(app, id, args).await
             } else {
                 error_response(id, "Missing args for resize_window")
+            }
+        }
+        "set_window_state" => {
+            if let Some(args) = args {
+                handle_set_window_state(app, id, args).await
+            } else {
+                error_response(id, "Missing args for set_window_state")
             }
         }
         "register_script" => {

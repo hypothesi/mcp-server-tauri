@@ -15,6 +15,84 @@
 
    var REF_PATTERN = /^\[?(?:ref=)?(e\d+)\]?$/;
 
+   var NON_RENDERED_TAGS = {
+      SCRIPT: 1, STYLE: 1, TITLE: 1, HEAD: 1, META: 1,
+      LINK: 1, TEMPLATE: 1, NOSCRIPT: 1, BASE: 1,
+   };
+
+   var INTERACTIVE_SELECTOR = 'a,button,input,select,textarea,summary,' +
+      '[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[tabindex]';
+
+   function isRendered(element) {
+      if (!element || element.nodeType !== 1) return false;
+      if (NON_RENDERED_TAGS[element.tagName]) return false;
+      if (element.hidden) return false;
+      if (element.getClientRects().length === 0) return false;
+      try {
+         var style = window.getComputedStyle(element);
+         if (style.display === 'none') return false;
+         if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      } catch (e) {
+         return false;
+      }
+      return true;
+   }
+
+   function hasMatchingDescendant(element, needle) {
+      var descendants = element.querySelectorAll('*');
+      for (var i = 0; i < descendants.length; i++) {
+         var el = descendants[i];
+         if (!isRendered(el)) continue;
+         var content = (el.textContent || '').trim();
+         if (content.indexOf(needle) !== -1) return true;
+      }
+      return false;
+   }
+
+   function preferInteractive(el) {
+      if (el.matches(INTERACTIVE_SELECTOR)) return el;
+      var host = el.closest(INTERACTIVE_SELECTOR);
+      return host && isRendered(host) ? host : el;
+   }
+
+   function dedupe(arr) {
+      var seen = new Set();
+      var result = [];
+      for (var i = 0; i < arr.length; i++) {
+         var el = arr[i];
+         if (!seen.has(el)) {
+            seen.add(el);
+            result.push(el);
+         }
+      }
+      return result;
+   }
+
+   function textCandidates(needle) {
+      var all = document.body ? document.body.querySelectorAll('*') : [],
+          exact = [], partial = [];
+
+      for (var i = 0; i < all.length; i++) {
+         var el = all[i],
+             content = (el.textContent || '').trim(),
+             attributeText = [
+                el.getAttribute('placeholder'),
+                el.getAttribute('aria-label'),
+                el.getAttribute('title'),
+             ].filter(Boolean),
+             exactAttribute = attributeText.indexOf(needle) !== -1,
+             partialAttribute = attributeText.some(function(value) { return value.indexOf(needle) !== -1; }),
+             textMatch = content.indexOf(needle) !== -1;
+
+         if (!textMatch && !partialAttribute) continue;
+         if (!isRendered(el)) continue;
+         if (textMatch && el.querySelector('*') && hasMatchingDescendant(el, needle)) continue;
+         (content === needle || exactAttribute ? exact : partial).push(preferInteractive(el));
+      }
+
+      return dedupe(exact.length > 0 ? exact : partial);
+   }
+
    function xpathForText(text) {
       // Escape single quotes for XPath by splitting on ' and using concat()
       if (text.indexOf("'") === -1) {
@@ -47,39 +125,26 @@
       }
 
       if (strategy === 'text') {
-         // First try: match element text content
-         var xpath = xpathForText(selectorOrRef);
-         var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-         if (result.singleNodeValue) return result.singleNodeValue;
-
-         // Fallback: search placeholder, aria-label, and title attributes
-         var attrSelectors = [
-            '[placeholder*="' + selectorOrRef.replace(/"/g, '\\"') + '"]',
-            '[aria-label*="' + selectorOrRef.replace(/"/g, '\\"') + '"]',
-            '[title*="' + selectorOrRef.replace(/"/g, '\\"') + '"]',
-         ];
-         for (var i = 0; i < attrSelectors.length; i++) {
-            var el = document.querySelector(attrSelectors[i]);
-            if (el) return el;
-         }
-         return null;
+         var candidates = textCandidates(selectorOrRef);
+         return candidates[0] || null;
       }
 
       if (strategy === 'xpath') {
          var result = document.evaluate(selectorOrRef, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-         return result.singleNodeValue;
+         var node = result.singleNodeValue;
+         return (node && isRendered(node)) ? node : null;
       }
 
       // Default: CSS selector
       return document.querySelector(selectorOrRef);
    };
 
-   /**
-    * Resolve all matching elements as an Array.
-    * @param {string} selector  - Selector, XPath, or text
-    * @param {string} [strategy] - 'css' (default), 'xpath', or 'text'
-    * @returns {Element[]}
-    */
+/**
+     * Resolve all matching elements as an Array.
+     * @param {string} selector  - Selector, XPath, or text
+     * @param {string} [strategy] - 'css' (default), 'xpath', or 'text'
+     * @returns {Element[]}
+     */
    window.__MCP__.resolveAll = function(selector, strategy) {
       if (!selector) return [];
 
@@ -91,33 +156,15 @@
       }
 
       if (strategy === 'text') {
-         // First try: match element text content
-         var xpath = xpathForText(selector);
-         var snapshot = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-         var results = [];
-         for (var i = 0; i < snapshot.snapshotLength; i++) {
-            results.push(snapshot.snapshotItem(i));
-         }
-         if (results.length > 0) return results;
-
-         // Fallback: search placeholder, aria-label, and title attributes
-         var attrSelectors = [
-            '[placeholder*="' + selector.replace(/"/g, '\\"') + '"]',
-            '[aria-label*="' + selector.replace(/"/g, '\\"') + '"]',
-            '[title*="' + selector.replace(/"/g, '\\"') + '"]',
-         ];
-         for (var i = 0; i < attrSelectors.length; i++) {
-            var found = Array.from(document.querySelectorAll(attrSelectors[i]));
-            if (found.length > 0) return results.concat(found);
-         }
-         return results;
+         return textCandidates(selector);
       }
 
       if (strategy === 'xpath') {
          var snapshot = document.evaluate(selector, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
          var results = [];
          for (var i = 0; i < snapshot.snapshotLength; i++) {
-            results.push(snapshot.snapshotItem(i));
+            var node = snapshot.snapshotItem(i);
+            if (node && isRendered(node)) results.push(node);
          }
          return results;
       }
@@ -126,13 +173,17 @@
       return Array.from(document.querySelectorAll(selector));
    };
 
-   /**
-    * Count all matching elements.
-    * @param {string} selector  - Selector, XPath, or text
-    * @param {string} [strategy] - 'css' (default), 'xpath', or 'text'
-    * @returns {number}
-    */
+/**
+     * Count all matching elements.
+     * @param {string} selector  - Selector, XPath, or text
+     * @param {string} [strategy] - 'css' (default), 'xpath', or 'text'
+     * @returns {number}
+     */
    window.__MCP__.countAll = function(selector, strategy) {
       return window.__MCP__.resolveAll(selector, strategy).length;
    };
+
+   // Export for reuse by other scripts
+   window.__MCP__.isRendered = isRendered;
+   window.__MCP__.INTERACTIVE_SELECTOR = INTERACTIVE_SELECTOR;
 })();

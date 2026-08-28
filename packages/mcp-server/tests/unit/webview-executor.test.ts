@@ -159,7 +159,7 @@ describe('Webview Executor Unit Tests', () => {
       expect(mockSendCommand).toHaveBeenNthCalledWith(3, expect.objectContaining({
          command: 'execute_js',
          args: expect.objectContaining({ windowLabel: 'recording-toolbar' }),
-      }), 7000);
+      }), 12000);
       expect(result.content[0]).toEqual({
          type: 'text',
          text: 'Screenshot captured via html2canvas',

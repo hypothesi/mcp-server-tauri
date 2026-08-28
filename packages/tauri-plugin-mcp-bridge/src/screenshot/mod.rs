@@ -31,6 +31,21 @@ pub struct Screenshot {
     pub data: Vec<u8>,
 }
 
+/// Captured screenshot with metadata about dimensions and scale
+#[derive(Debug)]
+pub struct CapturedScreenshot {
+    /// Base64 data URL of the image
+    pub data_url: String,
+    /// Image width in pixels (after any resizing)
+    pub image_width: u32,
+    /// Image height in pixels (after any resizing)
+    pub image_height: u32,
+    /// Webview viewport width in CSS pixels
+    pub css_width: f64,
+    /// Webview viewport height in CSS pixels
+    pub css_height: f64,
+}
+
 /// Screenshot error types
 #[derive(Debug, thiserror::Error)]
 pub enum ScreenshotError {
@@ -120,7 +135,17 @@ pub async fn capture_viewport_screenshot<R: Runtime>(
     format: &str,
     quality: u8,
     max_width: Option<u32>,
-) -> Result<String, ScreenshotError> {
+) -> Result<CapturedScreenshot, ScreenshotError> {
+    // Get CSS viewport dimensions before capturing
+    let physical_size = window
+        .inner_size()
+        .map_err(|e| ScreenshotError::CaptureFailed(format!("Failed to get inner size: {e}")))?;
+    let scale_factor = window
+        .scale_factor()
+        .map_err(|e| ScreenshotError::CaptureFailed(format!("Failed to get scale factor: {e}")))?;
+    let css_width = physical_size.width as f64 / scale_factor;
+    let css_height = physical_size.height as f64 / scale_factor;
+
     // Dispatch to platform-specific implementation
     #[cfg(target_os = "macos")]
     let screenshot = macos::capture_viewport(window)?;
@@ -153,6 +178,12 @@ pub async fn capture_viewport_screenshot<R: Runtime>(
         None => screenshot.data,
     };
 
+    // Get final image dimensions
+    let img = image::load_from_memory(&resized_data)
+        .map_err(|e| ScreenshotError::ResizeFailed(format!("Failed to decode image: {e}")))?;
+    let image_width = img.width();
+    let image_height = img.height();
+
     // Platform APIs return PNG data. Convert to requested format if needed.
     // Note: resize_if_needed already converts format when resizing occurs,
     // but if no resize happened, we still have PNG data.
@@ -175,7 +206,13 @@ pub async fn capture_viewport_screenshot<R: Runtime>(
     let base64_data = base64::engine::general_purpose::STANDARD.encode(&final_data);
     let data_url = format!("data:{mime_type};base64,{base64_data}");
 
-    Ok(data_url)
+    Ok(CapturedScreenshot {
+        data_url,
+        image_width,
+        image_height,
+        css_width,
+        css_height,
+    })
 }
 
 /// Check if data is JPEG by examining magic bytes

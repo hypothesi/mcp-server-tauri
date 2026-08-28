@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import {
    executeInWebview,
    executeInWebviewWithContext,
+   executeAsyncInWebview,
    captureScreenshot,
    getConsoleLogs as getConsoleLogsFromCapture,
    ScreenshotResult,
@@ -39,17 +40,27 @@ const selectorStrategyField = z.enum([ 'css', 'xpath', 'text' ]).default('css').
    'and title attributes. Ref IDs (e.g., "ref=e3") work with any strategy.'
 );
 
+/**
+ * Optional nth parameter for disambiguating multiple matches.
+ * Required when a text selector matches more than one visible element.
+ */
+const nthField = z.number().int().min(0).optional().describe(
+   'Zero-based index to pick one of several matching elements. ' +
+   'Omit when the selector is unique. Required when a text selector matches more than one visible element.'
+);
+
 // ============================================================================
 // Schemas
 // ============================================================================
 
 export const InteractSchema = WindowTargetSchema.extend({
-   action: z.enum([ 'click', 'double-click', 'long-press', 'scroll', 'swipe', 'focus' ])
+   action: z.enum([ 'click', 'double-click', 'long-press', 'scroll', 'swipe', 'focus', 'hover', 'right-click' ])
       .describe('Type of interaction to perform'),
    selector: z.string().optional().describe(
       'Element selector: CSS selector (default), XPath expression, text content, or ref ID (e.g., "ref=e3")'
    ),
    strategy: selectorStrategyField,
+   nth: nthField,
    x: z.number().optional().describe('X coordinate for direct coordinate interaction'),
    y: z.number().optional().describe('Y coordinate for direct coordinate interaction'),
    duration: z.number().optional()
@@ -83,6 +94,7 @@ export const KeyboardSchema = WindowTargetSchema.extend({
       'CSS selector (default), XPath, text content, or ref ID'
    ),
    strategy: selectorStrategyField,
+   nth: nthField,
    text: z.string().optional().describe('Text to type (required for "type" action)'),
    key: z.string().optional().describe('Key to press (required for "press/down/up" actions, e.g., "Enter", "a", "Escape")'),
    modifiers: z.array(z.enum([ 'Control', 'Alt', 'Shift', 'Meta' ])).optional().describe('Modifier keys to hold'),
@@ -97,14 +109,6 @@ export const WaitForSchema = WindowTargetSchema.extend({
    timeout: z.number().optional().default(5000).describe('Timeout in milliseconds (default: 5000ms)'),
 });
 
-export const GetStylesSchema = WindowTargetSchema.extend({
-   selector: z.string().describe('Element selector: CSS selector (default), XPath expression, text content, or ref ID'),
-   strategy: selectorStrategyField,
-   properties: z.array(z.string()).optional().describe('Specific CSS properties to retrieve. If omitted, returns all computed styles'),
-   multiple: z.boolean().optional().default(false)
-      .describe('Whether to get styles for all matching elements (true) or just the first (false)'),
-});
-
 export const ExecuteJavaScriptSchema = WindowTargetSchema.extend({
    script: z.string().describe(
       'JavaScript code to execute in the webview context. ' +
@@ -112,10 +116,13 @@ export const ExecuteJavaScriptSchema = WindowTargetSchema.extend({
       'For functions that return values, use IIFE syntax: "(() => { return value; })()" not "() => { return value; }"'
    ),
    args: z.array(z.unknown()).optional().describe('Arguments to pass to the script'),
+   timeout: z.number().int().positive().optional().describe('Execution timeout in milliseconds'),
 });
 
 export const FocusElementSchema = WindowTargetSchema.extend({
    selector: z.string().describe('CSS selector for element to focus'),
+   strategy: selectorStrategyField,
+   nth: nthField,
 });
 
 export const FindElementSchema = WindowTargetSchema.extend({
@@ -124,6 +131,16 @@ export const FindElementSchema = WindowTargetSchema.extend({
       'Interpretation depends on strategy.'
    ),
    strategy: selectorStrategyField,
+   nth: nthField,
+   limit: z.number().int().min(1).max(50).optional().default(5)
+      .describe('Maximum number of matches to return. Total match count is always reported.'),
+   properties: z.array(z.string()).optional().describe(
+      'Computed CSS properties to include for each match, e.g. ["display","opacity","font-size"].'
+   ),
+   visibleOnly: z.boolean().optional().default(true)
+      .describe('Return only rendered elements. Set false to include display:none and off-screen nodes.'),
+   includeHtml: z.boolean().optional().default(false)
+      .describe('Include outerHTML for each match, truncated to 2000 characters.'),
 });
 
 export const GetConsoleLogsSchema = WindowTargetSchema.extend({
@@ -147,6 +164,7 @@ export async function interact(options: {
    action: string;
    selector?: string;
    strategy?: string;
+   nth?: number;
    x?: number;
    y?: number;
    duration?: number;
@@ -159,7 +177,7 @@ export async function interact(options: {
    windowId?: string;
    appIdentifier?: string | number;
 }): Promise<string> {
-   const { action, selector, strategy, x, y, duration, scrollX, scrollY, fromX, fromY, toX, toY, windowId, appIdentifier } = options;
+   const { action, selector, strategy, nth, x, y, duration, scrollX, scrollY, fromX, fromY, toX, toY, windowId, appIdentifier } = options;
 
    // Handle swipe action separately since it has different logic
    if (action === 'swipe') {
@@ -171,13 +189,14 @@ export async function interact(options: {
       if (!selector) {
          throw new Error('Focus action requires a selector');
       }
-      return focusElement({ selector, strategy, windowId, appIdentifier });
+      return focusElement({ selector, strategy, nth, windowId, appIdentifier });
    }
 
    const script = buildScript(SCRIPTS.interact, {
       action,
       selector: selector ?? null,
       strategy: strategy ?? 'css',
+      nth: nth ?? null,
       x: x ?? null,
       y: y ?? null,
       duration: duration ?? 500,
@@ -268,6 +287,7 @@ export interface KeyboardOptions {
    action: string;
    selectorOrKey?: string;
    strategy?: string;
+   nth?: number;
    textOrModifiers?: string | string[];
    modifiers?: string[];
    windowId?: string;
@@ -275,7 +295,7 @@ export interface KeyboardOptions {
 }
 
 export async function keyboard(options: KeyboardOptions): Promise<string> {
-   const { action, selectorOrKey, strategy, textOrModifiers, modifiers, windowId, appIdentifier } = options;
+   const { action, selectorOrKey, strategy, nth, textOrModifiers, modifiers, windowId, appIdentifier } = options;
 
    // Handle the different parameter combinations based on action
    if (action === 'type') {
@@ -283,11 +303,11 @@ export async function keyboard(options: KeyboardOptions): Promise<string> {
 
       const text = textOrModifiers as string;
 
-      if (!selector || !text) {
+      if (!selector || text === undefined) {
          throw new Error('Type action requires both selector and text parameters');
       }
 
-      const script = buildTypeScript(selector, text, strategy);
+      const script = buildTypeScript(selector, text, strategy, nth);
 
       try {
          return await executeInWebview(script, windowId, appIdentifier);
@@ -341,43 +361,16 @@ export async function waitFor(options: WaitForOptions): Promise<string> {
    }
 }
 
-export interface GetStylesOptions {
-   selector: string;
-   strategy?: string;
-   properties?: string[];
-   multiple?: boolean;
-   windowId?: string;
-   appIdentifier?: string | number;
-}
-
-export async function getStyles(options: GetStylesOptions): Promise<string> {
-   const { selector, strategy, properties, multiple = false, windowId, appIdentifier } = options;
-
-   const script = buildScript(SCRIPTS.getStyles, {
-      selector,
-      strategy: strategy ?? 'css',
-      properties: properties || [],
-      multiple,
-   });
-
-   try {
-      return await executeInWebview(script, windowId, appIdentifier);
-   } catch(error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      throw new Error(`Get styles failed: ${message}`);
-   }
-}
-
 export interface ExecuteJavaScriptOptions {
    script: string;
    args?: unknown[];
+   timeout?: number;
    windowId?: string;
    appIdentifier?: string | number;
 }
 
 export async function executeJavaScript(options: ExecuteJavaScriptOptions): Promise<string> {
-   const { script, args, windowId, appIdentifier } = options;
+   const { script, args, timeout, windowId, appIdentifier } = options;
 
    // If args are provided, we need to inject them into the script context
    const wrappedScript = args && args.length > 0
@@ -390,7 +383,14 @@ export async function executeJavaScript(options: ExecuteJavaScriptOptions): Prom
       : script;
 
    try {
-      const { result, windowLabel, warning } = await executeInWebviewWithContext(wrappedScript, windowId, appIdentifier);
+      const execution = timeout === undefined
+         ? await executeInWebviewWithContext(wrappedScript, windowId, appIdentifier)
+         : {
+            result: await executeAsyncInWebview(buildTimedScript(wrappedScript), windowId, timeout, appIdentifier),
+            windowLabel: windowId ?? 'main',
+         };
+
+      const { result, windowLabel, warning } = execution;
 
       // Build response with window context
       let response = result;
@@ -410,17 +410,28 @@ export async function executeJavaScript(options: ExecuteJavaScriptOptions): Prom
    }
 }
 
+function buildTimedScript(script: string): string {
+   const trimmed = script.trim();
+
+   if (/\breturn\b/.test(trimmed) && !trimmed.startsWith('(')) {
+      return `return (async () => { ${trimmed} })();`;
+   }
+
+   return `return (${trimmed});`;
+}
+
 export interface FocusElementOptions {
    selector: string;
    strategy?: string;
+   nth?: number;
    windowId?: string;
    appIdentifier?: string | number;
 }
 
 export async function focusElement(options: FocusElementOptions): Promise<string> {
-   const { selector, strategy, windowId, appIdentifier } = options;
+   const { selector, strategy, nth, windowId, appIdentifier } = options;
 
-   const script = buildScript(SCRIPTS.focus, { selector, strategy: strategy ?? 'css' });
+   const script = buildScript(SCRIPTS.focus, { selector, strategy: strategy ?? 'css', nth: nth ?? null });
 
    try {
       return await executeInWebview(script, windowId, appIdentifier);
@@ -434,6 +445,11 @@ export async function focusElement(options: FocusElementOptions): Promise<string
 export interface FindElementOptions {
    selector: string;
    strategy: string;
+   nth?: number;
+   limit?: number;
+   properties?: string[];
+   visibleOnly?: boolean;
+   includeHtml?: boolean;
    windowId?: string;
    appIdentifier?: string | number;
 }
@@ -442,9 +458,19 @@ export interface FindElementOptions {
  * Find an element using various selector strategies.
  */
 export async function findElement(options: FindElementOptions): Promise<string> {
-   const { selector, strategy, windowId, appIdentifier } = options;
+   const { selector, strategy, nth, limit, properties, visibleOnly, includeHtml, windowId, appIdentifier } = options;
 
-   const script = buildScript(SCRIPTS.findElement, { selector, strategy });
+   await ensureAriaApiLoaded(windowId, appIdentifier);
+
+   const script = buildScript(SCRIPTS.findElement, {
+      selector,
+      strategy,
+      nth: nth ?? null,
+      limit: limit ?? 5,
+      properties: properties || [],
+      visibleOnly: visibleOnly ?? true,
+      includeHtml: includeHtml ?? false,
+   });
 
    try {
       return await executeInWebview(script, windowId, appIdentifier);
@@ -457,6 +483,9 @@ export async function findElement(options: FindElementOptions): Promise<string> 
 
 export interface GetConsoleLogsOptions {
    lines?: number;
+   level?: 'log' | 'debug' | 'info' | 'warn' | 'error';
+   maxChars?: number;
+   maxCharsPerEntry?: number;
    filter?: string;
    since?: string;
    windowId?: string;
@@ -467,10 +496,10 @@ export interface GetConsoleLogsOptions {
  * Get console logs from the webview.
  */
 export async function getConsoleLogs(options: GetConsoleLogsOptions = {}): Promise<string> {
-   const { lines = 50, filter, since, windowId, appIdentifier } = options;
+   const { lines = 50, level, maxChars = 20000, maxCharsPerEntry = 2000, filter, since, windowId, appIdentifier } = options;
 
    try {
-      return await getConsoleLogsFromCapture(filter, since, lines, windowId, appIdentifier);
+      return await getConsoleLogsFromCapture({ filter, since, lines, windowId, appIdentifier, level, maxChars, maxCharsPerEntry });
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 
