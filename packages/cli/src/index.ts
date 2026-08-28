@@ -133,8 +133,6 @@ function addSchemaOptions(command: Command, schema: JsonSchemaDefinition): void 
 function addSchemaOptionsWithExclusions(command: Command, schema: JsonSchemaDefinition, excludedProperties: Set<string>): void {
    const properties = schema.properties ?? {};
 
-   const requiredSet = new Set(schema.required ?? []);
-
    for (const [ propertyName, propertySchema ] of Object.entries(properties)) {
       if (excludedProperties.has(propertyName)) {
          continue;
@@ -164,11 +162,7 @@ function addSchemaOptionsWithExclusions(command: Command, schema: JsonSchemaDefi
          option.choices(typeInfo.choices);
       }
 
-      if (requiredSet.has(propertyName)) {
-         command.addOption(option.makeOptionMandatory(true));
-      } else {
-         command.addOption(option);
-      }
+      command.addOption(option);
    }
 }
 

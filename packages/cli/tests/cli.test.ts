@@ -28,6 +28,15 @@ describe('tauri-mcp CLI', () => {
       expect(parsed.text).toContain('"connected":true');
       expect(parsed.text).toContain(`"port":${port}`);
 
+      const findResult = await runCli([
+         'webview-find-element',
+         '--raw',
+         '{"selector":"#greet-input","strategy":"css"}',
+         '--json',
+      ]);
+
+      expect(findResult.stdout).toContain('greet-input');
+
       await runCli([ 'driver-session', 'stop' ]);
    });
 
