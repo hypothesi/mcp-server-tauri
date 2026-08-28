@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-28
+
+### Changed
+- Update the bundled `@hypothesi/tauri-mcp-server` dependency to `0.13.0`.
+
+### Fixed
+- Allow `--raw` tool arguments without duplicating required fields as separate CLI flags.
+
 ## [0.12.0] - 2026-07-05
 
 ### Changed

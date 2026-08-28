@@ -7,11 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-28
+
+### Added
+- `webview_find_element`: Returns structured JSON with geometry, text, accessible name, attributes, visibility, interactability, optional computed styles, and optional truncated outerHTML. Includes `totalMatches` and `truncated` fields. Supports `nth`, `limit`, `properties`, `visibleOnly`, and `includeHtml` options.
+- `webview_interact`: New `hover` and `right-click` actions. Ambiguous text selectors now throw an error listing candidates instead of silently clicking the first match. Supports `nth` parameter for disambiguation.
+- `webview_keyboard` type action: Supports `nth` parameter for disambiguation.
+- `manage_window`: New `focus`, `minimize`, and `maximize` actions (desktop only, requires tauri-plugin-mcp-bridge 0.13.0+).
+- `webview_screenshot`: Reports image pixel dimensions, CSS viewport dimensions, and scale factor.
+- `driver_session` start/status: Reports `pluginVersion` and `serverVersion` with mismatch warning.
+- `ipc_execute_command`: Now invokes any application Tauri command via `window.__TAURI_INTERNALS__.invoke`, not only bridge commands.
+- `read_logs`: New `level` filter and `maxChars`/`maxCharsPerEntry` character budgets with dropped-entry summary.
+- `webview_execute_js`: Accepts `timeout` parameter (ms). Timeout errors now identify which layer timed out (transport, script self-race, or Rust eval) and include liveness probe result.
+
+### Changed
+- `webview_find_element` replaces `webview_get_styles`; computed styles available via `properties` option.
+- Text selector resolution (`resolveRef`): Prefers exact matches over substring, innermost elements, and interactive ancestors. Filters out non-rendered elements (`<title>`, `<script>`, `display:none`, etc.).
+- `webview_execute_js` timeout errors now name the timing-out layer and include a liveness probe result.
+- Multi-line text typing now works (uses `JSON.stringify` for escaping).
+- `webview_interact` and `webview_keyboard` type action: Ambiguous text selectors throw an error listing up to 5 candidates with tag, text, and rect; `nth` parameter required for disambiguation.
+- `focus` action uses the same ambiguity rules as `interact`.
+- `read_logs` now applies character budget and per-entry truncation inside the webview; returns dropped-count summary line.
+
 ### Fixed
-- `webview_screenshot` no longer opens an interactive screen-sharing permission prompt unless `allowScreenCapture` is explicitly enabled.
-- `tauri-plugin-mcp-bridge`: capture Linux screenshots through WebKitGTK's native visible-region snapshot API.
-- `tauri-mcp-server`: constrain html2canvas fallback output to the visible viewport instead of allocating a full-document canvas.
-- `tauri-mcp-server`: keep bridge WeSockets alive with ping/pong heartbeats and reconnect stale cached sessions when `driver_session start` is called again.
+- Self-healing `__MCP__` helper: Page reload/HMR now triggers exactly one re-injection and retry before failing.
+- `webview_interact` no longer clicks at (0,0) when text selector matches only hidden/non-rendered elements.
+- `ipc_execute_command` now works for application commands, not only bridge commands.
+- `read_logs` character budget prevents token-limit failures; `level` filter works.
+- `webview_execute_js` timeout is configurable; timeout errors identify the layer.
+- Multi-line typing in `webview_keyboard` type action works correctly.
+- `webview_screenshot` scale factor reported so CSS pixel clicks land correctly.
+- Version mismatch warning on connect prevents silent plugin/server incompatibility.
+- Ambiguous text selectors in `interact`, `keyboard`, `find_element`, `focus` now throw instead of silently acting on first match.
+
+### Removed
+- `webview_get_styles` tool and `get-styles.js` script (0 calls in 3,131). Functionality folded into `webview_find_element`.
+- Dead `keyboard.js` script (never invoked).
+
+### Breaking Changes
+- `webview_get_styles` tool removed. Use `webview_find_element` with `properties` option instead.
+- Text selector behavior changed: exact matches rank above substrings; innermost elements preferred; non-rendered elements filtered out. May affect existing scripts relying on old XPath-based matching.
+- `webview_interact`, `webview_keyboard` type, `webview_find_element`, `focus` with ambiguous text selectors now throw instead of acting on first match. Pass `nth` to disambiguate.
 
 ## [0.12.0] - 2026-07-05
 

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-28
+
+### Added
+- Include the bridge package version in backend state responses.
+- Return screenshot image and CSS viewport dimensions with native captures.
+- Add focus, minimize, and maximize window commands.
+
+### Fixed
+- Convert physical window dimensions to CSS pixels using the platform scale factor.
+
 ### Fixed
 - Capture Linux screenshots through WebKitGTK's native visible-region snapshot API instead of falling back to JavaScript.
 

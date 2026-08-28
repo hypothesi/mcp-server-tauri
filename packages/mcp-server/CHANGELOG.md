@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-28
+
+### Added
+- Return structured element details, optional computed styles, match counts, and `nth` disambiguation from `webview_find_element`.
+- Add hover and right-click interactions plus focus, minimize, and maximize window actions.
+- Report plugin/server versions and screenshot pixel-to-CSS scale metadata.
+- Add console log level filtering and bounded output controls.
+
+### Changed
+- Route application IPC commands through the target webview so Tauri capability rules still apply.
+- Fold `webview_get_styles` into `webview_find_element` and remove the unused keyboard injection script.
+- Reject ambiguous text interactions with candidate details instead of silently choosing the first match.
+
+### Fixed
+- Re-inject the `__MCP__` helper once after a page reload or HMR update.
+- Preserve multiline and quoted text during keyboard input.
+- Report whether JavaScript timeouts came from the script, transport, or an unresponsive webview.
+
 ### Fixed
 - `webview_screenshot` only uses the interactive Screen Capture API fallback when `allowScreenCapture` is explicitly enabled.
 - Constrain html2canvas fallback output to the visible viewport instead of allocating a full-document canvas.
