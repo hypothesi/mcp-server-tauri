@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/hypothesi-mcp-server-tauri-badge.png)](https://mseep.ai/app/hypothesi-mcp-server-tauri)
+
 <div align="center">
 
 <img src="docs/public/logo.svg" alt="MCP Server Tauri" width="120" height="120" />
