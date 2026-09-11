@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSendCommand = vi.fn();
@@ -215,6 +216,98 @@ describe('Webview Executor Unit Tests', () => {
       expect(result.content[0]).toEqual({
          type: 'text',
          text: 'Screenshot captured via Screen Capture API',
+      });
+   });
+
+   describe('getConsoleLogs JS encoding', () => {
+      const concatPayload = '\'+(pwned=true)+\'';
+
+      const commentPayload = '\';pwned=true;//';
+
+      const filterBackslashPayload = '\\\';pwned=true;//';
+
+      const filterPayloads = [ concatPayload, commentPayload, filterBackslashPayload ];
+
+      async function captureConsoleLogsScript(options: { filter?: string; since?: string; level?: string }): Promise<string> {
+         const executor = await import('../../src/driver/webview-executor.js');
+
+         executor.resetInitialization();
+         mockSendCommand
+            .mockResolvedValueOnce({ success: true, data: true })
+            .mockResolvedValueOnce({ success: true, data: 'ok' });
+
+         await executor.getConsoleLogs(options);
+
+         const scripts = mockSendCommand.mock.calls
+            .map(([ command ]) => { return command.args?.script; })
+            .filter((script): script is string => {
+               return typeof script === 'string' && script.includes('__MCP_CONSOLE_LOGS__');
+            });
+
+         expect(scripts).toHaveLength(1);
+
+         return scripts[0];
+      }
+
+      function evalConsoleLogsScript(script: string, logs: Array<{ level: string; message: string; timestamp: number }> = []): {
+         pwned: boolean;
+         result: unknown;
+         error?: string;
+      } {
+         const sandbox = {
+            pwned: false,
+            window: { __MCP_CONSOLE_LOGS__: logs },
+         };
+
+         try {
+            return {
+               pwned: sandbox.pwned,
+               result: runInNewContext(`(function() { ${script} })()`, sandbox, { timeout: 500 }),
+            };
+         } catch(error: unknown) {
+            return {
+               pwned: sandbox.pwned,
+               result: undefined,
+               error: error instanceof Error ? error.message : String(error),
+            };
+         }
+      }
+
+      it('still filters logs for a benign since value', async () => {
+         const script = await captureConsoleLogsScript({ since: '2023-10-27T10:00:00Z' });
+
+         const replica = evalConsoleLogsScript(script, [
+            { level: 'info', message: 'old', timestamp: Date.parse('2020-01-01T00:00:00Z') },
+            { level: 'info', message: 'new', timestamp: Date.parse('2024-01-01T00:00:00Z') },
+         ]);
+
+         expect(replica.pwned).toBe(false);
+         expect(replica.error).toBeUndefined();
+         expect(replica.result).toContain('new');
+         expect(replica.result).not.toContain('old');
+         expect(script).toContain('const sinceStr = "2023-10-27T10:00:00Z"');
+      });
+
+      it.each([ concatPayload, commentPayload ])('does not execute attacker statements from since %j', async (since) => {
+         const script = await captureConsoleLogsScript({ since });
+
+         const replica = evalConsoleLogsScript(script);
+
+         expect(replica.pwned).toBe(false);
+         expect(script).toContain(`const sinceStr = ${JSON.stringify(since)}`);
+         expect(script).not.toContain(`if ('${since}')`);
+      });
+
+      it.each(filterPayloads)('does not execute attacker statements from filter %j', async (filter) => {
+         const script = await captureConsoleLogsScript({ filter });
+
+         const replica = evalConsoleLogsScript(script, [
+            { level: 'info', message: 'hello', timestamp: Date.now() },
+         ]);
+
+         expect(replica.pwned).toBe(false);
+         expect(script).toContain(`const filterStr = ${JSON.stringify(filter)}`);
+         expect(script).not.toContain(`new RegExp('${filter.replace(/'/g, '\\\'')}', 'i')`);
       });
    });
 });
