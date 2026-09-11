@@ -590,6 +590,10 @@ async fn dispatch_command<R: Runtime>(app: &AppHandle<R>, command: &Value) -> Va
             }
         }
         "list_windows" => handle_list_windows(app, id).await,
+        "get_backend_state" => match commands::get_backend_state(app.clone()).await {
+            Ok(data) => success_response(id, data),
+            Err(e) => error_response(id, e),
+        },
         "get_window_info" => handle_get_window_info(app, id, command).await,
         "execute_js" => {
             if let Some(args) = args {
