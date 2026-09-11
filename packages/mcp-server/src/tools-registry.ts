@@ -373,7 +373,8 @@ export const TOOLS: ToolDefinition[] = [
       name: 'webview_execute_js',
       description:
          '[Tauri Apps Only] Execute JavaScript in a Tauri app\'s webview context. ' +
-         'Requires active driver_session. Has access to window.__TAURI__. ' +
+         'Requires active driver_session. Has access to window.__TAURI_INTERNALS__ ' +
+         '(and window.__TAURI__ only if the app sets withGlobalTauri). ' +
          'If you need a return value, it must be JSON-serializable. ' +
          'For functions that return values, use an IIFE: "(() => { return 5; })()" not "() => { return 5; }". ' +
          'Accepts an optional timeout parameter (milliseconds) for long-running scripts. ' +
@@ -521,7 +522,9 @@ export const TOOLS: ToolDefinition[] = [
       name: 'ipc_monitor',
       description:
          '[Tauri Apps Only] Monitor Tauri IPC calls between frontend and Rust backend. ' +
-         'Requires active driver_session. Captures invoke() calls made through window.__TAURI__.core. ' +
+         'Requires active driver_session. Captures invoke() calls by wrapping ' +
+         'window.__TAURI_INTERNALS__.invoke, the primitive that @tauri-apps/api uses, ' +
+         'so calls are captured whether or not the app sets withGlobalTauri. ' +
          'Bridge-internal commands (plugin:mcp-bridge|*) are excluded from capture. ' +
          'This is Tauri-specific; for browser network monitoring, use Chrome DevTools MCP.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,

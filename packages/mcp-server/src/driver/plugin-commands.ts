@@ -99,6 +99,22 @@ export async function manageIPCMonitoring(action: 'start' | 'stop', appIdentifie
    return stopIPCMonitoring(appIdentifier);
 }
 
+/**
+ * Pull the bridge's interception status out of an `execute_js` response.
+ *
+ * `window.__MCP_START_IPC_MONITOR__()` returns one of `active:internals`,
+ * `active:global`, `inactive`, or an `unavailable:*` reason.
+ */
+function extractInterceptionStatus(response: { success?: boolean; data?: unknown }): string | null {
+   if (!response || response.success !== true) {
+      return null;
+   }
+
+   const { data } = response;
+
+   return typeof data === 'string' && data.length > 0 ? data : null;
+}
+
 export async function startIPCMonitoring(appIdentifier?: string | number): Promise<string> {
    try {
       // Start the Rust-side monitor state
@@ -116,7 +132,10 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
       const jsResponse = await client.sendCommand({
          command: 'execute_js',
          args: {
-            script: 'window.__MCP_START_IPC_MONITOR__ && window.__MCP_START_IPC_MONITOR__(); true;',
+            script:
+               'window.__MCP_START_IPC_MONITOR__ '
+               + '? String(window.__MCP_START_IPC_MONITOR__()) '
+               + ': "unavailable:bridge-not-injected";',
             windowLabel: 'main',
          },
       }, 5000);
@@ -126,7 +145,24 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
          console.error('Failed to start JS-side IPC interception:', jsResponse.error);
       }
 
-      return JSON.stringify(parsed.result);
+      // The webview is the only place invoke() can be intercepted. If no seam was
+      // available, say so: otherwise ipc_get_captured silently returns [] forever.
+      const interception = extractInterceptionStatus(jsResponse);
+
+      if (interception && interception.startsWith('unavailable')) {
+         return JSON.stringify({
+            status: parsed.result,
+            interception,
+            warning:
+               'IPC interception is NOT active, so ipc_get_captured will stay empty. '
+               + 'Tauri defines window.__TAURI_INTERNALS__.invoke as non-writable and '
+               + 'non-configurable, and this app does not expose window.__TAURI__ '
+               + '(withGlobalTauri is off). Set "withGlobalTauri": true in tauri.conf.json '
+               + 'and use window.__TAURI__.core.invoke() to capture calls.',
+         });
+      }
+
+      return JSON.stringify({ status: parsed.result, interception });
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 
