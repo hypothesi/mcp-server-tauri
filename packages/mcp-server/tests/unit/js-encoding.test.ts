@@ -36,9 +36,11 @@ function evalKeyEventScript(script: string): EvalReplicaResult {
    };
 
    try {
+      const result = runInNewContext(script, sandbox, { timeout: 500 });
+
       return {
          pwned: sandbox.pwned,
-         result: runInNewContext(script, sandbox, { timeout: 500 }),
+         result,
       };
    } catch(error: unknown) {
       return {

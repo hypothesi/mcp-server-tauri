@@ -260,9 +260,11 @@ describe('Webview Executor Unit Tests', () => {
          };
 
          try {
+            const result = runInNewContext(`(function() { ${script} })()`, sandbox, { timeout: 500 });
+
             return {
                pwned: sandbox.pwned,
-               result: runInNewContext(`(function() { ${script} })()`, sandbox, { timeout: 500 }),
+               result,
             };
          } catch(error: unknown) {
             return {
