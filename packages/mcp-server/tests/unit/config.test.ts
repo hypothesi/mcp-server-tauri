@@ -1,6 +1,24 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { getCwdHint, getDefaultHost, getDefaultPort, getConfig, buildWebSocketURL } from '../../src/config.js';
+import {
+   buildWebSocketURL,
+   canonicalizeHost,
+   getBridgeToken,
+   getBridgeTokenFilePath,
+   getCwdHint,
+   getConfig,
+   getDefaultHost,
+   getDefaultPort,
+   getWebSocketClientHeaders,
+   isAllowedBridgeHost,
+   isLoopbackHost,
+   MCP_BRIDGE_TOKEN_FILE_NAME,
+   MCP_BRIDGE_TOKEN_HEADER,
+} from '../../src/config.js';
 
 describe('config', () => {
    const originalEnv = process.env;
@@ -12,6 +30,7 @@ describe('config', () => {
       delete process.env.MCP_BRIDGE_HOST;
       delete process.env.MCP_BRIDGE_PORT;
       delete process.env.MCP_BRIDGE_CWD;
+      delete process.env.MCP_BRIDGE_TOKEN;
       delete process.env.TAURI_DEV_HOST;
    });
 
@@ -111,6 +130,137 @@ describe('config', () => {
          process.env.MCP_BRIDGE_CWD = '';
 
          expect(getCwdHint()).toBe(process.cwd());
+      });
+   });
+
+   describe('getBridgeToken', () => {
+      it('returns null by default', () => {
+         expect(getBridgeToken()).toBeNull();
+         expect(getWebSocketClientHeaders()).toBeUndefined();
+      });
+
+      it('returns MCP_BRIDGE_TOKEN and the upgrade header when set', () => {
+         process.env.MCP_BRIDGE_TOKEN = 'secret-token';
+
+         expect(getBridgeToken()).toBe('secret-token');
+         expect(MCP_BRIDGE_TOKEN_HEADER).toBe('X-MCP-Bridge-Token');
+         expect(getWebSocketClientHeaders()).toEqual({
+            [MCP_BRIDGE_TOKEN_HEADER]: 'secret-token',
+         });
+      });
+
+      it('ignores an empty MCP_BRIDGE_TOKEN', () => {
+         process.env.MCP_BRIDGE_TOKEN = '';
+
+         expect(getBridgeToken()).toBeNull();
+      });
+   });
+
+   describe('getBridgeToken token-file fallback', () => {
+      let tokenDir: string;
+
+      beforeEach(() => {
+         tokenDir = mkdtempSync(join(tmpdir(), 'mcp-bridge-token-'));
+         process.env.MCP_BRIDGE_TOKEN_FILE = join(tokenDir, 'hypothesi-mcp-bridge.token');
+      });
+
+      afterEach(() => {
+         rmSync(tokenDir, { recursive: true, force: true });
+      });
+
+      it('defaults the file path to the plugin location under os.tmpdir()', () => {
+         delete process.env.MCP_BRIDGE_TOKEN_FILE;
+
+         expect(getBridgeTokenFilePath()).toBe(join(tmpdir(), MCP_BRIDGE_TOKEN_FILE_NAME));
+         expect(MCP_BRIDGE_TOKEN_FILE_NAME).toBe('hypothesi-mcp-bridge.token');
+      });
+
+      it('honours MCP_BRIDGE_TOKEN_FILE as the file path', () => {
+         expect(getBridgeTokenFilePath()).toBe(join(tokenDir, 'hypothesi-mcp-bridge.token'));
+      });
+
+      it('returns null when the token file is missing', () => {
+         expect(getBridgeToken()).toBeNull();
+         expect(getBridgeToken('127.0.0.1')).toBeNull();
+      });
+
+      it('reads a trimmed token from the file for loopback targets', () => {
+         writeFileSync(getBridgeTokenFilePath(), '  file-token\n');
+
+         expect(getBridgeToken()).toBe('file-token');
+         expect(getBridgeToken('localhost')).toBe('file-token');
+         expect(getBridgeToken('127.0.0.1')).toBe('file-token');
+         expect(getBridgeToken('[::1]')).toBe('file-token');
+         expect(getWebSocketClientHeaders('127.0.0.1')).toEqual({
+            [MCP_BRIDGE_TOKEN_HEADER]: 'file-token',
+         });
+      });
+
+      it('never presents the file token to a non-loopback host', () => {
+         writeFileSync(getBridgeTokenFilePath(), 'file-token');
+
+         expect(getBridgeToken('192.168.1.9')).toBeNull();
+         expect(getBridgeToken('203.0.113.5')).toBeNull();
+         expect(getWebSocketClientHeaders('192.168.1.9')).toBeUndefined();
+
+         process.env.MCP_BRIDGE_HOST = '192.168.1.9';
+
+         expect(getBridgeToken()).toBeNull();
+      });
+
+      it('prefers MCP_BRIDGE_TOKEN over the file, including for non-loopback hosts', () => {
+         writeFileSync(getBridgeTokenFilePath(), 'file-token');
+         process.env.MCP_BRIDGE_TOKEN = 'env-token';
+
+         expect(getBridgeToken()).toBe('env-token');
+         expect(getBridgeToken('192.168.1.9')).toBe('env-token');
+      });
+
+      it('treats a blank token file as no token', () => {
+         writeFileSync(getBridgeTokenFilePath(), ' \n');
+
+         expect(getBridgeToken()).toBeNull();
+      });
+   });
+
+   describe('isLoopbackHost / isAllowedBridgeHost', () => {
+      it('treats localhost and loopback addresses as loopback', () => {
+         expect(isLoopbackHost('localhost')).toBe(true);
+         expect(isLoopbackHost('127.0.0.1')).toBe(true);
+         expect(isLoopbackHost('127.0.0.2')).toBe(true);
+         expect(isLoopbackHost('::1')).toBe(true);
+         expect(isLoopbackHost('[::1]')).toBe(true);
+         expect(isLoopbackHost('::ffff:127.0.0.1')).toBe(true);
+      });
+
+      it('does not treat LAN or public hosts as loopback', () => {
+         expect(isLoopbackHost('192.168.1.9')).toBe(false);
+         expect(isLoopbackHost('10.0.0.5')).toBe(false);
+         expect(isLoopbackHost('203.0.113.5')).toBe(false);
+         expect(canonicalizeHost('192.168.1.9')).toBe('192.168.1.9');
+      });
+
+      it('allowlists loopback even without env configuration', () => {
+         expect(isAllowedBridgeHost('127.0.0.1')).toBe(true);
+         expect(isAllowedBridgeHost('localhost')).toBe(true);
+      });
+
+      it('allowlists MCP_BRIDGE_HOST and TAURI_DEV_HOST', () => {
+         process.env.MCP_BRIDGE_HOST = '192.168.1.9';
+
+         expect(isAllowedBridgeHost('192.168.1.9')).toBe(true);
+         expect(isAllowedBridgeHost('10.0.0.5')).toBe(false);
+
+         delete process.env.MCP_BRIDGE_HOST;
+         process.env.TAURI_DEV_HOST = '10.0.0.5';
+
+         expect(isAllowedBridgeHost('10.0.0.5')).toBe(true);
+      });
+
+      it('allowlists an explicitly passed operator host and rejects arbitrary peers', () => {
+         expect(isAllowedBridgeHost('203.0.113.5')).toBe(false);
+         expect(isAllowedBridgeHost('203.0.113.5', '203.0.113.5')).toBe(true);
+         expect(isAllowedBridgeHost('203.0.113.5', '192.168.1.9')).toBe(false);
       });
    });
 });

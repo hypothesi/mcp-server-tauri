@@ -45,8 +45,9 @@ tauri-mcp driver-session stop
 ## Output
 
 - Image-producing tools write image files to disk by default.
-- Default filename: `<tool-name>-<timestamp>.png` in the current directory.
-- Use `--file <path>` to control the output filename.
+- Default location: `TAURI_MCP_SCREENSHOT_DIR` if set, otherwise `os.tmpdir()/tauri-mcp-screenshots`.
+- Default filename: `<tool-name>-<timestamp>.png` inside that directory.
+- Use `--file <path>` to control the output filename. Relative names stay in the screenshot directory; absolute paths outside it are rejected.
 - Use `--json` to print structured JSON output. Images are still written to disk; the JSON includes their file paths.
 
 ## Daemon Management

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-11
+
+### Security
+- Confine `--file` / default image output to `os.tmpdir()/tauri-mcp-screenshots` (or `TAURI_MCP_SCREENSHOT_DIR`). Absolute paths and `..` escapes outside that directory are rejected, and parent directories are not created outside the jail.
+
+### Changed
+- Update the bundled `@hypothesi/tauri-mcp-server` dependency to `0.14.0`.
+
 ## [0.13.0] - 2026-08-28
 
 ### Changed

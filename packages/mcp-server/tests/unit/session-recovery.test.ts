@@ -87,6 +87,7 @@ describe('driver session stale recovery', () => {
       vi.resetModules();
       clientMocks.healthResults.length = 0;
       clientMocks.instances.length = 0;
+      delete process.env.MCP_BRIDGE_TOKEN;
    });
 
    it('keeps a cached session that responds to a liveness probe', async () => {

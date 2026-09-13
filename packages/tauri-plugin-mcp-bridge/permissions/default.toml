@@ -1,19 +1,13 @@
 "$schema" = "schemas/schema.json"
 
 [default]
-description = "Default permissions for MCP Bridge plugin"
+description = """
+Inspect-only permissions for MCP Bridge (window info, backend state, script_result).
+Does not allow execute_js, screenshots, script injection, or IPC monitor start.
+Use mcp-bridge:automation for MCP operator automation.
+"""
 permissions = [
-  "allow-capture-native-screenshot",
-  "allow-emit-event",
-  "allow-execute-command",
-  "allow-execute-js",
   "allow-get-backend-state",
-  "allow-get-ipc-events",
   "allow-get-window-info",
-  "allow-list-windows",
-  "allow-report-ipc-event",
-  "allow-request-script-injection",
-  "allow-script-result",
-  "allow-start-ipc-monitor",
-  "allow-stop-ipc-monitor"
+  "allow-script-result"
 ]

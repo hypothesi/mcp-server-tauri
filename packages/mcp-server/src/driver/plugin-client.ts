@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import { EventEmitter } from 'events';
 
-import { buildWebSocketURL, getDefaultHost, getDefaultPort } from '../config.js';
+import { buildWebSocketURL, getDefaultHost, getDefaultPort, getWebSocketClientHeaders } from '../config.js';
 
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30000,
       DEFAULT_HEARTBEAT_TIMEOUT_MS = 10000,
@@ -112,14 +112,49 @@ export class PluginClient extends EventEmitter {
             return;
          }
 
-         this._ws = new WebSocket(this._url);
+         let settled = false;
+
+         const headers = getWebSocketClientHeaders(this._host);
+
+         function finish(error?: Error): void {
+            if (settled) {
+               return;
+            }
+
+            settled = true;
+
+            if (error) {
+               reject(error);
+            } else {
+               resolve();
+            }
+         }
+
+         // Token is a header, never a query string — browsers will not auto-send it.
+         this._ws = headers
+            ? new WebSocket(this._url, { headers })
+            : new WebSocket(this._url);
 
          this._ws.on('open', () => {
             // Connected to MCP Bridge plugin
             this._reconnectAttempts = 0;
             this._startHeartbeat();
             this.emit('connected');
-            resolve();
+            finish();
+         });
+
+         this._ws.on('unexpected-response', (_req, res) => {
+            // Drain so the socket is not left hanging after a handshake reject (401).
+            res.resume();
+            // A rejected upgrade is not a transient drop; retrying would tight-loop
+            // during discovery against impostor/unauth listeners.
+            this._shouldReconnect = false;
+
+            const statusCode = res.statusCode ?? 'unknown',
+                  error = new Error(`WebSocket handshake rejected (${statusCode})`);
+
+            this.emit('error', error);
+            finish(error);
          });
 
          this._ws.on('pong', () => {
@@ -152,7 +187,7 @@ export class PluginClient extends EventEmitter {
             // WebSocket error - emit for any listeners, then reject the promise.
             // Note: The constructor attaches a default error handler to prevent crashes.
             this.emit('error', err);
-            reject(err);
+            finish(err);
          });
 
          this._ws.on('close', () => {
@@ -166,6 +201,10 @@ export class PluginClient extends EventEmitter {
                clearTimeout(pending.timeout);
                pending.reject(new Error('Connection closed'));
                this._pendingRequests.delete(id);
+            }
+
+            if (!settled) {
+               finish(new Error('WebSocket closed before handshake completed'));
             }
 
             // Auto-reconnect with exponential backoff (max 30s)

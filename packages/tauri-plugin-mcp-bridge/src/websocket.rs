@@ -4,16 +4,23 @@
 //! between the Tauri application and external MCP clients. It broadcasts events
 //! to all connected clients and can receive commands from them.
 
+use crate::auth::TokenCallback;
 use crate::commands::{self, resolve_window_with_context, ScriptExecutor, WindowContext};
 use crate::logging::{mcp_log_error, mcp_log_info};
-use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
+use crate::script_registry::{
+    validate_https_script_url, ScriptEntry, ScriptType, SharedScriptRegistry,
+};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{self, Value};
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tauri::{AppHandle, Manager, Runtime, WebviewWindow};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc};
-use tokio_tungstenite::{accept_async, tungstenite::Message};
+use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::{accept_hdr_async, WebSocketStream};
 
 /// WebSocket server for real-time event streaming to MCP clients.
 ///
@@ -23,10 +30,11 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 ///
 /// # Architecture
 ///
-/// - Binds to 0.0.0.0 by default (all interfaces) for remote device support
+/// - Binds to 127.0.0.1 by default (loopback); 0.0.0.0 is an explicit opt-in
+/// - Requires `X-MCP-Bridge-Token` on upgrade; unauthenticated sockets never join
 /// - Runs on port 9223 by default (or next available in range 9223-9322)
 /// - Supports multiple concurrent client connections
-/// - Uses broadcast channels for event distribution
+/// - Uses broadcast channels for event distribution (latest authed operator)
 /// - Handles client disconnections gracefully
 ///
 /// # Examples
@@ -38,7 +46,7 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 /// async fn main() {
 ///     // Requires a Tauri AppHandle
 ///     let (event_tx, _event_rx) = tokio::sync::broadcast::channel(100);
-///     let server = WebSocketServer::new(9223, "0.0.0.0", app_handle, event_tx);
+///     let server = WebSocketServer::new(9223, "127.0.0.1", app_handle, event_tx, token);
 ///
 ///     tokio::spawn(async move {
 ///         if let Err(e) = server.start().await {
@@ -51,6 +59,8 @@ pub struct WebSocketServer<R: Runtime> {
     addr: SocketAddr,
     event_tx: broadcast::Sender<String>,
     app: AppHandle<R>,
+    token: String,
+    operator_generation: Arc<AtomicU64>,
 }
 
 impl<R: Runtime> WebSocketServer<R> {
@@ -62,6 +72,7 @@ impl<R: Runtime> WebSocketServer<R> {
     /// * `bind_address` - The address to bind to (e.g., "0.0.0.0" or "127.0.0.1")
     /// * `app` - The Tauri application handle
     /// * `event_tx` - An external broadcast sender for distributing events
+    /// * `token` - Handshake secret required as `X-MCP-Bridge-Token`
     ///
     /// # Returns
     ///
@@ -73,13 +84,14 @@ impl<R: Runtime> WebSocketServer<R> {
     /// use tauri_plugin_mcp_bridge::websocket::WebSocketServer;
     ///
     /// let (event_tx, _event_rx) = tokio::sync::broadcast::channel(100);
-    /// let server = WebSocketServer::new(9223, "0.0.0.0", app_handle, event_tx);
+    /// let server = WebSocketServer::new(9223, "127.0.0.1", app_handle, event_tx, token);
     /// ```
     pub fn new(
         port: u16,
         bind_address: &str,
         app: AppHandle<R>,
         event_tx: broadcast::Sender<String>,
+        token: String,
     ) -> Self {
         let addr: SocketAddr = format!("{bind_address}:{port}").parse().unwrap();
 
@@ -87,6 +99,8 @@ impl<R: Runtime> WebSocketServer<R> {
             addr,
             event_tx,
             app,
+            token,
+            operator_generation: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -109,7 +123,7 @@ impl<R: Runtime> WebSocketServer<R> {
     /// #[tokio::main]
     /// async fn main() {
     ///     // Requires a Tauri AppHandle
-    ///     let (server, _rx) = WebSocketServer::new(9223, "0.0.0.0", app_handle);
+    ///     let server = WebSocketServer::new(9223, "127.0.0.1", app_handle, event_tx, token);
     ///
     ///     tokio::spawn(async move {
     ///         if let Err(e) = server.start().await {
@@ -129,9 +143,13 @@ impl<R: Runtime> WebSocketServer<R> {
             let (stream, _) = listener.accept().await?;
             let event_tx = self.event_tx.clone();
             let app = self.app.clone();
+            let token = self.token.clone();
+            let operator_generation = self.operator_generation.clone();
 
             tokio::spawn(async move {
-                if let Err(e) = handle_connection(stream, event_tx, app).await {
+                if let Err(e) =
+                    handle_connection(stream, event_tx, app, token, operator_generation).await
+                {
                     mcp_log_error("WS_SERVER", &format!("WebSocket connection error: {e}"));
                 }
             });
@@ -153,7 +171,7 @@ impl<R: Runtime> WebSocketServer<R> {
     /// use tauri_plugin_mcp_bridge::websocket::WebSocketServer;
     ///
     /// // Requires a Tauri AppHandle
-    /// let (server, _rx) = WebSocketServer::new(9223, "0.0.0.0", app_handle);
+    /// let server = WebSocketServer::new(9223, "127.0.0.1", app_handle, event_tx, token);
     /// server.broadcast("Hello, clients!");
     /// ```
     pub fn broadcast(&self, message: &str) {
@@ -439,7 +457,12 @@ fn handle_register_script<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Value
     };
 
     let script_type = match type_str {
-        "url" => ScriptType::Url,
+        "url" => {
+            if let Err(error) = validate_https_script_url(content_str) {
+                return error_response(id, error);
+            }
+            ScriptType::Url
+        }
         _ => ScriptType::Inline,
     };
 
@@ -599,6 +622,10 @@ async fn dispatch_command<R: Runtime>(app: &AppHandle<R>, command: &Value) -> Va
             }
         }
         "list_windows" => handle_list_windows(app, id).await,
+        "get_backend_state" => match commands::get_backend_state(app.clone()).await {
+            Ok(data) => success_response(id, data),
+            Err(e) => error_response(id, e),
+        },
         "get_window_info" => handle_get_window_info(app, id, command).await,
         "execute_js" => {
             if let Some(args) = args {
@@ -652,12 +679,93 @@ fn is_benign_handshake_error(err: &tokio_tungstenite::tungstenite::Error) -> boo
     match err {
         Error::ConnectionClosed | Error::AlreadyClosed => true,
         Error::Protocol(ProtocolError::HandshakeIncomplete) => true,
+        Error::Http(_) => true,
         Error::Io(io_err) => matches!(
             io_err.kind(),
             ErrorKind::ConnectionReset | ErrorKind::UnexpectedEof | ErrorKind::BrokenPipe
         ),
         _ => false,
     }
+}
+
+/// Upgrade only after a matching `X-MCP-Bridge-Token` header (SEC-001, SEC-010).
+async fn accept_authenticated(
+    stream: TcpStream,
+    token: &str,
+) -> Result<WebSocketStream<TcpStream>, tokio_tungstenite::tungstenite::Error> {
+    accept_hdr_async(stream, TokenCallback::new(token)).await
+}
+
+fn claim_operator(operator_generation: &AtomicU64) -> u64 {
+    operator_generation.fetch_add(1, Ordering::SeqCst) + 1
+}
+
+fn is_current_operator(operator_generation: &AtomicU64, generation: u64) -> bool {
+    operator_generation.load(Ordering::SeqCst) == generation
+}
+
+/// Post-auth session: subscribe, exclusive picker events, request/response.
+///
+/// Shared by production `handle_connection` and handshake tests so subscribe-after-auth
+/// cannot drift from the replica.
+async fn serve_authenticated_socket<S, F, Fut>(
+    ws_stream: WebSocketStream<S>,
+    event_tx: broadcast::Sender<String>,
+    operator_generation: Arc<AtomicU64>,
+    mut on_text: F,
+) where
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+    F: FnMut(String) -> Fut,
+    Fut: std::future::Future<Output = Option<String>>,
+{
+    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+    let mut event_rx = event_tx.subscribe();
+    let my_generation = claim_operator(&operator_generation);
+    let (response_tx, mut response_rx) = mpsc::unbounded_channel::<String>();
+
+    let send_task = tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                Ok(msg) = event_rx.recv() => {
+                    if !is_current_operator(&operator_generation, my_generation) {
+                        continue;
+                    }
+                    if let Err(e) = ws_sender.send(Message::Text(msg.into())).await {
+                        eprintln!("Failed to send broadcast: {e}");
+                        break;
+                    }
+                }
+                Some(response) = response_rx.recv() => {
+                    if let Err(e) = ws_sender.send(Message::Text(response.into())).await {
+                        eprintln!("Failed to send response: {e}");
+                        break;
+                    }
+                }
+                else => break,
+            }
+        }
+    });
+
+    while let Some(msg) = ws_receiver.next().await {
+        match msg {
+            Ok(Message::Text(text)) => {
+                if let Some(response) = on_text(text.to_string()).await {
+                    let _ = response_tx.send(response);
+                }
+            }
+            Ok(Message::Close(_)) => {
+                println!("Client disconnected");
+                break;
+            }
+            Err(e) => {
+                eprintln!("WebSocket error: {e}");
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    send_task.abort();
 }
 
 /// Handles a single WebSocket client connection.
@@ -681,64 +789,30 @@ async fn handle_connection<R: Runtime>(
     stream: TcpStream,
     event_tx: broadcast::Sender<String>,
     app: AppHandle<R>,
+    token: String,
+    operator_generation: Arc<AtomicU64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let ws_stream = match accept_async(stream).await {
+    let ws_stream = match accept_authenticated(stream, &token).await {
         Ok(ws_stream) => ws_stream,
-        // A client that opens the TCP connection but drops before completing the WebSocket
-        // upgrade (port probes, health checks, browsers/agents reconnecting) surfaces here as a
-        // benign handshake/connection error, e.g. "Handshake not finished". Swallow those so
-        // they don't spam the connection-error log; propagate anything genuinely unexpected.
+        // Rejected tokens, probes, and incomplete upgrades must not join event_tx
+        // or dispatch execute_js (SEC-001, SEC-013).
         Err(e) if is_benign_handshake_error(&e) => return Ok(()),
         Err(e) => return Err(e.into()),
     };
-    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
-    let mut event_rx = event_tx.subscribe();
 
-    let (response_tx, mut response_rx) = mpsc::unbounded_channel::<String>();
-
-    let send_task = tokio::spawn(async move {
-        loop {
-            tokio::select! {
-                Ok(msg) = event_rx.recv() => {
-                    if let Err(e) = ws_sender.send(Message::Text(msg.into())).await {
-                        eprintln!("Failed to send broadcast: {e}");
-                        break;
-                    }
-                }
-                Some(response) = response_rx.recv() => {
-                    if let Err(e) = ws_sender.send(Message::Text(response.into())).await {
-                        eprintln!("Failed to send response: {e}");
-                        break;
-                    }
-                }
-                else => break,
-            }
-        }
-    });
-
-    while let Some(msg) = ws_receiver.next().await {
-        match msg {
-            Ok(Message::Text(text)) => {
-                if let Ok(command) = serde_json::from_str::<Value>(&text) {
-                    let response = dispatch_command(&app, &command).await;
-                    let _ = response_tx.send(response.to_string());
-                } else {
+    serve_authenticated_socket(ws_stream, event_tx, operator_generation, |text| {
+        let app = app.clone();
+        async move {
+            match serde_json::from_str::<Value>(&text) {
+                Ok(command) => Some(dispatch_command(&app, &command).await.to_string()),
+                Err(_) => {
                     eprintln!("Failed to parse command: {text}");
+                    None
                 }
             }
-            Ok(Message::Close(_)) => {
-                println!("Client disconnected");
-                break;
-            }
-            Err(e) => {
-                eprintln!("WebSocket error: {e}");
-                break;
-            }
-            _ => {}
         }
-    }
-
-    send_task.abort();
+    })
+    .await;
     Ok(())
 }
 
@@ -747,51 +821,75 @@ struct ScriptOperationResult {
     window_context: WindowContext,
 }
 
+/// JSON-encode a string for interpolation into a JavaScript template.
+fn json_js_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+/// Builds the webview eval script that injects a registry entry.
+fn build_inject_script(entry: &ScriptEntry) -> String {
+    let script_id = json_js_string(&entry.id);
+    let content = json_js_string(&entry.content);
+
+    match entry.script_type {
+        ScriptType::Inline => format!(
+            r#"
+            (function() {{
+                var scriptId = {script_id};
+                var existing = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
+                if (existing) {{
+                    existing.remove();
+                }}
+                var script = document.createElement('script');
+                script.setAttribute('data-mcp-script-id', scriptId);
+                script.textContent = {content};
+                document.head.appendChild(script);
+            }})();
+            "#
+        ),
+        ScriptType::Url => format!(
+            r#"
+            (function() {{
+                var scriptId = {script_id};
+                var existing = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
+                if (existing) {{
+                    existing.remove();
+                }}
+                var script = document.createElement('script');
+                script.setAttribute('data-mcp-script-id', scriptId);
+                script.src = {content};
+                script.async = true;
+                document.head.appendChild(script);
+            }})();
+            "#
+        ),
+    }
+}
+
+/// Builds the webview eval script that removes a registry entry from the DOM.
+fn build_remove_script(script_id: &str) -> String {
+    let script_id = json_js_string(script_id);
+
+    format!(
+        r#"
+        (function() {{
+            var scriptId = {script_id};
+            var script = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
+            if (script) {{
+                script.remove();
+            }}
+        }})();
+        "#
+    )
+}
+
 /// Injects a script into a specific webview window.
 fn inject_script_to_window<R: Runtime>(
     window: &WebviewWindow<R>,
     entry: &ScriptEntry,
 ) -> Result<(), String> {
-    let script = match entry.script_type {
-        ScriptType::Inline => format!(
-            r#"
-            (function() {{
-                var existing = document.querySelector('script[data-mcp-script-id="{}"]');
-                if (existing) {{
-                    existing.remove();
-                }}
-                var script = document.createElement('script');
-                script.setAttribute('data-mcp-script-id', '{}');
-                script.textContent = {};
-                document.head.appendChild(script);
-            }})();
-            "#,
-            entry.id,
-            entry.id,
-            serde_json::to_string(&entry.content).unwrap_or_else(|_| "''".to_string())
-        ),
-        ScriptType::Url => format!(
-            r#"
-            (function() {{
-                var existing = document.querySelector('script[data-mcp-script-id="{}"]');
-                if (existing) {{
-                    existing.remove();
-                }}
-                var script = document.createElement('script');
-                script.setAttribute('data-mcp-script-id', '{}');
-                script.src = {};
-                script.async = true;
-                document.head.appendChild(script);
-            }})();
-            "#,
-            entry.id,
-            entry.id,
-            serde_json::to_string(&entry.content).unwrap_or_else(|_| "''".to_string())
-        ),
-    };
-
     window
-        .eval(&script)
+        .eval(build_inject_script(entry))
         .map_err(|e| format!("Failed to inject script: {e}"))
 }
 
@@ -817,19 +915,8 @@ fn remove_script_from_window<R: Runtime>(
     window: &WebviewWindow<R>,
     script_id: &str,
 ) -> Result<(), String> {
-    let script = format!(
-        r#"
-        (function() {{
-            var script = document.querySelector('script[data-mcp-script-id="{script_id}"]');
-            if (script) {{
-                script.remove();
-            }}
-        }})();
-        "#
-    );
-
     window
-        .eval(&script)
+        .eval(build_remove_script(script_id))
         .map_err(|e| format!("Failed to remove script: {e}"))
 }
 
@@ -887,7 +974,14 @@ pub fn inject_all_scripts<R: Runtime>(
     let registry: tauri::State<'_, SharedScriptRegistry> = app.state();
     let scripts: Vec<ScriptEntry> = {
         let reg = registry.lock().unwrap();
-        reg.get_all().iter().map(|e| (*e).clone()).collect()
+        reg.get_all()
+            .iter()
+            .filter(|entry| match entry.script_type {
+                ScriptType::Inline => true,
+                ScriptType::Url => validate_https_script_url(&entry.content).is_ok(),
+            })
+            .map(|e| (*e).clone())
+            .collect()
     };
 
     let resolved = resolve_window_with_context(app, window_label)?;
@@ -897,4 +991,368 @@ pub fn inject_all_scripts<R: Runtime>(
     }
 
     Ok(scripts.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_inject_script, build_remove_script};
+    use crate::script_registry::{ScriptEntry, ScriptType};
+
+    const CONCAT_PAYLOAD: &str = "'+(pwned=true)+'";
+    const COMMENT_PAYLOAD: &str = "';pwned=true;//";
+    const SCRIPT_ID_PAYLOAD: &str = "x']');pwned=true;//";
+    const SCRIPT_ID_DOUBLE_QUOTE_PAYLOAD: &str = "x\"]');pwned=true;//";
+
+    fn assert_payload_stays_in_json(source: &str, payload: &str) {
+        let encoded = serde_json::to_string(payload).expect("string JSON encoding is infallible");
+        assert!(
+            source.contains(&encoded),
+            "generated script should JSON-encode {payload:?}:\n{source}"
+        );
+
+        let stripped = source.replace(&encoded, "\"ENCODED\"");
+        assert!(
+            !stripped.contains("pwned=true"),
+            "attacker statement escaped JSON string context:\n{stripped}"
+        );
+        assert!(
+            !stripped.contains(payload),
+            "raw payload interpolated outside JSON string context:\n{stripped}"
+        );
+    }
+
+    fn inline_entry(id: &str) -> ScriptEntry {
+        ScriptEntry {
+            id: id.to_string(),
+            script_type: ScriptType::Inline,
+            content: "1".to_string(),
+        }
+    }
+
+    fn url_entry(id: &str) -> ScriptEntry {
+        ScriptEntry {
+            id: id.to_string(),
+            script_type: ScriptType::Url,
+            content: "https://example.com/script.js".to_string(),
+        }
+    }
+
+    fn eval_replica(source: &str) -> serde_json::Value {
+        let harness = format!(
+            r#"
+            const vm = require('node:vm');
+            const ctx = {{
+                pwned: false,
+                CSS: {{ escape(value) {{ return value; }} }},
+                document: {{
+                    querySelector() {{ return null; }},
+                    querySelectorAll() {{ return []; }},
+                    createElement() {{
+                        return {{ setAttribute() {{}}, textContent: '', src: '', async: false }};
+                    }},
+                    head: {{ appendChild() {{}} }},
+                }},
+            }};
+            try {{
+                vm.runInNewContext({source}, ctx, {{ timeout: 500 }});
+            }} catch (error) {{
+                ctx.error = String(error);
+            }}
+            process.stdout.write(JSON.stringify({{ pwned: ctx.pwned, error: ctx.error || null }}));
+            "#,
+            source = serde_json::to_string(source).expect("script JSON encoding is infallible")
+        );
+
+        let output = std::process::Command::new("node")
+            .arg("-e")
+            .arg(harness)
+            .output()
+            .expect("node is required to eval generated webview scripts");
+
+        assert!(
+            output.status.success(),
+            "node eval replica failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        serde_json::from_slice(&output.stdout).expect("node eval replica should print JSON")
+    }
+
+    #[test]
+    fn inject_script_json_encodes_benign_id() {
+        let source = build_inject_script(&inline_entry("__mcp_html2canvas__"));
+        assert!(source.contains(r#""__mcp_html2canvas__""#));
+        assert!(source.contains("script.textContent = \"1\""));
+        assert!(source.contains("CSS.escape(scriptId)"));
+    }
+
+    #[test]
+    fn inject_script_json_encodes_quote_breakout_ids() {
+        for payload in [
+            SCRIPT_ID_PAYLOAD,
+            SCRIPT_ID_DOUBLE_QUOTE_PAYLOAD,
+            CONCAT_PAYLOAD,
+            COMMENT_PAYLOAD,
+        ] {
+            let inline = build_inject_script(&inline_entry(payload));
+            let url = build_inject_script(&url_entry(payload));
+            assert_payload_stays_in_json(&inline, payload);
+            assert_payload_stays_in_json(&url, payload);
+            assert_eq!(eval_replica(&inline)["pwned"], false);
+            assert_eq!(eval_replica(&url)["pwned"], false);
+        }
+    }
+
+    #[test]
+    fn remove_script_json_encodes_quote_breakout_ids() {
+        for payload in [
+            SCRIPT_ID_PAYLOAD,
+            SCRIPT_ID_DOUBLE_QUOTE_PAYLOAD,
+            CONCAT_PAYLOAD,
+            COMMENT_PAYLOAD,
+        ] {
+            let source = build_remove_script(payload);
+            assert_payload_stays_in_json(&source, payload);
+            assert_eq!(eval_replica(&source)["pwned"], false);
+        }
+    }
+
+    #[test]
+    fn inject_script_json_encodes_content_and_url() {
+        let inline = ScriptEntry {
+            id: "ok".to_string(),
+            script_type: ScriptType::Inline,
+            content: CONCAT_PAYLOAD.to_string(),
+        };
+        let url = ScriptEntry {
+            id: "ok".to_string(),
+            script_type: ScriptType::Url,
+            content: COMMENT_PAYLOAD.to_string(),
+        };
+
+        assert_payload_stays_in_json(&build_inject_script(&inline), CONCAT_PAYLOAD);
+        assert_payload_stays_in_json(&build_inject_script(&url), COMMENT_PAYLOAD);
+    }
+}
+
+#[cfg(test)]
+mod control_plane_tests {
+    use super::{accept_authenticated, serve_authenticated_socket, validate_https_script_url};
+    use crate::auth::TOKEN_HEADER;
+    use futures_util::StreamExt;
+    use std::sync::atomic::AtomicU64;
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::net::TcpListener;
+    use tokio::sync::broadcast;
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    use tokio_tungstenite::{connect_async, tungstenite};
+
+    const TOKEN: &str = "secret-token";
+
+    async fn start_control_plane() -> (u16, broadcast::Sender<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let port = listener.local_addr().expect("addr").port();
+        let (event_tx, _event_rx) = broadcast::channel::<String>(16);
+        let operator_generation = Arc::new(AtomicU64::new(0));
+        let server_tx = event_tx.clone();
+
+        tokio::spawn(async move {
+            loop {
+                let Ok((stream, _)) = listener.accept().await else {
+                    break;
+                };
+                let event_tx = server_tx.clone();
+                let operator_generation = operator_generation.clone();
+                tokio::spawn(async move {
+                    let Ok(ws) = accept_authenticated(stream, TOKEN).await else {
+                        return;
+                    };
+                    serve_authenticated_socket(
+                        ws,
+                        event_tx,
+                        operator_generation,
+                        |text| async move {
+                            let Ok(command) = serde_json::from_str::<serde_json::Value>(&text)
+                            else {
+                                return None;
+                            };
+                            let id = command.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                            let cmd = command
+                                .get("command")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            if cmd == "execute_js" {
+                                Some(
+                                    serde_json::json!({
+                                        "id": id,
+                                        "success": true,
+                                        "data": "executed"
+                                    })
+                                    .to_string(),
+                                )
+                            } else {
+                                None
+                            }
+                        },
+                    )
+                    .await;
+                });
+            }
+        });
+
+        (port, event_tx)
+    }
+
+    fn request(url: &str, token: Option<&str>) -> tungstenite::http::Request<()> {
+        let mut request = url.into_client_request().expect("request");
+        if let Some(token) = token {
+            request
+                .headers_mut()
+                .insert(TOKEN_HEADER, token.parse().expect("token header"));
+        }
+        request
+    }
+
+    async fn connect(
+        port: u16,
+        token: Option<&str>,
+    ) -> Result<
+        tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
+        tungstenite::Error,
+    > {
+        let url = format!("ws://127.0.0.1:{port}/");
+        let (ws, _) = connect_async(request(&url, token)).await?;
+        Ok(ws)
+    }
+
+    #[tokio::test]
+    async fn handshake_rejects_missing_token() {
+        let (port, _tx) = start_control_plane().await;
+        let error = connect(port, None).await.expect_err("unauth must fail");
+        match error {
+            tungstenite::Error::Http(response) => {
+                assert_eq!(
+                    response.status(),
+                    tungstenite::http::StatusCode::UNAUTHORIZED
+                );
+            }
+            other => panic!("expected HTTP 401, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn handshake_rejects_wrong_token() {
+        let (port, _tx) = start_control_plane().await;
+        let error = connect(port, Some("wrong-token"))
+            .await
+            .expect_err("wrong token must fail");
+        match error {
+            tungstenite::Error::Http(response) => {
+                assert_eq!(
+                    response.status(),
+                    tungstenite::http::StatusCode::UNAUTHORIZED
+                );
+            }
+            other => panic!("expected HTTP 401, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn handshake_accepts_matching_token() {
+        let (port, _tx) = start_control_plane().await;
+        connect(port, Some(TOKEN)).await.expect("matching token");
+    }
+
+    #[tokio::test]
+    async fn unauthenticated_execute_js_never_dispatches() {
+        // Parent accepted any upgrade via accept_async and then dispatched execute_js.
+        let (port, _tx) = start_control_plane().await;
+        assert!(
+            connect(port, None).await.is_err(),
+            "missing token must not reach execute_js dispatch"
+        );
+    }
+
+    #[tokio::test]
+    async fn query_string_token_does_not_authenticate() {
+        let (port, _tx) = start_control_plane().await;
+        let url = format!("ws://127.0.0.1:{port}/?{TOKEN_HEADER}={TOKEN}");
+        let result = connect_async(request(&url, None)).await;
+        assert!(
+            result.is_err(),
+            "token must not be accepted from the query string"
+        );
+    }
+
+    #[tokio::test]
+    async fn unauthenticated_socket_never_joins_broadcast() {
+        let (port, event_tx) = start_control_plane().await;
+
+        let unauth = connect(port, None).await;
+        assert!(unauth.is_err());
+
+        let (mut authed, _) =
+            connect_async(request(&format!("ws://127.0.0.1:{port}/"), Some(TOKEN)))
+                .await
+                .expect("authed");
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let _ = event_tx.send("picker-secret".to_string());
+
+        let received = tokio::time::timeout(Duration::from_secs(2), authed.next())
+            .await
+            .expect("authed should receive")
+            .expect("socket open")
+            .expect("text");
+        assert_eq!(received.to_string(), "picker-secret");
+    }
+
+    #[tokio::test]
+    async fn picker_events_are_exclusive_to_latest_authed_operator() {
+        let (port, event_tx) = start_control_plane().await;
+        let url = format!("ws://127.0.0.1:{port}/");
+
+        let (mut first, _) = connect_async(request(&url, Some(TOKEN)))
+            .await
+            .expect("first");
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        let (mut second, _) = connect_async(request(&url, Some(TOKEN)))
+            .await
+            .expect("second");
+        tokio::time::sleep(Duration::from_millis(30)).await;
+
+        let _ = event_tx.send("only-latest".to_string());
+
+        let received = tokio::time::timeout(Duration::from_secs(2), second.next())
+            .await
+            .expect("latest operator should receive")
+            .expect("socket")
+            .expect("text");
+        assert_eq!(received.to_string(), "only-latest");
+
+        let stale = tokio::time::timeout(Duration::from_millis(200), first.next()).await;
+        assert!(
+            stale.is_err(),
+            "previous authed connection must not receive picker events"
+        );
+    }
+
+    #[test]
+    fn register_script_url_rejects_dangerous_schemes() {
+        for url in [
+            "javascript:alert(1)",
+            "data:text/javascript,alert(1)",
+            "file:///tmp/x.js",
+            "http://example.com/x.js",
+        ] {
+            assert!(
+                validate_https_script_url(url).is_err(),
+                "{url} must be rejected"
+            );
+        }
+        assert!(validate_https_script_url("https://example.com/x.js").is_ok());
+    }
 }

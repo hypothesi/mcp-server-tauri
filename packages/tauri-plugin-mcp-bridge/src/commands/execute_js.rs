@@ -176,6 +176,57 @@ fn should_use_native_evaluation(script: &str) -> bool {
         && !trimmed.contains("new Promise(")
 }
 
+/// Build the `__sendResult` helper injected into the webview.
+///
+/// `window.__TAURI__` only exists when the app sets `withGlobalTauri: true`,
+/// which is **not** the default. `window.__TAURI_INTERNALS__` is always injected
+/// by Tauri v2 and is the primitive `@tauri-apps/api`'s own `invoke()` calls
+/// underneath. Preferring internals is what makes results come back on Windows
+/// and Linux (where there is no native evaluation path) in ordinary apps.
+fn build_send_result_js(exec_id: &str) -> String {
+    let exec_id_js = serde_json::to_string(exec_id).unwrap_or_else(|_| "\"\"".to_string());
+
+    format!(
+        r#"function __sendResult(success, data, error) {{
+                try {{
+                    var __invoke = null;
+
+                    if (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === 'function') {{
+                        __invoke = function(cmd, args) {{
+                            return window.__TAURI_INTERNALS__.invoke(cmd, args);
+                        }};
+                    }} else if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {{
+                        __invoke = function(cmd, args) {{
+                            return window.__TAURI__.core.invoke(cmd, args);
+                        }};
+                    }}
+
+                    if (__invoke) {{
+                        Promise.resolve(__invoke('plugin:mcp-bridge|script_result', {{
+                            execId: {exec_id_js},
+                            success: success,
+                            data: data !== undefined ? data : null,
+                            error: error
+                        }})).catch(function(e) {{
+                            console.error('[MCP] Failed to invoke script_result:', e);
+                        }});
+                    }} else if (window.__TAURI__ && window.__TAURI__.event) {{
+                        window.__TAURI__.event.emit('__script_result', {{
+                            exec_id: {exec_id_js},
+                            success: success,
+                            data: data,
+                            error: error
+                        }});
+                    }} else {{
+                        console.error('[MCP] Tauri IPC not available, cannot send result');
+                    }}
+                }} catch (e) {{
+                    console.error('[MCP] Failed to send result:', e);
+                }}
+            }}"#
+    )
+}
+
 /// Fallback: eval + IPC event listener approach.
 /// Used on non-macOS platforms.
 async fn eval_with_ipc_callback<R: Runtime>(
@@ -240,34 +291,12 @@ async fn eval_with_ipc_callback<R: Runtime>(
 
     let prepared_script = prepare_script(script);
 
+    let send_result_fn = build_send_result_js(&exec_id);
+
     let wrapped_script = format!(
         r#"
         (function() {{
-            function __sendResult(success, data, error) {{
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {{
-                        window.__TAURI__.core.invoke('plugin:mcp-bridge|script_result', {{
-                            execId: '{exec_id}',
-                            success: success,
-                            data: data !== undefined ? data : null,
-                            error: error
-                        }}).catch(function(e) {{
-                            console.error('[MCP] Failed to invoke script_result:', e);
-                        }});
-                    }} else if (window.__TAURI__ && window.__TAURI__.event) {{
-                        window.__TAURI__.event.emit('__script_result', {{
-                            exec_id: '{exec_id}',
-                            success: success,
-                            data: data,
-                            error: error
-                        }});
-                    }} else {{
-                        console.error('[MCP] __TAURI__ not available, cannot send result');
-                    }}
-                }} catch (e) {{
-                    console.error('[MCP] Failed to send result:', e);
-                }}
-            }}
+            {send_result_fn}
 
             (async () => {{
                 try {{
@@ -358,10 +387,47 @@ fn prepare_script(script: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::build_send_result_js;
     use super::prepare_script;
 
     #[cfg(target_os = "macos")]
     use super::should_use_native_evaluation;
+
+    /// Regression guard: results must come back in apps that do NOT set
+    /// `withGlobalTauri`, i.e. the default. `window.__TAURI__` is absent there,
+    /// so the internals path must exist and must be tried first.
+    #[test]
+    fn send_result_prefers_tauri_internals() {
+        let js = build_send_result_js("abc-123");
+
+        assert!(
+            js.contains("window.__TAURI_INTERNALS__.invoke"),
+            "must use the always-present internals invoke"
+        );
+
+        let internals_at = js
+            .find("window.__TAURI_INTERNALS__")
+            .expect("internals branch present");
+        let global_at = js
+            .find("window.__TAURI__ && window.__TAURI__.core")
+            .expect("global fallback present");
+
+        assert!(
+            internals_at < global_at,
+            "internals must be preferred over the withGlobalTauri-only global"
+        );
+    }
+
+    #[test]
+    fn send_result_json_encodes_exec_id() {
+        let js = build_send_result_js("x');pwned=true;//");
+
+        assert!(
+            !js.contains("execId: 'x');pwned=true;//'"),
+            "exec id must not be concatenated raw into JS source"
+        );
+        assert!(js.contains(r#"execId: "x');pwned=true;//""#));
+    }
 
     #[test]
     fn adds_return_for_simple_expression() {

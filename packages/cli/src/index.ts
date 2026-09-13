@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-import fs from 'fs/promises';
-import path from 'path';
 import vm from 'vm';
 import { Command, Option } from 'commander';
 
 import { getCliToolDefinitions } from '@hypothesi/tauri-mcp-server';
 import { createCallResult } from 'mcporter';
 
+import { writeImageFiles, type WrittenImage } from './image-output.js';
 import { runMcporterCommand, SERVER_NAME } from './runtime.js';
 
 interface JsonSchemaProperty {
@@ -29,11 +28,6 @@ interface ToolCommandOptions {
    json?: boolean;
    raw?: string;
    timeout?: number;
-}
-
-interface WrittenImage {
-   mimeType: string;
-   path: string;
 }
 
 type DaemonAction = 'status' | 'stop' | 'start' | 'restart';
@@ -111,7 +105,7 @@ function createToolCommand(toolName: string, description: string, schema: JsonSc
    command
       .description(description)
       .option('--raw <json>', 'Provide raw JSON arguments to the tool')
-      .option('--file <path>', 'Write image output to a specific file path')
+      .option('--file <path>', 'Write image output under the screenshot directory')
       .option('--json', 'Print structured JSON output')
       .option('--call-timeout <ms>', 'Call timeout in milliseconds', parseInteger, 30000)
       .action(async (options: ToolCommandOptions) => {
@@ -455,78 +449,6 @@ function createArrayParser(itemKind: PrimitiveSchemaKind | undefined): (value: s
 
       return parts;
    };
-}
-
-async function writeImageFiles(
-   toolName: string,
-   content: unknown[] | null,
-   requestedPath?: string
-): Promise<WrittenImage[]> {
-   const images = (content ?? []).filter(isImageContent);
-
-   if (images.length === 0) {
-      return [];
-   }
-
-   const outputPaths = buildOutputPaths(toolName, images, requestedPath);
-
-   const writes = images.map(async (image, index) => {
-      const outputPath = outputPaths[index];
-
-      if (!outputPath) {
-         throw new Error('Image output path resolution failed.');
-      }
-
-      await fs.mkdir(path.dirname(outputPath), { recursive: true });
-      await fs.writeFile(outputPath, image.data, 'base64');
-
-      return {
-         path: outputPath,
-         mimeType: image.mimeType,
-      };
-   });
-
-   return Promise.all(writes);
-}
-
-function buildOutputPaths(toolName: string, images: Array<{ mimeType: string }>, requestedPath?: string): string[] {
-   if (requestedPath) {
-      if (images.length === 1) {
-         return [ path.resolve(requestedPath) ];
-      }
-
-      const resolved = path.resolve(requestedPath);
-
-      const extension = path.extname(resolved);
-
-      const baseName = extension ? resolved.slice(0, -extension.length) : resolved;
-
-      return images.map((image, index) => {
-         return `${baseName}-${index + 1}${extension || defaultExtension(image.mimeType)}`;
-      });
-   }
-
-   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-
-   return images.map((image, index) => {
-      const suffix = images.length === 1 ? '' : `-${index + 1}`;
-
-      return path.resolve(process.cwd(), `${toolName}-${stamp}${suffix}${defaultExtension(image.mimeType)}`);
-   });
-}
-
-function defaultExtension(mimeType: string): string {
-   switch (mimeType) {
-      case 'image/jpeg': {
-         return '.jpg';
-      }
-      case 'image/webp': {
-         return '.webp';
-      }
-      default: {
-         return '.png';
-      }
-   }
 }
 
 function isImageContent(value: unknown): value is { type: 'image'; data: string; mimeType: string } {

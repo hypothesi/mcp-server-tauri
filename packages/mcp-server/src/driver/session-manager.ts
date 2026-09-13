@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-import { getCwdHint, getDefaultHost, getDefaultPort } from '../config.js';
+import {
+   getBridgeToken,
+   getCwdHint,
+   getDefaultHost,
+   getDefaultPort,
+   isAllowedBridgeHost,
+   isLoopbackHost,
+} from '../config.js';
 import { AppDiscovery } from './app-discovery.js';
 import { PluginClient } from './plugin-client.js';
 import { resetInitialization } from './webview-executor.js';
@@ -16,8 +23,10 @@ const sessionLogger = createMcpLogger('SESSION');
  * The "session" concept is maintained for API compatibility.
  *
  * Connection Strategy:
- * 1. Try localhost first (most reliable for simulators/emulators/desktop)
- * 2. If localhost fails and a remote host is configured, try that host
+ * 1. Connect to the operator/env host:port (never replace a non-loopback
+ *    target with a localhost impostor)
+ * 2. Auto-discover additional loopback ports only when a bridge token is
+ *    configured and the peer completes handshake
  * 3. Return error if all connection attempts fail
  */
 
@@ -127,6 +136,10 @@ function getAppDiscovery(host: string): AppDiscovery {
  *     the workspace the TS server was launched from; the common case
  *     when VSCode opens a parent dir and moss runs from a worktree)
  *
+ * Paths are normalized (`\\` vs `/`, trailing slashes, Windows case)
+ * before the prefix check so mixed separators on Windows cannot miss
+ * the intended app (SEC-021).
+ *
  * Sessions whose `cwd` is null (older plugin without CWD support) are
  * skipped — they cannot be matched and stay eligible for the existing
  * "use default app" fallback in `resolveTargetApp`.
@@ -136,6 +149,20 @@ function getAppDiscovery(host: string): AppDiscovery {
  *
  * @returns The best-matching session, or null if no session matches.
  */
+/**
+ * Normalize a session CWD for prefix matching.
+ *
+ * Always treat `\\` and `/` as the same separator. Fold case on Windows
+ * (and for drive-letter paths) so `C:\\proj\\app` matches `C:/proj/app`.
+ */
+export function normalizeSessionPath(path: string): string {
+   const converted = path.replace(/\\/g, '/'),
+         trimmed = converted.length > 1 ? converted.replace(/\/+$/, '') : converted,
+         foldCase = process.platform === 'win32' || /^[A-Za-z]:/.test(trimmed) || path.includes('\\');
+
+   return foldCase ? trimmed.toLowerCase() : trimmed;
+}
+
 export function findSessionByCwd(
    sessions: Iterable<SessionInfo>,
    hintCwd: string | null
@@ -143,6 +170,8 @@ export function findSessionByCwd(
    if (!hintCwd) {
       return null;
    }
+
+   const normalizedHint = normalizeSessionPath(hintCwd);
 
    let best: SessionInfo | null = null,
        bestScore = -1;
@@ -152,14 +181,16 @@ export function findSessionByCwd(
          continue;
       }
 
+      const sessionPath = normalizeSessionPath(session.cwd);
+
       let score = -1;
 
-      if (session.cwd === hintCwd) {
-         score = session.cwd.length;
-      } else if (hintCwd.startsWith(session.cwd + '/')) {
-         score = session.cwd.length;
-      } else if (session.cwd.startsWith(hintCwd + '/')) {
-         score = hintCwd.length;
+      if (sessionPath === normalizedHint) {
+         score = sessionPath.length;
+      } else if (normalizedHint.startsWith(sessionPath + '/')) {
+         score = sessionPath.length;
+      } else if (sessionPath.startsWith(normalizedHint + '/')) {
+         score = normalizedHint.length;
       }
 
       if (score > bestScore) {
@@ -385,9 +416,15 @@ async function handleStatusAction(): Promise<string> {
 }
 
 async function handleStartAction(host?: string, port?: number): Promise<string> {
-   const configuredHost = host ?? getDefaultHost();
+   const configuredHost = host ?? getDefaultHost(),
+         configuredPort = port ?? getDefaultPort();
 
-   const configuredPort = port ?? getDefaultPort();
+   if (!isAllowedBridgeHost(configuredHost, host)) {
+      return (
+         `Session start failed - host ${configuredHost} is not allowlisted ` +
+         '(loopback, MCP_BRIDGE_HOST, or an explicitly passed host)'
+      );
+   }
 
    if (await keepResponsiveSession(configuredPort)) {
       return `Already connected to app on port ${configuredPort}`;
@@ -395,38 +432,29 @@ async function handleStartAction(host?: string, port?: number): Promise<string> 
 
    let connectedSession: { name: string; host: string; port: number } | null = null;
 
-   if (configuredHost !== 'localhost' && configuredHost !== '127.0.0.1') {
-      try {
-         connectedSession = await tryConnect('localhost', configuredPort);
-      } catch{
-         // ignore
-      }
+   try {
+      connectedSession = await tryConnect(configuredHost, configuredPort, host);
+   } catch{
+      // Configured endpoint is down or failed handshake; fall through.
    }
 
-   if (!connectedSession) {
-      try {
-         connectedSession = await tryConnect(configuredHost, configuredPort);
-      } catch{
-         // ignore
-      }
-   }
-
-   if (!connectedSession) {
-      const localhostDiscovery = getAppDiscovery('localhost');
-
-      const firstApp = await localhostDiscovery.getFirstAvailableApp();
+   // Auto-discovery is loopback-only and requires a token handshake so the
+   // first WebSocket in 9223-9322 cannot steal the session (SEC-007/011).
+   if (!connectedSession && isLoopbackHost(configuredHost) && getBridgeToken(configuredHost)) {
+      const discovery = getAppDiscovery(configuredHost),
+            firstApp = await discovery.getFirstAvailableApp();
 
       if (firstApp) {
          try {
-            connectedSession = await tryConnect('localhost', firstApp.port);
+            connectedSession = await tryConnect(configuredHost, firstApp.port, host);
          } catch{
-            // ignore
+            // Handshake or connect failed; skip this discovered port.
          }
       }
    }
 
    if (!connectedSession) {
-      return `Session start failed - no Tauri app found at localhost or ${configuredHost}:${configuredPort}`;
+      return `Session start failed - no authenticated Tauri app found at ${configuredHost}:${configuredPort}`;
    }
 
    if (await keepResponsiveSession(connectedSession.port)) {
@@ -508,10 +536,17 @@ async function handleStopAction(appIdentifier?: string | number): Promise<string
  * Try to connect to a specific host and port.
  * Returns session info on success, throws on failure.
  */
-async function tryConnect(host: string, port: number): Promise<{ name: string; host: string; port: number }> {
-   const discovery = getAppDiscovery(host);
+async function tryConnect(
+   host: string,
+   port: number,
+   explicitHost?: string
+): Promise<{ name: string; host: string; port: number }> {
+   if (!isAllowedBridgeHost(host, explicitHost)) {
+      throw new Error(`Host ${host} is not an allowlisted MCP Bridge target`);
+   }
 
-   const session = await discovery.connectToPort(port, undefined, host);
+   const discovery = getAppDiscovery(host),
+         session = await discovery.connectToPort(port, undefined, host);
 
    return {
       name: session.name,
@@ -567,10 +602,11 @@ async function fetchAppMetadata(
  * Manage session lifecycle (start, stop, or status).
  *
  * Connection strategy for 'start':
- * 1. Try localhost:{port} first (most reliable for simulators/emulators/desktop)
- * 2. If localhost fails AND a different host is configured, try {host}:{port}
- * 3. If both fail, try auto-discovery on localhost
- * 4. Return error if all attempts fail
+ * 1. Connect to the specified or env host:port (loopback / MCP_BRIDGE_HOST /
+ *    explicit operator host only)
+ * 2. If that fails and the host is loopback, auto-discover ports that complete
+ *    the token handshake
+ * 3. Return error if all attempts fail
  *
  * @param action - 'start', 'stop', or 'status'
  * @param host - Optional host address (defaults to env var or localhost)

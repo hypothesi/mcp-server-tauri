@@ -1,5 +1,89 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+const discoveryMocks = vi.hoisted(() => {
+   return {
+      connectCalls: [] as Array<{ host: string; port: number }>,
+      failKeys: new Set<string>(),
+      firstAvailable: null as { host: string; port: number } | null,
+      firstAvailableCalls: 0,
+   };
+});
+
+vi.mock('../../src/driver/plugin-client.js', () => {
+   class PluginClient {
+      public readonly host: string;
+      public readonly port: number;
+
+      public readonly checkConnection = vi.fn(async () => {
+         return true;
+      });
+
+      public readonly connect = vi.fn(() => {
+         return Promise.resolve();
+      });
+
+      public readonly disconnect = vi.fn();
+
+      public readonly sendCommand = vi.fn(async () => {
+         return {
+            success: true,
+            data: {
+               app: { identifier: 'com.hypothesi.test-app' },
+               cwd: '/test/app',
+            },
+         };
+      });
+
+      public constructor(host: string, port: number) {
+         this.host = host;
+         this.port = port;
+      }
+   }
+
+   return { PluginClient };
+});
+
+vi.mock('../../src/driver/app-discovery.js', () => {
+   class AppDiscovery {
+      public readonly host: string;
+
+      public constructor(host: string) {
+         this.host = host;
+      }
+
+      public async connectToPort(port: number, _appName?: string, host?: string): Promise<{
+         name: string;
+         host: string;
+         port: number;
+      }> {
+         const targetHost = host ?? this.host;
+
+         discoveryMocks.connectCalls.push({ host: targetHost, port });
+
+         if (discoveryMocks.failKeys.has(`${targetHost}:${port}`)) {
+            throw new Error(`Failed to connect to ${targetHost}:${port}`);
+         }
+
+         return {
+            name: `Tauri App (${targetHost}:${port})`,
+            host: targetHost,
+            port,
+         };
+      }
+
+      public async getFirstAvailableApp(): Promise<{ host: string; port: number } | null> {
+         discoveryMocks.firstAvailableCalls += 1;
+         return discoveryMocks.firstAvailable;
+      }
+
+      public disconnectAll(): Promise<void> {
+         return Promise.resolve();
+      }
+   }
+
+   return { AppDiscovery };
+});
+
 describe('Session Manager Unit Tests', () => {
    const originalEnv = process.env;
 
@@ -9,7 +93,12 @@ describe('Session Manager Unit Tests', () => {
       process.env = { ...originalEnv };
       delete process.env.MCP_BRIDGE_HOST;
       delete process.env.MCP_BRIDGE_PORT;
+      delete process.env.MCP_BRIDGE_TOKEN;
       delete process.env.TAURI_DEV_HOST;
+      discoveryMocks.connectCalls.length = 0;
+      discoveryMocks.failKeys.clear();
+      discoveryMocks.firstAvailable = null;
+      discoveryMocks.firstAvailableCalls = 0;
    });
 
    afterEach(() => {
@@ -204,6 +293,107 @@ describe('Session Manager Unit Tests', () => {
          const match = findSessionByCwd(sessions as never, '/Users/me/proj') as { port: number };
 
          expect(match.port).toBe(9224);
+      });
+
+      it('treats Windows backslash and POSIX slash as equivalent', async () => {
+         const { findSessionByCwd } = await import('../../src/driver/session-manager');
+
+         const sessions = [ fakeSession(9223, 'C:\\proj\\app') ];
+
+         const match = findSessionByCwd(sessions as never, 'C:/proj/app') as { port: number };
+
+         expect(match.port).toBe(9223);
+      });
+
+      it('matches mixed-separator descendant paths', async () => {
+         const { findSessionByCwd } = await import('../../src/driver/session-manager');
+
+         const sessions = [ fakeSession(9223, 'C:\\proj\\app\\src-tauri') ];
+
+         const match = findSessionByCwd(sessions as never, 'C:/proj/app') as { port: number };
+
+         expect(match.port).toBe(9223);
+      });
+
+      it('matches drive-letter paths case-insensitively', async () => {
+         const { findSessionByCwd } = await import('../../src/driver/session-manager');
+
+         const sessions = [ fakeSession(9223, 'C:\\Proj\\App') ];
+
+         const match = findSessionByCwd(sessions as never, 'c:/proj/app') as { port: number };
+
+         expect(match.port).toBe(9223);
+      });
+
+      it('does not match a Windows sibling that shares a prefix without a path boundary', async () => {
+         const { findSessionByCwd } = await import('../../src/driver/session-manager');
+
+         const sessions = [ fakeSession(9223, 'C:\\foo\\barbaz') ];
+
+         expect(findSessionByCwd(sessions as never, 'C:/foo/bar')).toBeNull();
+      });
+   });
+
+   describe('handleStartAction routing', () => {
+      it('does not try localhost first when a non-loopback host is specified', async () => {
+         const { manageDriverSession } = await import('../../src/driver/session-manager');
+
+         const result = await manageDriverSession('start', '192.168.1.9', 9223);
+
+         expect(result).toContain('Session started');
+         expect(result).toContain('192.168.1.9');
+         expect(discoveryMocks.connectCalls).toEqual([ { host: '192.168.1.9', port: 9223 } ]);
+      });
+
+      it('does not fall back to a localhost impostor when the specified remote host fails', async () => {
+         discoveryMocks.failKeys.add('192.168.1.9:9223');
+
+         const { manageDriverSession } = await import('../../src/driver/session-manager');
+
+         const result = await manageDriverSession('start', '192.168.1.9', 9223);
+
+         expect(result).toContain('Session start failed');
+         expect(discoveryMocks.connectCalls).toEqual([ { host: '192.168.1.9', port: 9223 } ]);
+         expect(discoveryMocks.firstAvailableCalls).toBe(0);
+      });
+
+      it('does not auto-discover the first WebSocket when no token is configured', async () => {
+         discoveryMocks.failKeys.add('localhost:9223');
+         discoveryMocks.firstAvailable = { host: 'localhost', port: 9224 };
+
+         const { manageDriverSession } = await import('../../src/driver/session-manager');
+
+         const result = await manageDriverSession('start', 'localhost', 9223);
+
+         expect(result).toContain('Session start failed');
+         expect(discoveryMocks.firstAvailableCalls).toBe(0);
+         expect(discoveryMocks.connectCalls).toEqual([ { host: 'localhost', port: 9223 } ]);
+      });
+
+      it('auto-discovers a handshake-capable loopback port when a token is configured', async () => {
+         process.env.MCP_BRIDGE_TOKEN = 'test-token';
+         discoveryMocks.failKeys.add('localhost:9223');
+         discoveryMocks.firstAvailable = { host: 'localhost', port: 9224 };
+
+         const { manageDriverSession } = await import('../../src/driver/session-manager');
+
+         const result = await manageDriverSession('start', 'localhost', 9223);
+
+         expect(result).toContain('Session started');
+         expect(discoveryMocks.firstAvailableCalls).toBe(1);
+         expect(discoveryMocks.connectCalls).toEqual([
+            { host: 'localhost', port: 9223 },
+            { host: 'localhost', port: 9224 },
+         ]);
+      });
+
+      it('still connects to an explicit loopback port without a token', async () => {
+         const { manageDriverSession } = await import('../../src/driver/session-manager');
+
+         const result = await manageDriverSession('start', 'localhost', 9223);
+
+         expect(result).toContain('Session started');
+         expect(discoveryMocks.connectCalls).toEqual([ { host: 'localhost', port: 9223 } ]);
       });
    });
 });

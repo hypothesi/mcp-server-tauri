@@ -83,7 +83,8 @@ All CLI flags are kebab-case, not camelCase. For example, use `--window-id`, not
 ## Inspection and Capture
 
 ```bash
-# Screenshots always write files to disk
+# Screenshots always write files under the screenshot directory
+# (TAURI_MCP_SCREENSHOT_DIR or os.tmpdir()/tauri-mcp-screenshots)
 tauri-mcp webview-screenshot --file shot.png
 tauri-mcp webview-screenshot --format jpeg --quality 80 --file shot.jpg
 tauri-mcp webview-screenshot --json

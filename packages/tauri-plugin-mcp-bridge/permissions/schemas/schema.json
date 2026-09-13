@@ -451,10 +451,16 @@
           "markdownDescription": "Denies the stop_ipc_monitor command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for MCP Bridge plugin\n#### This default permission set includes:\n\n- `allow-capture-native-screenshot`\n- `allow-emit-event`\n- `allow-execute-command`\n- `allow-execute-js`\n- `allow-get-backend-state`\n- `allow-get-ipc-events`\n- `allow-get-window-info`\n- `allow-list-windows`\n- `allow-report-ipc-event`\n- `allow-request-script-injection`\n- `allow-script-result`\n- `allow-start-ipc-monitor`\n- `allow-stop-ipc-monitor`",
+          "description": "Full MCP Bridge permissions for debug/operator webviews.\nRequired for the documented MCP automation path (execute_js, screenshots, script injection, IPC monitor).\n\n#### This permission set includes:\n\n- `allow-capture-native-screenshot`\n- `allow-emit-event`\n- `allow-execute-command`\n- `allow-execute-js`\n- `allow-get-backend-state`\n- `allow-get-ipc-events`\n- `allow-get-window-info`\n- `allow-list-windows`\n- `allow-report-ipc-event`\n- `allow-request-script-injection`\n- `allow-script-result`\n- `allow-start-ipc-monitor`\n- `allow-stop-ipc-monitor`",
+          "type": "string",
+          "const": "automation",
+          "markdownDescription": "Full MCP Bridge permissions for debug/operator webviews.\nRequired for the documented MCP automation path (execute_js, screenshots, script injection, IPC monitor).\n\n#### This permission set includes:\n\n- `allow-capture-native-screenshot`\n- `allow-emit-event`\n- `allow-execute-command`\n- `allow-execute-js`\n- `allow-get-backend-state`\n- `allow-get-ipc-events`\n- `allow-get-window-info`\n- `allow-list-windows`\n- `allow-report-ipc-event`\n- `allow-request-script-injection`\n- `allow-script-result`\n- `allow-start-ipc-monitor`\n- `allow-stop-ipc-monitor`"
+        },
+        {
+          "description": "Inspect-only permissions for MCP Bridge (window info, backend state, script_result).\nDoes not allow execute_js, screenshots, script injection, or IPC monitor start.\nUse mcp-bridge:automation for MCP operator automation.\n\n#### This default permission set includes:\n\n- `allow-get-backend-state`\n- `allow-get-window-info`\n- `allow-script-result`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for MCP Bridge plugin\n#### This default permission set includes:\n\n- `allow-capture-native-screenshot`\n- `allow-emit-event`\n- `allow-execute-command`\n- `allow-execute-js`\n- `allow-get-backend-state`\n- `allow-get-ipc-events`\n- `allow-get-window-info`\n- `allow-list-windows`\n- `allow-report-ipc-event`\n- `allow-request-script-injection`\n- `allow-script-result`\n- `allow-start-ipc-monitor`\n- `allow-stop-ipc-monitor`"
+          "markdownDescription": "Inspect-only permissions for MCP Bridge (window info, backend state, script_result).\nDoes not allow execute_js, screenshots, script injection, or IPC monitor start.\nUse mcp-bridge:automation for MCP operator automation.\n\n#### This default permission set includes:\n\n- `allow-get-backend-state`\n- `allow-get-window-info`\n- `allow-script-result`"
         }
       ]
     }

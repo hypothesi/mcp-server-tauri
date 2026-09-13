@@ -87,7 +87,7 @@ Capture a screenshot of the current viewport (visible area) of the webview.
 |------|------|----------|-------------|
 | `format` | string | No | Image format: 'png', 'jpeg' (default: 'jpeg') |
 | `quality` | number | No | JPEG quality 0-100 (default: 80, only for jpeg format) |
-| `filePath` | string | No | File path to save the screenshot to instead of returning base64 |
+| `filePath` | string | No | File name or path to save the screenshot instead of returning base64. Relative paths are written under `TAURI_MCP_SCREENSHOT_DIR` or `os.tmpdir()/tauri-mcp-screenshots`. Absolute paths outside that directory are rejected. |
 | `windowId` | string | No | Window label to target (defaults to 'main') |
 | `maxWidth` | number | No | Maximum width in pixels. Images wider than this will be scaled down proportionally |
 | `allowScreenCapture` | boolean | No | Allow an interactive OS screen-sharing prompt if native and html2canvas capture fail (default: false) |
@@ -105,7 +105,7 @@ Capture a screenshot of the current viewport (visible area) of the webview.
 {
   "tool": "webview_screenshot",
   "format": "png",
-  "filePath": "/path/to/screenshot.png"
+  "filePath": "screenshot.png"
 }
 
 // Take a screenshot with max width constraint (useful for reducing token usage)
@@ -130,6 +130,8 @@ The Screen Capture API fallback is disabled by default because it opens an opera
 ### Environment Variable
 
 You can set a default `maxWidth` for all screenshots using the `TAURI_MCP_SCREENSHOT_MAX_WIDTH` environment variable. The tool parameter takes precedence over the environment variable.
+
+Screenshot `filePath` writes are confined to `TAURI_MCP_SCREENSHOT_DIR` when set, otherwise `os.tmpdir()/tauri-mcp-screenshots`.
 
 On macOS, native screenshots may bring a fully occluded Tauri window forward so WKWebView can paint a fresh frame. Set `TAURI_MCP_NO_FOREGROUND=1` to disable that behavior.
 

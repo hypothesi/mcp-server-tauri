@@ -215,7 +215,7 @@ The `identifier` field contains the app's bundle ID (e.g., `com.example.my-app`)
 For real iOS/Android devices on the network:
 
 1. Ensure your development machine and device are on the same network
-2. The Tauri plugin binds to `0.0.0.0` by default, allowing remote connections
+2. Bind the plugin off loopback (`Builder::bind_address("0.0.0.0")` or `MCP_BRIDGE_BIND=0.0.0.0`) **and** set `allow_insecure_cleartext` / `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT=1`. Share `MCP_BRIDGE_TOKEN` with the MCP client.
 3. Use the device's IP address as the `host` parameter
 
 **Android alternative**: Use `adb reverse tcp:9223 tcp:9223` to forward the port, then connect to localhost.

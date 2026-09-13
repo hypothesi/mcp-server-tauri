@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-11
+
+### Security
+- Require `X-MCP-Bridge-Token` on WebSocket upgrade; missing or wrong tokens are rejected before command dispatch.
+- Default bind address is `127.0.0.1`. Binding `0.0.0.0` (or any non-loopback address) requires `Builder::allow_insecure_cleartext(true)` or `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT`.
+- `register_script` `type=url` accepts `https://` only (`javascript:`, `data:`, `file:`, and `http:` are rejected).
+- Unauthenticated sockets never subscribe to picker/event broadcasts; picker events go to the latest authed operator connection.
+- JSON-encode script registry ids interpolated into inject/remove JS.
+- `init()` / `Builder::build()` start the WebSocket listener only under `debug_assertions`. Release builds log once and do not bind unless `Builder::allow_release(true)`. Commands and the injected bridge script still register.
+- `mcp-bridge:default` is inspect-only (window info, backend state, `script_result`). Full command access is `mcp-bridge:automation`.
+- IPC monitor stores at most 1000 events (ring buffer; oldest dropped).
+
+### Fixed
+- Dispatch `get_backend_state` as a first-class WebSocket command so auto-discovery and handshake checks receive app metadata.
+
+### Breaking Changes
+- Default bind address is `127.0.0.1`. Non-loopback binds require `Builder::allow_insecure_cleartext(true)` or `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT`.
+- WebSocket upgrade requires `X-MCP-Bridge-Token`. Missing or wrong tokens are rejected before command dispatch.
+- `init()` does not bind the operator WebSocket in release builds unless `Builder::allow_release(true)`. Commands and the injected bridge script still register.
+- `mcp-bridge:default` is inspect-only; MCP automation requires `mcp-bridge:automation`.
+
 ## [0.13.0] - 2026-08-28
 
 ### Added

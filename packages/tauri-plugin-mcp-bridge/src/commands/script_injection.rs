@@ -1,6 +1,8 @@
 //! Script injection command for re-injecting registered scripts on page load.
 
-use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
+use crate::script_registry::{
+    validate_https_script_url, ScriptEntry, ScriptType, SharedScriptRegistry,
+};
 use tauri::{command, Runtime, State, WebviewWindow};
 
 /// Request script injection - called by bridge.js when a page loads.
@@ -14,7 +16,14 @@ pub async fn request_script_injection<R: Runtime>(
         let reg = registry
             .lock()
             .map_err(|e| format!("Failed to lock registry: {e}"))?;
-        reg.get_all().iter().map(|e| (*e).clone()).collect()
+        reg.get_all()
+            .iter()
+            .filter(|entry| match entry.script_type {
+                ScriptType::Inline => true,
+                ScriptType::Url => validate_https_script_url(&entry.content).is_ok(),
+            })
+            .map(|e| (*e).clone())
+            .collect()
     };
 
     if scripts.is_empty() {

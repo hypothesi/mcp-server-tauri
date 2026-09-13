@@ -1,0 +1,23 @@
+"$schema" = "schemas/schema.json"
+
+[[set]]
+identifier = "automation"
+description = """
+Full MCP Bridge permissions for debug/operator webviews.
+Required for the documented MCP automation path (execute_js, screenshots, script injection, IPC monitor).
+"""
+permissions = [
+  "allow-capture-native-screenshot",
+  "allow-emit-event",
+  "allow-execute-command",
+  "allow-execute-js",
+  "allow-get-backend-state",
+  "allow-get-ipc-events",
+  "allow-get-window-info",
+  "allow-list-windows",
+  "allow-report-ipc-event",
+  "allow-request-script-injection",
+  "allow-script-result",
+  "allow-start-ipc-monitor",
+  "allow-stop-ipc-monitor"
+]

@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import {
    executeInWebview,
    executeInWebviewWithContext,
@@ -10,6 +10,7 @@ import {
    ScreenshotResult,
 } from './webview-executor.js';
 import { SCRIPTS, buildScript, buildTypeScript, buildKeyEventScript } from './scripts/index.js';
+import { ensureScreenshotJail, resolveScreenshotOutputPath } from './screenshot-path.js';
 
 // ============================================================================
 // Base Schema for Window Targeting
@@ -76,7 +77,12 @@ export const InteractSchema = WindowTargetSchema.extend({
 export const ScreenshotSchema = WindowTargetSchema.extend({
    format: z.enum([ 'png', 'jpeg' ]).optional().default('jpeg').describe('Image format'),
    quality: z.number().min(0).max(100).optional().default(80).describe('JPEG quality (0-100, only for jpeg format)'),
-   filePath: z.string().optional().describe('File path to save the screenshot to instead of returning as base64'),
+   filePath: z.string().optional().describe(
+      'File name or path to save the screenshot instead of returning as base64. ' +
+      'Relative paths are written under the screenshot directory ' +
+      '(TAURI_MCP_SCREENSHOT_DIR, or os.tmpdir()/tauri-mcp-screenshots). ' +
+      'Absolute paths outside that directory are rejected.'
+   ),
    maxWidth: z.number().int().positive().optional().describe(
       'Maximum width in pixels. Images wider than this will be scaled down proportionally. ' +
       'Can also be set via TAURI_MCP_SCREENSHOT_MAX_WIDTH environment variable.'
@@ -259,13 +265,21 @@ export interface ScreenshotFileResult {
 export async function screenshot(options: ScreenshotOptions = {}): Promise<ScreenshotResult | ScreenshotFileResult> {
    const { quality, format = 'jpeg', windowId, filePath, appIdentifier, maxWidth, allowScreenCapture } = options;
 
+   let resolvedPath: string | undefined;
+
+   if (filePath) {
+      const jailRoot = await ensureScreenshotJail();
+
+      resolvedPath = resolveScreenshotOutputPath(filePath, jailRoot);
+   }
+
    // Use the native screenshot function from webview-executor
    const result = await captureScreenshot({
       format, quality, windowId, appIdentifier, maxWidth, allowScreenCapture,
    });
 
    // If filePath is provided, write to file instead of returning base64
-   if (filePath) {
+   if (resolvedPath) {
       // Find the image content in the result
       const imageContent = result.content.find((c) => { return c.type === 'image'; });
 
@@ -273,8 +287,7 @@ export async function screenshot(options: ScreenshotOptions = {}): Promise<Scree
          throw new Error('Screenshot capture failed: no image data');
       }
 
-      const resolvedPath = resolve(filePath);
-
+      await mkdir(dirname(resolvedPath), { recursive: true });
       await writeFile(resolvedPath, imageContent.data, 'base64');
 
       return { filePath: resolvedPath, format };

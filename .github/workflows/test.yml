@@ -177,6 +177,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check workflow security
+        run: node scripts/check-workflow-security.js
+
       - name: Run ESLint
         run: npm run eslint
 

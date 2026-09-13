@@ -5,7 +5,7 @@
  * running with MCP Bridge on the same machine or remote devices using port scanning.
  */
 
-import { getDefaultHost, getDefaultPort } from '../config.js';
+import { getBridgeToken, getDefaultHost, getDefaultPort, isAllowedBridgeHost } from '../config.js';
 import { PluginClient } from './plugin-client.js';
 
 export interface AppInstance {
@@ -34,9 +34,13 @@ export class AppDiscovery {
    private _basePort: number;
    private _maxPorts = 100;
 
-   public constructor(host?: string, basePort?: number) {
+   public constructor(host?: string, basePort?: number, maxPorts?: number) {
       this._host = host ?? getDefaultHost();
       this._basePort = basePort ?? getDefaultPort();
+
+      if (maxPorts !== undefined) {
+         this._maxPorts = maxPorts;
+      }
    }
 
    /**
@@ -57,6 +61,11 @@ export class AppDiscovery {
     * Discovers available Tauri app instances by scanning ports
     */
    public async discoverApps(): Promise<AppInstance[]> {
+      // Do not scan hosts the operator never allowlisted (SEC-019).
+      if (!isAllowedBridgeHost(this._host)) {
+         return [];
+      }
+
       const apps: AppInstance[] = [];
 
       // Scan port range for available apps
@@ -193,9 +202,16 @@ export class AppDiscovery {
    }
 
    /**
-    * Check if a port is in use (likely a Tauri app)
+    * Check if a port is an authenticated MCP Bridge peer.
+    *
+    * TCP+WebSocket upgrade is not enough: without a token we skip the port
+    * rather than attaching to the first listener in 9223-9322 (SEC-007).
     */
    private async _isPortInUse(port: number): Promise<boolean> {
+      if (!getBridgeToken(this._host)) {
+         return false;
+      }
+
       const client = new PluginClient(this._host, port);
 
       try {

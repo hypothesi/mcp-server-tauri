@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- When `MCP_BRIDGE_TOKEN` is unset and the target host is loopback, read the handshake token from the file the plugin writes (`{temp}/hypothesi-mcp-bridge.token`, override with `MCP_BRIDGE_TOKEN_FILE`). Local development no longer needs a shared environment variable; non-loopback hosts still require an explicit token.
+
+## [0.14.0] - 2026-09-11
+
+### Security
+- JSON-encode untrusted values interpolated into webview `eval` templates (`read_logs` `since`/`filter`, keyboard `key`/`action`).
+- Confine `webview_screenshot` `filePath` writes to `os.tmpdir()/tauri-mcp-screenshots` (or `TAURI_MCP_SCREENSHOT_DIR`). Absolute paths and `..` escapes outside that directory are rejected.
+- Mark `webview_screenshot` `readOnlyHint` as false because the tool can write files.
+
+### Fixed
+- Require a token handshake before auto-discovery attaches to a plugin port; do not prefer localhost over a specified remote host; allowlist session targets to loopback, `MCP_BRIDGE_HOST`, and operator-specified hosts; send `X-MCP-Bridge-Token` from `MCP_BRIDGE_TOKEN`; normalize Windows path separators before CWD session routing.
+
+### Changed
+- Document loopback-default plugin bind, `MCP_BRIDGE_TOKEN`, and the explicit LAN cleartext opt-in (`allow_insecure_cleartext` / `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT`).
+- Setup instructions now require `mcp-bridge:automation` (inspect-only `mcp-bridge:default` is not enough for MCP automation) and document `Builder::allow_release(true)` for a release binary bridge.
+
+### Breaking Changes
+- Auto-discovery and session start require `MCP_BRIDGE_TOKEN` (`X-MCP-Bridge-Token`) to attach to a plugin port.
+- `driver_session` does not prefer localhost over a specified remote host.
+
 ## [0.13.0] - 2026-08-28
 
 ### Added

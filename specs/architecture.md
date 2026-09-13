@@ -106,11 +106,11 @@ The plugin can monitor all Tauri IPC events for debugging and introspection:
 pub struct IPCMonitor {
     events: Vec<IPCEvent>,
     is_monitoring: bool,
-    max_events: usize,
+    max_events: usize, // default 1000
 }
 ```
 
-Events are captured and stored with timestamps, allowing AI agents to understand application behavior.
+Events are captured and stored with timestamps, allowing AI agents to understand application behavior. `add_event` enforces `max_events` as a ring buffer (drop oldest); the store never grows past the cap.
 
 ## WebSocket Protocol
 

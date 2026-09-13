@@ -2,6 +2,8 @@ import { spawn, ChildProcess } from 'child_process';
 import { writeFileSync, unlinkSync, existsSync } from 'fs';
 import path from 'path';
 
+import { E2E_MCP_BRIDGE_TOKEN } from './tests/test-utils.ts';
+
 const TEST_APP_PATH = path.resolve(process.cwd(), '../test-app'),
       TEST_APP_PORT_FILE = path.resolve(process.cwd(), '.test-app-port');
 
@@ -24,8 +26,13 @@ async function startGlobalTestApp(): Promise<void> {
          stdio: 'pipe',
          shell: true,
          detached: process.platform !== 'win32',
-         // eslint-disable-next-line no-process-env
-         env: { ...process.env, WEBKIT_DISABLE_COMPOSITING_MODE: '1' },
+         /* eslint-disable no-process-env -- child needs the real env */
+         env: {
+            ...process.env,
+            WEBKIT_DISABLE_COMPOSITING_MODE: '1',
+            MCP_BRIDGE_TOKEN: process.env.MCP_BRIDGE_TOKEN || E2E_MCP_BRIDGE_TOKEN,
+         },
+         /* eslint-enable no-process-env */
       });
 
       if (!tauriProcess.stdout || !tauriProcess.stderr) {

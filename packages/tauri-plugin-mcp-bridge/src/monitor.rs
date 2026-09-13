@@ -6,6 +6,11 @@
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
+/// Cap on captured IPC events. Oldest events are dropped when full.
+///
+/// Architecture specified `max_events` but the store was previously unbounded.
+pub const DEFAULT_MAX_EVENTS: usize = 1000;
+
 /// Represents a captured IPC event.
 ///
 /// Each event records a Tauri command invocation with its arguments, result,
@@ -71,6 +76,7 @@ pub struct IPCEvent {
 pub struct IPCMonitor {
     pub enabled: bool,
     pub events: Vec<IPCEvent>,
+    max_events: usize,
 }
 
 impl Default for IPCMonitor {
@@ -95,9 +101,15 @@ impl IPCMonitor {
     /// assert!(!monitor.enabled);
     /// ```
     pub fn new() -> Self {
+        Self::with_max_events(DEFAULT_MAX_EVENTS)
+    }
+
+    /// Creates a monitor that stores at most `max_events` entries.
+    pub fn with_max_events(max_events: usize) -> Self {
         Self {
             enabled: false,
             events: Vec::new(),
+            max_events,
         }
     }
 
@@ -142,7 +154,8 @@ impl IPCMonitor {
     /// Adds an IPC event to the monitor if monitoring is enabled.
     ///
     /// Events are only added when the monitor is enabled. If disabled,
-    /// the event is silently ignored.
+    /// the event is silently ignored. When the store is at `max_events`,
+    /// the oldest event is dropped (ring buffer).
     ///
     /// # Arguments
     ///
@@ -170,9 +183,17 @@ impl IPCMonitor {
     /// assert_eq!(monitor.get_events().len(), 1);
     /// ```
     pub fn add_event(&mut self, event: IPCEvent) {
-        if self.enabled {
-            self.events.push(event);
+        if !self.enabled {
+            return;
         }
+        if self.max_events == 0 {
+            self.events.clear();
+            return;
+        }
+        while self.events.len() >= self.max_events {
+            self.events.remove(0);
+        }
+        self.events.push(event);
     }
 
     /// Returns a copy of all captured events.
@@ -221,4 +242,77 @@ pub fn current_timestamp() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn event(command: impl Into<String>) -> IPCEvent {
+        IPCEvent {
+            timestamp: 1,
+            command: command.into(),
+            args: json!({}),
+            result: None,
+            error: None,
+            duration_ms: None,
+        }
+    }
+
+    #[test]
+    fn add_event_never_grows_past_cap() {
+        const CAP: usize = 8;
+        let mut monitor = IPCMonitor::with_max_events(CAP);
+        monitor.start();
+
+        for i in 0..(CAP * 3) {
+            monitor.add_event(event(i.to_string()));
+            assert!(
+                monitor.events.len() <= CAP,
+                "events grew to {} past cap {CAP}",
+                monitor.events.len()
+            );
+        }
+
+        assert_eq!(monitor.events.len(), CAP);
+        let commands: Vec<_> = monitor
+            .get_events()
+            .into_iter()
+            .map(|e| e.command)
+            .collect();
+        let expected: Vec<_> = ((CAP * 2)..(CAP * 3)).map(|i| i.to_string()).collect();
+        assert_eq!(commands, expected);
+    }
+
+    #[test]
+    fn new_monitor_uses_documented_cap() {
+        assert_eq!(IPCMonitor::new().max_events, DEFAULT_MAX_EVENTS);
+        assert_eq!(DEFAULT_MAX_EVENTS, 1000);
+    }
+
+    #[test]
+    fn disabled_monitor_does_not_store_events() {
+        let mut monitor = IPCMonitor::with_max_events(2);
+        monitor.add_event(event("ignored"));
+        assert!(monitor.events.is_empty());
+    }
+
+    #[test]
+    fn start_clears_previous_events() {
+        let mut monitor = IPCMonitor::with_max_events(4);
+        monitor.start();
+        monitor.add_event(event("old"));
+        monitor.start();
+        assert!(monitor.events.is_empty());
+        assert!(monitor.enabled);
+    }
+
+    #[test]
+    fn zero_cap_stores_nothing() {
+        let mut monitor = IPCMonitor::with_max_events(0);
+        monitor.start();
+        monitor.add_event(event("dropped"));
+        assert!(monitor.events.is_empty());
+    }
 }

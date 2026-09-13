@@ -6,12 +6,13 @@ import { getTestAppPort } from '../../mcp-server/tests/test-utils.js';
 
 const CLI_PATH = path.resolve(process.cwd(), 'dist/index.js');
 
-function runCli(args: string[]): ReturnType<typeof execa> {
+function runCli(args: string[], extraEnv: Record<string, string> = {}): ReturnType<typeof execa> {
    return execa('node', [ CLI_PATH, ...args ], {
       cwd: process.cwd(),
       env: {
          ...process.env,
          NO_COLOR: '1',
+         ...extraEnv,
       },
    });
 }
@@ -42,12 +43,18 @@ describe('tauri-mcp CLI', () => {
 
    it('writes screenshot output to disk and reports the path in JSON mode', async () => {
       const port = getTestAppPort(),
-            outputPath = path.resolve(process.cwd(), 'tmp', 'cli-screenshot-test.png');
+            jail = path.resolve(process.cwd(), 'tmp', 'cli-screenshots'),
+            outputName = 'cli-screenshot-test.png',
+            outputPath = path.join(jail, outputName);
 
       await runCli([ 'driver-session', 'start', '--port', String(port) ]);
 
-      const screenshot = await runCli([ 'webview-screenshot', '--file', outputPath, '--json' ]),
-            parsed = JSON.parse(screenshot.stdout) as { files: Array<{ path: string }> };
+      const screenshot = await runCli(
+         [ 'webview-screenshot', '--file', outputName, '--json' ],
+         { TAURI_MCP_SCREENSHOT_DIR: jail }
+      );
+
+      const parsed = JSON.parse(screenshot.stdout) as { files: Array<{ path: string }> };
 
       expect(parsed.files[0]?.path).toBe(outputPath);
 

@@ -55,17 +55,40 @@ fn main() {
 
 ### Custom Configuration
 
-By default, the plugin binds to `0.0.0.0` (all interfaces) to support remote device development. For localhost-only access:
+By default the plugin binds to **`127.0.0.1`** (loopback) and requires the MCP client to send `X-MCP-Bridge-Token` on WebSocket upgrade. That token is the operator-plane credential: Tauri webview capability ACL is **not** applied to this socket (denying `allow-execute-js` on a window does not block MCP).
+
+Token resolution:
+
+1. `Builder::token(...)` if set
+2. `MCP_BRIDGE_TOKEN` if set
+3. Otherwise a 128-bit hex token is generated, logged once, and written to `{temp}/hypothesi-mcp-bridge.token` (for example `C:\Users\<you>\AppData\Local\Temp\hypothesi-mcp-bridge.token` on Windows, `$TMPDIR/hypothesi-mcp-bridge.token` on Unix)
+
+The MCP server resolves the same value from `MCP_BRIDGE_TOKEN`, or, for loopback targets only, from that token file (path override: `MCP_BRIDGE_TOKEN_FILE`). A local dev setup therefore needs no token configuration at all; set `MCP_BRIDGE_TOKEN` on both sides when you pin the token or connect to a non-loopback host.
+
+Non-loopback bind (`0.0.0.0`) is opt-in and **refused** unless you also set `allow_insecure_cleartext` (cleartext `ws://` on a LAN is otherwise silent exposure):
 
 ```rust
 use tauri_plugin_mcp_bridge::Builder;
 
 fn main() {
     tauri::Builder::default()
-        .plugin(Builder::new().bind_address("127.0.0.1").build())
+        .plugin(
+            Builder::new()
+                .bind_address("0.0.0.0")
+                .allow_insecure_cleartext(true)
+                .build(),
+        )
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+```
+
+Equivalent environment variables (used when the builder does not set the value explicitly): `MCP_BRIDGE_BIND`, `MCP_BRIDGE_TOKEN`, `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT=1`.
+
+By default, `init()` and `Builder::build()` start the WebSocket listener only under `debug_assertions`. In a release binary the plugin still registers commands and injects the bridge script, but it does not bind the operator WebSocket unless you pass `Builder::allow_release(true)`:
+
+```rust
+Builder::new().allow_release(true).build()
 ```
 
 ## Features
@@ -172,11 +195,17 @@ The plugin runs a WebSocket server on port 9223 (or next available in range 9223
 
 ### Remote Device Development
 
-By default, the WebSocket server binds to `0.0.0.0` (all network interfaces), enabling connections from:
+Loopback is the default. To accept connections from a phone or another machine you must:
+
+1. Bind off loopback: `Builder::bind_address("0.0.0.0")` or `MCP_BRIDGE_BIND=0.0.0.0`
+2. Explicitly allow cleartext: `Builder::allow_insecure_cleartext(true)` or `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT=1`
+3. Share `MCP_BRIDGE_TOKEN` with the MCP client (`X-MCP-Bridge-Token` on upgrade — never a query string)
+
+That enables connections from:
 
 - **iOS devices** on the same network
 - **Android devices** on the same network or via `adb reverse`
-- **Emulators/Simulators** via localhost
+- **Emulators/Simulators** via localhost (loopback bind is enough; no LAN opt-in)
 
 #### Connecting from MCP Server
 
@@ -187,16 +216,13 @@ The MCP server supports connecting to remote Tauri apps via the `driver_session`
 driver_session({ action: 'start', host: '192.168.1.100' })
 
 // Or use environment variables:
-// MCP_BRIDGE_HOST=192.168.1.100 npx mcp-server-tauri
+// MCP_BRIDGE_HOST=192.168.1.100 MCP_BRIDGE_TOKEN=... npx mcp-server-tauri
 // TAURI_DEV_HOST=192.168.1.100 npx mcp-server-tauri (same as Tauri CLI uses)
 ```
 
 #### Connection Strategy
 
-The MCP server uses a fallback strategy:
-1. Try `localhost:{port}` first (most reliable for simulators/emulators/desktop)
-2. If localhost fails and a remote host is configured, try `{host}:{port}`
-3. Auto-discover apps on localhost if specific connection fails
+The MCP server connects to the specified or env host:port (loopback, `MCP_BRIDGE_HOST`, or an operator-specified host). It does **not** prefer localhost over a specified remote host. Auto-discovery on loopback requires `MCP_BRIDGE_TOKEN` and a successful handshake.
 
 ## Development
 
@@ -240,17 +266,21 @@ npm test
 
 ## Permissions
 
-Add the plugin's default permission to your Tauri capabilities file (`src-tauri/capabilities/default.json`):
+Webview `invoke` is gated by Tauri capabilities, separately from the token-gated operator WebSocket.
+
+`mcp-bridge:default` is **inspect-only**: window info, backend state, and `script_result`. It does **not** allow `execute_js`, screenshots, script injection, or starting the IPC monitor. XSS in a window that only has `default` cannot native-eval through plugin commands.
+
+For the documented MCP automation path (including test-app e2e), grant `mcp-bridge:automation` — the former allow-all set:
 
 ```json
 {
   "permissions": [
-    "mcp-bridge:default"
+    "mcp-bridge:automation"
   ]
 }
 ```
 
-This grants all permissions required by the MCP server. The plugin is designed to work as a complete unit—partial permissions are not recommended as the MCP server expects all commands to be available.
+The MCP operator plane is still the token-gated WebSocket, not these capabilities: omitting `allow-execute-js` from a window does not stop `execute_js` over an authenticated plugin socket. Commands such as `script_result` and `request_script_injection` are invoked from the injected bridge script, so automation webviews need the matching ACL.
 
 ## API Documentation
 

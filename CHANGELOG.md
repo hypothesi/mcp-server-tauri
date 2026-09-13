@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- MCP server: when `MCP_BRIDGE_TOKEN` is unset and the target host is loopback, read the handshake token from the file the plugin writes (`{temp}/hypothesi-mcp-bridge.token`, override with `MCP_BRIDGE_TOKEN_FILE`). Local development no longer needs a shared environment variable; non-loopback hosts still require an explicit token.
+
+## [0.14.0] - 2026-09-11
+
+### Security
+- Plugin WebSocket requires `X-MCP-Bridge-Token`, defaults to loopback, and refuses silent LAN cleartext binds. URL scripts are https-only.
+- JSON-encode untrusted values interpolated into webview `eval` templates (`read_logs` filters, keyboard key/action, script registry ids).
+- Confine `webview_screenshot` `filePath` and CLI `--file` image writes to `os.tmpdir()/tauri-mcp-screenshots` (or `TAURI_MCP_SCREENSHOT_DIR`). Absolute paths and `..` escapes outside that directory are rejected.
+- Mark `webview_screenshot` as not read-only because it can write files.
+- Auto-discovery requires a token handshake; session targets are allowlisted to loopback, `MCP_BRIDGE_HOST`, and operator-specified hosts; CWD routing normalizes Windows path separators.
+- IPC monitor event store is capped (ring buffer).
+- Pin `mcp-publisher` to a hashed release asset and pass workflow versions through `env:` instead of interpolating git tags into `run:` shells.
+
+### Fixed
+- Dispatch `get_backend_state` as a first-class WebSocket command so auto-discovery and handshake checks receive app metadata.
+
+### Breaking Changes
+- Default plugin bind address is `127.0.0.1`. Binding `0.0.0.0` (or any non-loopback address) requires `Builder::allow_insecure_cleartext(true)` or `MCP_BRIDGE_ALLOW_INSECURE_CLEARTEXT`.
+- Plugin WebSocket upgrade requires `X-MCP-Bridge-Token` (`MCP_BRIDGE_TOKEN`). Missing or wrong tokens are rejected before command dispatch.
+- `init()` does not bind the operator WebSocket in release builds unless `Builder::allow_release(true)`. Commands and the injected bridge script still register.
+- `mcp-bridge:default` is inspect-only; MCP automation requires `mcp-bridge:automation`.
+
 ## [0.13.0] - 2026-08-28
 
 ### Added

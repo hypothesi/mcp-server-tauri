@@ -64,7 +64,7 @@ Create `.mcp.json` at the workspace root (it's covered by a global `.gitignore` 
 }
 ```
 
-This registers a project-scoped MCP server named `tauri-dev` that runs the local-built `packages/mcp-server/dist/index.js`, so edits to the MCP server show up the next time the agent reconnects. Do **not** invoke the published `mcp-server-tauri` from the global config for dev work — those tools run a different build.
+This registers a project-scoped MCP server named `tauri-dev` that runs the local-built `packages/mcp-server/dist/index.js`, so edits to the MCP server show up the next time the agent reconnects. Do **not** invoke the published `mcp-server-tauri` from the global config for dev work — those tools run a different build. On loopback the MCP server reads the plugin token from `{temp}/hypothesi-mcp-bridge.token` automatically; set `MCP_BRIDGE_TOKEN` only to pin it or for a non-loopback host.
 
 Workflow:
 
@@ -80,7 +80,10 @@ This replaces ad-hoc Node scripts that talk raw WebSocket to `localhost:9300`. R
 
 - Call `driver_session` with `action: 'start'` before using driver tools
 - Always call with `action: 'stop'` to clean up
-- WebSocket port range: 9223-9322
+- WebSocket port range: 9223-9322; plugin binds `127.0.0.1` by default
+- The MCP client sends `X-MCP-Bridge-Token` on upgrade, from `MCP_BRIDGE_TOKEN` or (loopback only) the token file the plugin writes to `{temp}/hypothesi-mcp-bridge.token` (override: `MCP_BRIDGE_TOKEN_FILE`). Generated tokens are logged once
+- MCP automation requires `mcp-bridge:automation` (`mcp-bridge:default` is inspect-only)
+- In release builds, `init()` still registers commands and injects the bridge script, but does not bind the operator WebSocket unless `Builder::allow_release(true)`
 
 ## Git Commits
 

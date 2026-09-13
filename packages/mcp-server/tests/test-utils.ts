@@ -7,6 +7,25 @@ import path from 'path';
 
 const TEST_APP_PORT_FILE = path.resolve(process.cwd(), '.test-app-port');
 
+/** Shared with global-setup so the plugin and MCP client use the same handshake token. */
+export const E2E_MCP_BRIDGE_TOKEN = 'wp4-e2e-test-token';
+
+if (!process.env.MCP_BRIDGE_TOKEN) {
+   process.env.MCP_BRIDGE_TOKEN = E2E_MCP_BRIDGE_TOKEN;
+}
+
+/**
+ * The token the test-app was actually launched with.
+ *
+ * An operator-supplied `MCP_BRIDGE_TOKEN` wins over {@link E2E_MCP_BRIDGE_TOKEN},
+ * because global-setup passes the same value through to the app. Tests must use
+ * this rather than the constant, or the handshake 401s whenever the developer
+ * happens to have `MCP_BRIDGE_TOKEN` exported.
+ */
+export function getE2EBridgeToken(): string {
+   return process.env.MCP_BRIDGE_TOKEN || E2E_MCP_BRIDGE_TOKEN;
+}
+
 let cachedPort: number | null = null;
 
 /**

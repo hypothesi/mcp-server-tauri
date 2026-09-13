@@ -1,22 +1,14 @@
 ## Default Permission
 
-Default permissions for MCP Bridge plugin
+Inspect-only permissions for MCP Bridge (window info, backend state, script_result).
+Does not allow execute_js, screenshots, script injection, or IPC monitor start.
+Use mcp-bridge:automation for MCP operator automation.
 
 #### This default permission set includes the following:
 
-- `allow-capture-native-screenshot`
-- `allow-emit-event`
-- `allow-execute-command`
-- `allow-execute-js`
 - `allow-get-backend-state`
-- `allow-get-ipc-events`
 - `allow-get-window-info`
-- `allow-list-windows`
-- `allow-report-ipc-event`
-- `allow-request-script-injection`
 - `allow-script-result`
-- `allow-start-ipc-monitor`
-- `allow-stop-ipc-monitor`
 
 ## Permission Table
 
@@ -361,6 +353,21 @@ Enables the stop_ipc_monitor command without any pre-configured scope.
 <td>
 
 Denies the stop_ipc_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mcp-bridge:automation`
+
+</td>
+<td>
+
+Full MCP Bridge permissions for debug/operator webviews.
+Required for the documented MCP automation path (execute_js, screenshots, script injection, IPC monitor).
+
 
 </td>
 </tr>

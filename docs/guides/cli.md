@@ -60,8 +60,9 @@ This makes it suitable for scripted workflows where each step is a separate comm
 ## Output
 
 - Image tools write image files to disk by default.
-- Default filename: `<tool-name>-<timestamp>.png` in the current directory.
-- Use `--file <path>` to control the image filename.
+- Default location: `TAURI_MCP_SCREENSHOT_DIR` if set, otherwise `os.tmpdir()/tauri-mcp-screenshots`.
+- Default filename: `<tool-name>-<timestamp>.png` inside that directory.
+- Use `--file <path>` to control the image filename. Relative names stay in the screenshot directory; absolute paths outside it are rejected.
 - Use `--json` for structured JSON output. Images are still written to disk; the JSON
   includes their file paths.
 - Use `--raw <json>` to pass raw JSON arguments directly to the underlying tool.

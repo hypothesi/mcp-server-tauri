@@ -107,6 +107,7 @@ module.exports = [
          'packages/cli/tests/**/*.ts',
          'packages/cli/tests/**/*.js',
          'packages/cli/vitest.config.ts',
+         'packages/cli/vitest.config.unit.ts',
       ],
       languageOptions: {
          parserOptions: {

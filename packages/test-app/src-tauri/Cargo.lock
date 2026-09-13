@@ -3994,12 +3994,13 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-mcp-bridge"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "base64 0.22.1",
  "block2 0.5.1",
  "cairo-rs",
  "futures-util",
+ "getrandom 0.2.16",
  "gio",
  "image",
  "jni",

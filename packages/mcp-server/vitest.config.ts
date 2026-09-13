@@ -11,5 +11,10 @@ export default defineConfig({
       fileParallelism: false, // Disable file-level parallelism
       pool: 'forks', // Use separate processes for isolation
       globalSetup: './vitest.global-setup.ts', // Start app once globally
+      setupFiles: [ './tests/setup-env.ts' ], // Keep token-file fallback hermetic
+      env: {
+         // eslint-disable-next-line no-process-env -- honour an operator-supplied token
+         MCP_BRIDGE_TOKEN: process.env.MCP_BRIDGE_TOKEN || 'wp4-e2e-test-token',
+      },
    },
 });

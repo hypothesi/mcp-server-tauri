@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdir, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as webviewExecutor from '../../src/driver/webview-executor';
 
 // Mock the webview-executor module
@@ -12,6 +15,13 @@ vi.mock('../../src/driver/webview-executor', () => {
       }),
       executeAsyncInWebview: vi.fn(),
       captureScreenshot: vi.fn(),
+   };
+});
+
+vi.mock('node:fs/promises', () => {
+   return {
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      writeFile: vi.fn().mockResolvedValue(undefined),
    };
 });
 
@@ -249,6 +259,112 @@ describe('Webview Interactions Unit Tests', () => {
          mockExecuteInWebview.mockRejectedValue(new Error('Element not found'));
 
          await expect(focusElement({ selector: '.nonexistent' })).rejects.toThrow('Focus failed');
+      });
+   });
+
+   describe('Screenshot path jail', () => {
+      const originalEnv = process.env;
+
+      const mockWriteFile = vi.mocked(writeFile);
+
+      const mockMkdir = vi.mocked(mkdir);
+
+      function mockImageCapture(): void {
+         vi.mocked(webviewExecutor.captureScreenshot).mockResolvedValue({
+            content: [
+               { type: 'text', text: 'Screenshot captured' },
+               { type: 'image', data: 'aaaa', mimeType: 'image/png' },
+            ],
+         });
+      }
+
+      beforeEach(() => {
+         process.env = { ...originalEnv };
+         delete process.env.TAURI_MCP_SCREENSHOT_DIR;
+         mockWriteFile.mockClear();
+         mockMkdir.mockClear();
+         mockImageCapture();
+      });
+
+      afterEach(() => {
+         process.env = originalEnv;
+      });
+
+      it('writes relative filePath inside the screenshot jail', async () => {
+         const jail = path.join(os.tmpdir(), 'tauri-mcp-screenshots-unit');
+
+         process.env.TAURI_MCP_SCREENSHOT_DIR = jail;
+
+         const { screenshot } = await import('../../src/driver/webview-interactions');
+
+         const result = await screenshot({ filePath: 'shot.png' });
+
+         expect('filePath' in result).toBe(true);
+         if (!('filePath' in result)) {
+            throw new Error('Expected file result');
+         }
+
+         expect(result.filePath).toBe(path.resolve(jail, 'shot.png'));
+         expect(mockWriteFile).toHaveBeenCalledWith(result.filePath, 'aaaa', 'base64');
+
+         const mkdirInsideJail = mockMkdir.mock.calls.every((call) => {
+            const target = path.resolve(String(call[0]));
+
+            return target === path.resolve(jail) || target.startsWith(path.resolve(jail) + path.sep);
+         });
+
+         expect(mkdirInsideJail).toBe(true);
+      });
+
+      it('rejects a Windows absolute escape after canonicalize', async () => {
+         const { screenshot } = await import('../../src/driver/webview-interactions');
+
+         await expect(screenshot({ filePath: 'C:\\Windows\\Temp\\..\\evil.png' })).rejects.toThrow(
+            /must stay inside/i
+         );
+         expect(mockWriteFile).not.toHaveBeenCalled();
+      });
+
+      it('rejects a POSIX absolute escape', async () => {
+         const { screenshot } = await import('../../src/driver/webview-interactions');
+
+         await expect(screenshot({ filePath: '/tmp/evil' })).rejects.toThrow(/must stay inside/i);
+         expect(mockWriteFile).not.toHaveBeenCalled();
+      });
+
+      it('rejects parent-directory traversal', async () => {
+         const { screenshot } = await import('../../src/driver/webview-interactions');
+
+         await expect(screenshot({ filePath: '../evil.png' })).rejects.toThrow(/must stay inside/i);
+         expect(mockWriteFile).not.toHaveBeenCalled();
+      });
+
+      it('allows an absolute path that already lives in the jail', async () => {
+         const jail = path.join(os.tmpdir(), 'tauri-mcp-screenshots-unit');
+
+         process.env.TAURI_MCP_SCREENSHOT_DIR = jail;
+
+         const { screenshot } = await import('../../src/driver/webview-interactions');
+
+         const result = await screenshot({ filePath: path.join(jail, 'nested', 'ok.png') });
+
+         expect('filePath' in result).toBe(true);
+         if (!('filePath' in result)) {
+            throw new Error('Expected file result');
+         }
+
+         expect(result.filePath).toBe(path.resolve(jail, 'nested', 'ok.png'));
+         expect(mockWriteFile).toHaveBeenCalledOnce();
+      });
+
+      it('marks webview_screenshot as not read-only because it can write files', async () => {
+         const { TOOLS } = await import('../../src/tools-registry');
+
+         const tool = TOOLS.find((entry) => {
+            return entry.name === 'webview_screenshot';
+         });
+
+         expect(tool?.annotations?.readOnlyHint).toBe(false);
       });
    });
 });

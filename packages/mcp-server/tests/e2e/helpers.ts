@@ -21,7 +21,11 @@ export async function startTestApp(): Promise<void> {
          stdio: 'pipe',
          shell: true,
          detached: true,
-         env: { ...process.env, WEBKIT_DISABLE_COMPOSITING_MODE: '1' },
+         env: {
+            ...process.env,
+            WEBKIT_DISABLE_COMPOSITING_MODE: '1',
+            MCP_BRIDGE_TOKEN: process.env.MCP_BRIDGE_TOKEN || 'wp4-e2e-test-token',
+         },
       });
 
       if (!tauriProcess.stdout || !tauriProcess.stderr) {

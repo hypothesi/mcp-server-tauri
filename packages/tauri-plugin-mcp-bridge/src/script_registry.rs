@@ -17,6 +17,33 @@ pub enum ScriptType {
     Url,
 }
 
+/// Allows only `https://` URLs for `ScriptType::Url` (SEC-004).
+///
+/// `javascript:`, `data:`, `file:`, `http:`, and schemeless values are rejected.
+pub fn validate_https_script_url(content: &str) -> Result<(), String> {
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        return Err("script URL is empty".to_string());
+    }
+    if trimmed.bytes().any(|byte| byte < 0x20 || byte == 0x7f) {
+        return Err("script URL contains control characters".to_string());
+    }
+
+    let Some(scheme_end) = trimmed.find(':') else {
+        return Err("register_script type=url allows https only".to_string());
+    };
+    let scheme = &trimmed[..scheme_end];
+    if !scheme.eq_ignore_ascii_case("https") {
+        return Err(format!(
+            "register_script type=url allows https only, got '{scheme}'"
+        ));
+    }
+    if !trimmed[scheme_end..].starts_with("://") {
+        return Err("script URL must be an https:// URL".to_string());
+    }
+    Ok(())
+}
+
 /// A script entry in the registry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScriptEntry {
@@ -174,6 +201,19 @@ mod tests {
 
         let all = registry.get_all();
         assert_eq!(all.len(), 2);
+    }
+
+    #[test]
+    fn url_script_allows_https_only() {
+        assert!(validate_https_script_url("https://example.com/script.js").is_ok());
+        assert!(validate_https_script_url("HTTPS://example.com/script.js").is_ok());
+        assert!(validate_https_script_url("http://example.com/script.js").is_err());
+        assert!(validate_https_script_url("javascript:alert(1)").is_err());
+        assert!(validate_https_script_url("data:text/javascript,alert(1)").is_err());
+        assert!(validate_https_script_url("file:///tmp/x.js").is_err());
+        assert!(validate_https_script_url("//example.com/x.js").is_err());
+        assert!(validate_https_script_url("https:example.com/x.js").is_err());
+        assert!(validate_https_script_url("").is_err());
     }
 
     #[test]
