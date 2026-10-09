@@ -4,7 +4,7 @@ version = "0.13.0"
 description = "MCP Bridge plugin for use with Tauri applications - enables IPC monitoring and backend inspection"
 authors = ["hypothesi"]
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.90"
 license = "MIT"
 repository = "https://github.com/hypothesi/mcp-server-tauri"
 documentation = "https://docs.rs/tauri-plugin-mcp-bridge"
@@ -23,7 +23,7 @@ name = "tauri_plugin_mcp_bridge"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
-tauri = "2"
+tauri = "~2.12.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
@@ -61,9 +61,9 @@ objc2-ui-kit = { version = "0.2", features = ["UIImage"] }
 objc2-web-kit = { version = "0.2", features = ["WKSnapshotConfiguration", "block2"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-webview2-com = "0.38"
-windows = { version = "0.61", features = ["Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_Foundation"] }
-windows-core = "0.61"
+webview2-com = "0.39.1"
+windows = { version = "0.62.2", features = ["Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_Foundation"] }
+windows-core = "0.62.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
@@ -75,7 +75,7 @@ gio = "0.18"
 jni = "0.21"
 
 [build-dependencies]
-tauri-plugin = { version = "2", features = ["build"] }
+tauri-plugin = { version = "2.7.1", features = ["build"] }
 
 [lints.clippy]
 too_many_lines = "warn"

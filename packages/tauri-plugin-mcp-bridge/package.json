@@ -38,7 +38,7 @@
     "monitoring"
   ],
   "devDependencies": {
-    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/api": "2.12.2",
     "typescript": "^5.6.3"
   },
   "peerDependencies": {

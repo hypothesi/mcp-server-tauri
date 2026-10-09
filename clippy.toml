@@ -2,7 +2,7 @@
 # See: https://doc.rust-lang.org/clippy/lint_configuration.html
 
 # Minimum supported Rust version - matches rust-version in Cargo.toml
-msrv = "1.70"
+msrv = "1.90"
 
 # Maximum lines in a function before clippy::too_many_lines warns (default: 100)
 # Note: The lint itself must be enabled separately via #![warn(clippy::too_many_lines)]
