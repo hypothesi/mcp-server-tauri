@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import { getTestAppPort } from '../../mcp-server/tests/test-utils.js';
 
-const CLI_PATH = path.resolve(process.cwd(), 'dist/index.js');
+const CLI_PATH = path.resolve(process.cwd(), 'dist/index.js'),
+      APP_READY_TIMEOUT_MS = 10000;
 
 function runCli(args: string[]): ReturnType<typeof execa> {
    return execa('node', [ CLI_PATH, ...args ], {
@@ -14,6 +15,17 @@ function runCli(args: string[]): ReturnType<typeof execa> {
          NO_COLOR: '1',
       },
    });
+}
+
+async function findGreetInput(): Promise<string> {
+   const result = await runCli([
+      'webview-find-element',
+      '--raw',
+      '{"selector":"#greet-input","strategy":"css"}',
+      '--json',
+   ]);
+
+   return result.stdout;
 }
 
 describe('tauri-mcp CLI', () => {
@@ -28,14 +40,8 @@ describe('tauri-mcp CLI', () => {
       expect(parsed.text).toContain('"connected":true');
       expect(parsed.text).toContain(`"port":${port}`);
 
-      const findResult = await runCli([
-         'webview-find-element',
-         '--raw',
-         '{"selector":"#greet-input","strategy":"css"}',
-         '--json',
-      ]);
-
-      expect(findResult.stdout).toContain('greet-input');
+      // The bridge can start before Tauri finishes creating its initial window.
+      await expect.poll(findGreetInput, { timeout: APP_READY_TIMEOUT_MS }).toContain('greet-input');
 
       await runCli([ 'driver-session', 'stop' ]);
    });
