@@ -34,6 +34,7 @@ async function startGlobalTestApp(): Promise<void> {
       }
 
       let pluginReady = false,
+          mainPageLoaded = false,
           startupSettled = false;
 
       const startupTimer = setTimeout(() => {
@@ -51,11 +52,8 @@ async function startGlobalTestApp(): Promise<void> {
          }
       };
 
-      // The MCP bridge plugin only initializes after Tauri loads the webview,
-      // which only happens once Vite (beforeDevCommand) is reachable. Treating
-      // pluginReady as the single source of truth avoids a CI race where
-      // Vite's "Local:" output is buffered by the Tauri CLI and never reaches
-      // this listener, even though the app itself starts successfully.
+      // The bridge can listen before the main window exists. Wait for the first
+      // finished page load so UI commands do not race native window creation.
       tauriProcess.stdout.on('data', (data) => {
          const output = data.toString();
 
@@ -73,6 +71,13 @@ async function startGlobalTestApp(): Promise<void> {
                console.log('✓ MCP Bridge plugin ready');
             }
             pluginReady = true;
+         }
+
+         if (output.includes('MCP test app main page loaded')) {
+            mainPageLoaded = true;
+         }
+
+         if (pluginReady && mainPageLoaded && !startupSettled) {
             startupSettled = true;
             clearTimeout(startupTimer);
             console.log('✅ Global test environment ready!');
@@ -106,8 +111,10 @@ async function startGlobalTestApp(): Promise<void> {
       });
 
       tauriProcess.on('exit', (code, signal) => {
-         if (!pluginReady) {
-            failStartup(new Error(`Tauri app exited before MCP bridge was ready (code ${code ?? 'null'}, signal ${signal ?? 'none'})`));
+         if (!startupSettled) {
+            failStartup(new Error(
+               `Tauri app exited before the UI and bridge were ready (code ${code ?? 'null'}, signal ${signal ?? 'none'})`
+            ));
          }
       });
    });

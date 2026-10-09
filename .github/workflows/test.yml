@@ -160,6 +160,14 @@ jobs:
           projectPath: packages/test-app
           args: ${{ matrix.args }}
 
+      - name: Test CLI integration (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get install -y xvfb
+          npm run build --workspace=@hypothesi/tauri-mcp-server
+          npm run build --workspace=@hypothesi/tauri-mcp-cli
+          xvfb-run -a npm run test:cli
+
   lint-and-standards:
     name: Lint and Standards Check
     runs-on: ubuntu-latest
