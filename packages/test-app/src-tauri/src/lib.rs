@@ -29,11 +29,19 @@ pub fn run() {
     {
         // Use port 9300 to avoid collision with other Tauri apps using default port 9223
         // Note: Must be within the MCP server's discovery range (9223-9322)
-        builder = builder.plugin(
-            tauri_plugin_mcp_bridge::Builder::new()
-                .base_port(9300)
-                .build(),
-        );
+        builder = builder
+            .plugin(
+                tauri_plugin_mcp_bridge::Builder::new()
+                    .base_port(9300)
+                    .build(),
+            )
+            .on_page_load(|webview, payload| {
+                if webview.label() == "main"
+                    && payload.event() == tauri::webview::PageLoadEvent::Finished
+                {
+                    println!("MCP test app main page loaded");
+                }
+            });
     }
 
     builder
