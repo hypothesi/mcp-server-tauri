@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-09
+
+### Changed
+
+* Update the pinned `@hypothesi/tauri-mcp-server` dependency to `0.13.1`.
+
 ## [0.13.0] - 2026-08-28
 
 ### Changed
