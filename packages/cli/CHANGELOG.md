@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.13.1-tauri.2.12.0.1] - 2026-10-09
+
+### Changed
+
+* Publish a synchronized compatibility variant for Tauri 2.12.0.
+* Publish on the `tauri-2-12-0` npm channel, preserving `latest`.
+
 ## [0.13.1] - 2026-10-09
 
 ### Changed

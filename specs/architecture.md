@@ -151,7 +151,7 @@ Responses include success/error status:
 - `typescript` - Type safety
 
 ### Tauri Plugin
-* `tauri` v2.12.2 (2.12 patch releases) - Application framework
+* `tauri` v2.12.0 (exactly, for this compatibility release) - Application framework
 - `tokio` - Async runtime
 - `tokio-tungstenite` - WebSocket server
 - `serde_json` - JSON serialization

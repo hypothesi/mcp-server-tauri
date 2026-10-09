@@ -53,5 +53,8 @@
       "vitepress": "1.6.4",
       "vitepress-plugin-llms": "1.9.3",
       "vue": "3.5.25"
+   },
+   "overrides": {
+      "@tauri-apps/api": "2.12.0"
    }
 }

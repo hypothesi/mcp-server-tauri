@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1-tauri.2.12.0.1] - 2026-10-09
+
+### Changed
+
+* Pin Tauri and its JavaScript API to 2.12.0 for the compatibility release.
+* Publish on the `tauri-2-12-0` npm channel, preserving `latest`.
+
 ## [0.13.1] - 2026-10-09
 
 ### Changed

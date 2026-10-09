@@ -15,7 +15,7 @@ The MCP Bridge plugin extends MCP servers with direct access to Tauri internals.
 
 ## Installation
 
-Requires Tauri 2.12.2 or a later 2.12 patch release and Rust 1.90 or later.
+This compatibility release requires exactly Tauri 2.12.0 and Rust 1.90 or later.
 The Tauri minor version is constrained because native screenshot APIs depend on
 Tauri's platform dependency versions.
 
@@ -27,7 +27,7 @@ Or add manually to your `src-tauri/Cargo.toml`:
 
 ```toml
 [dependencies]
-tauri-plugin-mcp-bridge = "0.13.1"
+tauri-plugin-mcp-bridge = "=0.13.1-tauri.2.12.0.1"
 ```
 
 ### Optional: TypeScript Bindings

@@ -17,6 +17,7 @@ jobs:
       release-server: ${{ steps.check.outputs.server }}
       release-cli: ${{ steps.check.outputs.cli }}
       version: ${{ steps.check.outputs.version }}
+      npm-tag: ${{ steps.check.outputs.npm-tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,6 +55,8 @@ jobs:
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          NPM_TAG=$(node -p "require('./packages/mcp-server/package.json').publishConfig.tag || 'latest'")
+          echo "npm-tag=$NPM_TAG" >> $GITHUB_OUTPUT
 
   test-plugin:
     name: Test tauri-plugin-mcp-bridge
@@ -222,7 +225,7 @@ jobs:
       - name: Publish to NPM
         run: |
           cd packages/tauri-plugin-mcp-bridge
-          npm publish --access public --provenance
+          npm publish --access public --provenance --tag "${{ needs.determine-packages.outputs.npm-tag }}"
         continue-on-error: false
 
       - name: Publish to crates.io
@@ -230,7 +233,7 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           cd packages/tauri-plugin-mcp-bridge
-          cargo publish --token "${CARGO_REGISTRY_TOKEN}"
+          cargo publish --locked --token "${CARGO_REGISTRY_TOKEN}"
         continue-on-error: false
 
   release-server:
@@ -268,7 +271,7 @@ jobs:
       - name: Publish to NPM
         run: |
           cd packages/mcp-server
-          npm publish --access public --provenance
+          npm publish --access public --provenance --tag "${{ needs.determine-packages.outputs.npm-tag }}"
         continue-on-error: false
 
   release-cli:
@@ -304,7 +307,7 @@ jobs:
       - name: Publish to NPM
         run: |
           cd packages/cli
-          npm publish --access public --provenance
+          npm publish --access public --provenance --tag "${{ needs.determine-packages.outputs.npm-tag }}"
         continue-on-error: false
 
   create-release:
@@ -392,4 +395,5 @@ jobs:
           name: "Release ${{ needs.determine-packages.outputs.version }}"
           body: ${{ steps.release_notes.outputs.notes }}
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(needs.determine-packages.outputs.version, '-') }}
+          make_latest: ${{ !contains(needs.determine-packages.outputs.version, '-') }}
