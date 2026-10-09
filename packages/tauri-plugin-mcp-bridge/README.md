@@ -27,7 +27,7 @@ Or add manually to your `src-tauri/Cargo.toml`:
 
 ```toml
 [dependencies]
-tauri-plugin-mcp-bridge = "0.2"
+tauri-plugin-mcp-bridge = "0.13.1"
 ```
 
 ### Optional: TypeScript Bindings

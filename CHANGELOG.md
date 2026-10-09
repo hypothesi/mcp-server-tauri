@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-09
+
 ### Changed
 
 * Require Tauri 2.12.2 (2.12 patch releases) and Rust 1.90 or later.
