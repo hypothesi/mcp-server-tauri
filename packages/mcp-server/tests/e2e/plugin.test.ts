@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import WebSocket from 'ws';
 import {
    startIPCMonitoring,
    stopIPCMonitoring,
@@ -9,7 +10,15 @@ import {
    executeIPCCommand,
 } from '../../src/driver/plugin-commands';
 import { manageDriverSession } from '../../src/driver/session-manager';
+import { executeInWebview } from '../../src/driver/webview-executor';
 import { getTestAppPort } from '../test-utils';
+
+function waitForOpen(websocket: WebSocket): Promise<void> {
+   return new Promise((resolve, reject) => {
+      websocket.once('open', resolve);
+      websocket.once('error', reject);
+   });
+}
 
 /**
  * E2E tests for MCP Bridge Plugin.
@@ -105,5 +114,63 @@ describe('MCP Bridge Plugin E2E Tests', () => {
 
       // Check if it succeeded or returned expected structure
       expect(parsed).toBeTruthy();
+   }, TIMEOUT);
+
+   it('should accept headerless Node WebSocket clients', async () => {
+      const websocket = new WebSocket(`ws://127.0.0.1:${getTestAppPort()}`);
+
+      await waitForOpen(websocket);
+      expect(websocket.readyState).toBe(WebSocket.OPEN);
+      websocket.close();
+   }, TIMEOUT);
+
+   it('should reject browser origins before dispatching privileged commands', async () => {
+      const marker = '__MCP_ORIGIN_ATTACK_DISPATCHED__';
+
+      await executeInWebview(`window.${marker} = false; return false;`);
+
+      const websocket = new WebSocket(`ws://127.0.0.1:${getTestAppPort()}`, {
+         origin: 'https://attacker.example',
+      });
+
+      const command = JSON.stringify({
+         command: 'execute_js',
+         args: { script: `window.${marker} = true; return true;` },
+      });
+
+      let opened = false;
+
+      const status = await new Promise<number>((resolve, reject) => {
+         websocket.once('open', () => {
+            opened = true;
+            websocket.send(command, (error) => {
+               if (error) {
+                  reject(error);
+                  return;
+               }
+               resolve(101);
+            });
+         });
+         websocket.once('unexpected-response', (request, response) => {
+            const statusCode = response.statusCode ?? 0;
+
+            response.resume();
+            request.destroy();
+            resolve(statusCode);
+         });
+         websocket.once('error', reject);
+      });
+
+      if (websocket.readyState === WebSocket.OPEN) {
+         websocket.close();
+      } else if (websocket.readyState !== WebSocket.CLOSED) {
+         websocket.terminate();
+      }
+
+      await new Promise((resolve) => { return setTimeout(resolve, 100); });
+
+      expect(status).toBe(403);
+      expect(opened).toBe(false);
+      await expect(executeInWebview(`return Boolean(window.${marker});`)).resolves.toBe('false');
    }, TIMEOUT);
 });
