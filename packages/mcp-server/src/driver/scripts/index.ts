@@ -123,6 +123,27 @@ export function buildTypeScript(selector: string, text: string, strategy?: strin
 }
 
 /**
+ * Map a `KeyboardEvent.key` value to the `KeyboardEvent.code` of the key that
+ * produces it. Apps that match shortcuts on `code` (digits, letters) ignore an
+ * event whose `code` is the bare key, e.g. `"2"` instead of `"Digit2"`.
+ */
+function keyToCode(key: string): string {
+   if (/^[0-9]$/.test(key)) {
+      return `Digit${key}`;
+   }
+
+   if (/^[a-z]$/i.test(key)) {
+      return `Key${key.toUpperCase()}`;
+   }
+
+   if (key === ' ') {
+      return 'Space';
+   }
+
+   return key;
+}
+
+/**
  * Build a script for key events (press, down, up)
  */
 export function buildKeyEventScript(
@@ -138,7 +159,7 @@ export function buildKeyEventScript(
 
          const eventOptions = {
             key: key,
-            code: key,
+            code: ${JSON.stringify(keyToCode(key))},
             bubbles: true,
             cancelable: true,
             ctrlKey: modifiers.includes('Control'),
