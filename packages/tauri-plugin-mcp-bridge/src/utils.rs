@@ -1,4 +1,4 @@
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 #[cfg(target_os = "macos")]
 const ENV_NO_FOREGROUND: &str = "TAURI_MCP_NO_FOREGROUND";
@@ -7,7 +7,7 @@ const ENV_NO_FOREGROUND: &str = "TAURI_MCP_NO_FOREGROUND";
 const NS_WINDOW_OCCLUSION_STATE_VISIBLE: usize = 1 << 1;
 
 #[cfg(target_os = "macos")]
-pub fn prepare_window_for_screenshot<R: Runtime>(window: &WebviewWindow<R>) -> Result<(), String> {
+pub fn prepare_window_for_screenshot<R: Runtime>(window: &Webview<R>) -> Result<(), String> {
     use objc2_web_kit::WKWebView;
 
     if should_skip_window_foregrounding() {
@@ -27,7 +27,7 @@ pub fn prepare_window_for_screenshot<R: Runtime>(window: &WebviewWindow<R>) -> R
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn prepare_window_for_screenshot<R: Runtime>(_window: &WebviewWindow<R>) -> Result<(), String> {
+pub fn prepare_window_for_screenshot<R: Runtime>(_window: &Webview<R>) -> Result<(), String> {
     Ok(())
 }
 

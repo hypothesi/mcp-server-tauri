@@ -1,5 +1,5 @@
 use super::{Screenshot, ScreenshotError};
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 /// Android-specific screenshot implementation using WebView.draw()
 ///
@@ -9,9 +9,7 @@ use tauri::{Runtime, WebviewWindow};
 /// 3. Creating a Canvas from the Bitmap
 /// 4. Drawing the WebView to the Canvas
 /// 5. Compressing the Bitmap to PNG bytes
-pub fn capture_viewport<R: Runtime>(
-    window: &WebviewWindow<R>,
-) -> Result<Screenshot, ScreenshotError> {
+pub fn capture_viewport<R: Runtime>(window: &Webview<R>) -> Result<Screenshot, ScreenshotError> {
     #[cfg(target_os = "android")]
     {
         use jni::objects::{JByteArray, JValue};

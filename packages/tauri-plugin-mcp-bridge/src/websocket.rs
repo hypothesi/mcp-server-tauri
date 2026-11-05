@@ -10,7 +10,7 @@ use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{self, Value};
 use std::net::SocketAddr;
-use tauri::{AppHandle, Manager, Runtime, WebviewWindow};
+use tauri::{AppHandle, Manager, Runtime, Webview};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
@@ -206,7 +206,7 @@ async fn handle_invoke_tauri<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Va
             }
         }
         "plugin:mcp-bridge|start_ipc_monitor" => {
-            let Some(window) = app.webview_windows().values().next().cloned() else {
+            let Some(window) = commands::app_webview_windows(app).values().next().cloned() else {
                 return error_response(id, "No window available");
             };
             match commands::start_ipc_monitor(window, app.state()).await {
@@ -215,7 +215,7 @@ async fn handle_invoke_tauri<R: Runtime>(app: &AppHandle<R>, id: &str, args: &Va
             }
         }
         "plugin:mcp-bridge|stop_ipc_monitor" => {
-            let Some(window) = app.webview_windows().values().next().cloned() else {
+            let Some(window) = commands::app_webview_windows(app).values().next().cloned() else {
                 return error_response(id, "No window available");
             };
             match commands::stop_ipc_monitor(window, app.state()).await {
@@ -740,7 +740,7 @@ struct ScriptOperationResult {
 
 /// Injects a script into a specific webview window.
 fn inject_script_to_window<R: Runtime>(
-    window: &WebviewWindow<R>,
+    window: &Webview<R>,
     entry: &ScriptEntry,
 ) -> Result<(), String> {
     let script = match entry.script_type {
@@ -805,7 +805,7 @@ fn inject_script_to_webview<R: Runtime>(
 
 /// Removes a script from a specific window's DOM.
 fn remove_script_from_window<R: Runtime>(
-    window: &WebviewWindow<R>,
+    window: &Webview<R>,
     script_id: &str,
 ) -> Result<(), String> {
     let script = format!(
@@ -841,7 +841,7 @@ fn remove_script_from_webview<R: Runtime>(
 }
 
 /// Clears all MCP-managed scripts from a specific window's DOM.
-fn clear_scripts_from_window<R: Runtime>(window: &WebviewWindow<R>) -> Result<(), String> {
+fn clear_scripts_from_window<R: Runtime>(window: &Webview<R>) -> Result<(), String> {
     let script = r#"
         (function() {
             var scripts = document.querySelectorAll('script[data-mcp-script-id]');

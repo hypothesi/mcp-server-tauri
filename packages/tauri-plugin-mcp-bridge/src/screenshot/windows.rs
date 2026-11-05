@@ -1,13 +1,11 @@
 use super::{Screenshot, ScreenshotError};
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 /// Windows-specific screenshot implementation using WebView2's CapturePreview
 ///
 /// This implementation captures only the visible viewport.
 /// WebView2's CapturePreview API naturally captures just the viewport.
-pub fn capture_viewport<R: Runtime>(
-    window: &WebviewWindow<R>,
-) -> Result<Screenshot, ScreenshotError> {
+pub fn capture_viewport<R: Runtime>(window: &Webview<R>) -> Result<Screenshot, ScreenshotError> {
     #[cfg(target_os = "windows")]
     {
         use std::sync::mpsc;
