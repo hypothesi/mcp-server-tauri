@@ -12,7 +12,8 @@ pub async fn set_window_state<R: Runtime>(
     window_id: Option<String>,
     action: &str,
 ) -> Result<(), String> {
-    let window = resolve_window(&app, window_id)?;
+    let webview = resolve_window(&app, window_id)?;
+    let window = webview.window();
 
     match action {
         "focus" => window.set_focus().map_err(|e| e.to_string()),

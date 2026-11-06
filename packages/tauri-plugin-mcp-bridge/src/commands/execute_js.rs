@@ -3,7 +3,7 @@
 use super::script_executor::ScriptExecutor;
 use crate::logging::mcp_log_error;
 use serde_json::Value;
-use tauri::{command, Listener, Runtime, State, WebviewWindow};
+use tauri::{command, Listener, Runtime, State, Webview};
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// On other platforms, falls back to the eval + event listener approach.
 #[command]
 pub async fn execute_js<R: Runtime>(
-    window: WebviewWindow<R>,
+    window: Webview<R>,
     script: String,
     state: State<'_, ScriptExecutor>,
 ) -> Result<Value, String> {
@@ -61,10 +61,7 @@ pub async fn execute_js<R: Runtime>(
 /// macOS: Use WKWebView's evaluateJavaScript:completionHandler: directly
 /// to get results without needing IPC callbacks.
 #[cfg(target_os = "macos")]
-fn native_evaluate_js<R: Runtime>(
-    window: &WebviewWindow<R>,
-    script: &str,
-) -> Result<Value, String> {
+fn native_evaluate_js<R: Runtime>(window: &Webview<R>, script: &str) -> Result<Value, String> {
     use block2::RcBlock;
     use objc2_foundation::{NSError, NSString};
     use objc2_web_kit::WKWebView;
@@ -179,7 +176,7 @@ fn should_use_native_evaluation(script: &str) -> bool {
 /// Fallback: eval + IPC event listener approach.
 /// Used on non-macOS platforms.
 async fn eval_with_ipc_callback<R: Runtime>(
-    window: &WebviewWindow<R>,
+    window: &Webview<R>,
     script: &str,
     state: &State<'_, ScriptExecutor>,
 ) -> Result<Value, String> {

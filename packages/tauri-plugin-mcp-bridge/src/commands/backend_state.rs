@@ -1,8 +1,9 @@
 //! Backend state retrieval.
 
+use super::list_windows::app_webview_windows;
 use crate::monitor::current_timestamp;
 use serde_json::Value;
-use tauri::{command, AppHandle, Manager, Runtime};
+use tauri::{command, AppHandle, Runtime};
 
 /// Retrieves comprehensive backend application state.
 ///
@@ -24,13 +25,12 @@ pub async fn get_backend_state<R: Runtime>(app: AppHandle<R>) -> Result<Value, S
     let config = app.config();
 
     // Get window information
-    let windows: Vec<Value> = app
-        .webview_windows()
+    let windows: Vec<Value> = app_webview_windows(&app)
         .iter()
         .map(|(label, window)| {
-            let is_focused = window.is_focused().unwrap_or(false);
-            let is_visible = window.is_visible().unwrap_or(false);
-            let title = window.title().unwrap_or_default();
+            let is_focused = window.window().is_focused().unwrap_or(false);
+            let is_visible = window.window().is_visible().unwrap_or(false);
+            let title = window.window().title().unwrap_or_default();
 
             serde_json::json!({
                 "label": label,

@@ -3,7 +3,7 @@ use std::io::Cursor;
 
 use image::imageops::FilterType;
 use image::ImageFormat;
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 // Platform-specific modules
 #[cfg(target_os = "macos")]
@@ -124,23 +124,22 @@ fn resize_if_needed(
 /// Platform-specific screenshot implementation trait
 pub trait PlatformScreenshot {
     /// Capture a screenshot of the current viewport
-    fn capture_viewport(
-        window: &WebviewWindow<impl Runtime>,
-    ) -> Result<Screenshot, ScreenshotError>;
+    fn capture_viewport(window: &Webview<impl Runtime>) -> Result<Screenshot, ScreenshotError>;
 }
 
 /// Capture a screenshot of the current viewport using platform-specific APIs
 pub async fn capture_viewport_screenshot<R: Runtime>(
-    window: &WebviewWindow<R>,
+    window: &Webview<R>,
     format: &str,
     quality: u8,
     max_width: Option<u32>,
 ) -> Result<CapturedScreenshot, ScreenshotError> {
     // Get CSS viewport dimensions before capturing
     let physical_size = window
-        .inner_size()
+        .size()
         .map_err(|e| ScreenshotError::CaptureFailed(format!("Failed to get inner size: {e}")))?;
     let scale_factor = window
+        .window()
         .scale_factor()
         .map_err(|e| ScreenshotError::CaptureFailed(format!("Failed to get scale factor: {e}")))?;
     let css_width = physical_size.width as f64 / scale_factor;

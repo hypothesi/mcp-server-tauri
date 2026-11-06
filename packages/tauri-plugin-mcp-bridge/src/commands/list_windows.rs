@@ -4,6 +4,16 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{command, AppHandle, Manager, Runtime};
 
+pub(crate) fn app_webview_windows<R: Runtime>(
+    app: &AppHandle<R>,
+) -> std::collections::HashMap<String, tauri::Webview<R>> {
+    // Child-only labels must not become bridge targets.
+    app.webviews()
+        .into_iter()
+        .filter(|(label, webview)| webview.window().label() == label.as_str())
+        .collect()
+}
+
 /// Information about a webview window.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,14 +56,14 @@ pub struct WindowInfo {
 /// ```
 #[command]
 pub async fn list_windows<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
-    let windows = app.webview_windows();
+    let windows = app_webview_windows(&app);
     let mut window_list: Vec<WindowInfo> = Vec::new();
 
     for (label, window) in windows.iter() {
-        let title = window.title().ok();
+        let title = window.window().title().ok();
         let url = window.url().ok().map(|u| u.to_string());
-        let focused = window.is_focused().unwrap_or(false);
-        let visible = window.is_visible().unwrap_or(false);
+        let focused = window.window().is_focused().unwrap_or(false);
+        let visible = window.window().is_visible().unwrap_or(false);
         let is_main = label == "main";
 
         window_list.push(WindowInfo {
@@ -94,7 +104,7 @@ pub struct WindowContext {
 
 /// Result of resolving a window, including context information.
 pub struct ResolvedWindow<R: Runtime> {
-    pub window: tauri::WebviewWindow<R>,
+    pub window: tauri::Webview<R>,
     pub context: WindowContext,
 }
 
@@ -114,14 +124,12 @@ pub fn resolve_window_with_context<R: Runtime>(
     app: &AppHandle<R>,
     label: Option<String>,
 ) -> Result<ResolvedWindow<R>, String> {
-    let windows = app.webview_windows();
+    let windows = app_webview_windows(app);
     let total_windows = windows.len();
     let explicit_label = label.is_some();
     let target_label = label.unwrap_or_else(|| "main".to_string());
 
-    let window = app
-        .get_webview_window(&target_label)
-        .ok_or_else(|| format!("Window '{target_label}' not found"))?;
+    let window = resolve_window(app, Some(target_label.clone()))?;
 
     let warning = if !explicit_label && total_windows > 1 {
         Some(format!(
@@ -154,13 +162,14 @@ pub fn resolve_window_with_context<R: Runtime>(
 ///
 /// # Returns
 ///
-/// * `Ok(WebviewWindow)` - The resolved window
+/// * `Ok(Webview)` - The resolved window
 /// * `Err(String)` - Error if window not found
 pub fn resolve_window<R: Runtime>(
     app: &AppHandle<R>,
     label: Option<String>,
-) -> Result<tauri::WebviewWindow<R>, String> {
+) -> Result<tauri::Webview<R>, String> {
     let label = label.unwrap_or_else(|| "main".to_string());
-    app.get_webview_window(&label)
+    app.get_webview(&label)
+        .filter(|webview| webview.window().label() == label)
         .ok_or_else(|| format!("Window '{label}' not found"))
 }

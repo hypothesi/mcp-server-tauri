@@ -1,13 +1,13 @@
 //! Script injection command for re-injecting registered scripts on page load.
 
 use crate::script_registry::{ScriptEntry, ScriptType, SharedScriptRegistry};
-use tauri::{command, Runtime, State, WebviewWindow};
+use tauri::{command, Runtime, State, Webview};
 
 /// Request script injection - called by bridge.js when a page loads.
 /// This command retrieves all registered scripts and injects them into the webview.
 #[command]
 pub async fn request_script_injection<R: Runtime>(
-    window: WebviewWindow<R>,
+    window: Webview<R>,
     registry: State<'_, SharedScriptRegistry>,
 ) -> Result<serde_json::Value, String> {
     let scripts: Vec<ScriptEntry> = {
