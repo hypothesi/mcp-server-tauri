@@ -1,5 +1,5 @@
 use super::{Screenshot, ScreenshotError};
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 /// iOS-specific screenshot implementation using WKWebView's takeSnapshot
 ///
@@ -10,9 +10,7 @@ use tauri::{Runtime, WebviewWindow};
 /// objc2-web-kit's WKWebView requires objc2-app-kit which is macOS-only.
 /// On iOS, WKWebView inherits from UIView (via objc2-ui-kit), not NSView.
 /// The takeSnapshotWithConfiguration:completionHandler: method returns UIImage on iOS.
-pub fn capture_viewport<R: Runtime>(
-    window: &WebviewWindow<R>,
-) -> Result<Screenshot, ScreenshotError> {
+pub fn capture_viewport<R: Runtime>(window: &Webview<R>) -> Result<Screenshot, ScreenshotError> {
     #[cfg(target_os = "ios")]
     {
         use block2::RcBlock;

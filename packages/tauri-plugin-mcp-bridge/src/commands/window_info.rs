@@ -1,7 +1,7 @@
 //! Window information retrieval.
 
 use serde_json::Value;
-use tauri::{command, Runtime, WebviewWindow};
+use tauri::{command, Runtime, Webview};
 
 /// Retrieves detailed information about the current window.
 ///
@@ -33,7 +33,8 @@ use tauri::{command, Runtime, WebviewWindow};
 /// console.log(`Window size: ${info.width}x${info.height}`);
 /// ```
 #[command]
-pub async fn get_window_info<R: Runtime>(window: WebviewWindow<R>) -> Result<Value, String> {
+pub async fn get_window_info<R: Runtime>(window: Webview<R>) -> Result<Value, String> {
+    let window = window.window();
     let size = window
         .outer_size()
         .map_err(|e| format!("Failed to get size: {e}"))?;

@@ -1,5 +1,5 @@
 use super::{Screenshot, ScreenshotError};
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 #[cfg(target_os = "macos")]
 const LOG_SCOPE: &str = "SCREENSHOT_MACOS";
@@ -8,9 +8,7 @@ const LOG_SCOPE: &str = "SCREENSHOT_MACOS";
 ///
 /// This implementation captures only the visible viewport, not the full document.
 /// It uses the native WKWebView takeSnapshot API to get a high-quality screenshot.
-pub fn capture_viewport<R: Runtime>(
-    window: &WebviewWindow<R>,
-) -> Result<Screenshot, ScreenshotError> {
+pub fn capture_viewport<R: Runtime>(window: &Webview<R>) -> Result<Screenshot, ScreenshotError> {
     #[cfg(target_os = "macos")]
     {
         use block2::RcBlock;

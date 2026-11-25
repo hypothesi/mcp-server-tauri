@@ -1,7 +1,7 @@
 //! IPC monitoring commands.
 
 use crate::monitor::{current_timestamp, IPCEvent, IPCMonitorState};
-use tauri::{command, Runtime, State, WebviewWindow};
+use tauri::{command, Runtime, State, Webview};
 
 /// Starts IPC monitoring to capture Tauri command calls.
 ///
@@ -33,7 +33,7 @@ use tauri::{command, Runtime, State, WebviewWindow};
 /// * [`get_ipc_events`] - Retrieve captured events
 #[command]
 pub async fn start_ipc_monitor<R: Runtime>(
-    window: WebviewWindow<R>,
+    window: Webview<R>,
     monitor: State<'_, IPCMonitorState>,
 ) -> Result<String, String> {
     let mut mon = monitor.lock().map_err(|e| format!("Lock error: {e}"))?;
@@ -75,7 +75,7 @@ pub async fn start_ipc_monitor<R: Runtime>(
 /// * [`get_ipc_events`] - Retrieve captured events
 #[command]
 pub async fn stop_ipc_monitor<R: Runtime>(
-    window: WebviewWindow<R>,
+    window: Webview<R>,
     monitor: State<'_, IPCMonitorState>,
 ) -> Result<String, String> {
     // Trigger JS-side IPC interception stop first

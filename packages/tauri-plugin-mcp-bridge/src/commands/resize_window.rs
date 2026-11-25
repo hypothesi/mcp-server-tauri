@@ -73,7 +73,8 @@ pub async fn resize_window<R: Runtime>(
         .window_id
         .clone()
         .unwrap_or_else(|| "main".to_string());
-    let window = resolve_window(&app, params.window_id)?;
+    let webview = resolve_window(&app, params.window_id)?;
+    let window = webview.window();
 
     // Check if window is resizable
     let is_resizable = window.is_resizable().unwrap_or(true);

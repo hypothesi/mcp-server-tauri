@@ -1,13 +1,11 @@
 use super::{Screenshot, ScreenshotError};
-use tauri::{Runtime, WebviewWindow};
+use tauri::{Runtime, Webview};
 
 /// Linux-specific screenshot implementation using WebKitGTK's snapshot API.
 ///
 /// WebKit renders only the visible region directly into a Cairo surface. This
 /// avoids traversing or rasterizing offscreen DOM content in JavaScript.
-pub fn capture_viewport<R: Runtime>(
-    window: &WebviewWindow<R>,
-) -> Result<Screenshot, ScreenshotError> {
+pub fn capture_viewport<R: Runtime>(window: &Webview<R>) -> Result<Screenshot, ScreenshotError> {
     #[cfg(target_os = "linux")]
     {
         use std::sync::mpsc;

@@ -1,7 +1,7 @@
 //! Native screenshot capture.
 
 use serde_json::Value;
-use tauri::{command, Runtime, WebviewWindow};
+use tauri::{command, Runtime, Webview};
 
 /// Native screenshot command using platform-specific APIs.
 ///
@@ -32,7 +32,7 @@ use tauri::{command, Runtime, WebviewWindow};
 /// * `Err(String)` - Error message if capture fails
 #[command]
 pub async fn capture_native_screenshot<R: Runtime>(
-    window: WebviewWindow<R>,
+    window: Webview<R>,
     format: Option<String>,
     quality: Option<u8>,
     max_width: Option<u32>,

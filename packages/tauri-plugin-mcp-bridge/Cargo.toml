@@ -23,7 +23,7 @@ name = "tauri_plugin_mcp_bridge"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
-tauri = "~2.12.2"
+tauri = { version = "~2.12.2", features = ["unstable"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
