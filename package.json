@@ -39,13 +39,9 @@
       "@silvermine/eslint-config": "github:silvermine/eslint-config-silvermine#3d0c92ca8d18c4bb66d7b01cf226b1963cbd1319",
       "@silvermine/eslint-plugin-silvermine": "2.5.0",
       "@silvermine/standardization": "2.2.3",
-      "@types/fs-extra": "11.0.4",
-      "@types/glob": "8.1.0",
       "@types/node": "20.10.0",
       "concurrently": "9.1.2",
       "eslint": "8.57.1",
-      "fs-extra": "11.2.0",
-      "glob": "11.0.0",
       "husky": "9.1.7",
       "lucide-vue-next": "0.554.0",
       "tsx": "4.20.6",
@@ -53,5 +49,10 @@
       "vitepress": "1.6.4",
       "vitepress-plugin-llms": "1.9.3",
       "vue": "3.5.25"
+   },
+   "overrides": {
+      "vitest": {
+         "vite": "7.3.8"
+      }
    }
 }
