@@ -121,13 +121,13 @@ await invoke('plugin:mcp-bridge|emit_event', {
 
 ## MCP Server Integration
 
-This plugin is part of the larger MCP Server for Tauri, which provides **22 total MCP tools** for comprehensive Tauri development and testing. The plugin specifically enables the following tools:
+This plugin is part of the larger MCP Server for Tauri, which provides **21 total MCP tools** for comprehensive Tauri development and testing. The plugin specifically enables the following tools:
 
 ### Mobile Development Tools (1)
 
 1. **list_devices** - List connected Android devices and iOS simulators
 
-### UI Automation & WebView Tools (16)
+### UI Automation & WebView Tools (15)
 
 Tools for UI automation and webview interaction via the plugin's WebSocket connection:
 
@@ -141,12 +141,11 @@ Tools for UI automation and webview interaction via the plugin's WebSocket conne
 8. **native_dialog_interact** - Invoke, set single/multiple paths, or select native Windows dialog controls
 9. **webview_keyboard** - Type text or simulate keyboard events with optional modifiers
 10. **webview_wait_for** - Wait for element selectors, text content, or IPC events
-11. **webview_get_styles** - Get computed CSS styles for element(s)
-12. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
-13. **webview_dom_snapshot** - Get structured DOM snapshot (accessibility or structure type)
-14. **webview_select_element** - Visual element picker — user clicks an element, returns metadata + screenshot
-15. **webview_get_pointed_element** - Retrieve metadata for element user Alt+Shift+Clicked
-16. **get_setup_instructions** - Get setup/update instructions for the MCP Bridge plugin
+11. **webview_execute_js** - Execute arbitrary JavaScript code in the webview context
+12. **webview_dom_snapshot** - Get structured DOM snapshot (accessibility or structure type)
+13. **webview_select_element** - Visual element picker — user clicks an element, returns metadata + screenshot
+14. **webview_get_pointed_element** - Retrieve metadata for element user Alt+Shift+Clicked
+15. **get_setup_instructions** - Get setup/update instructions for the MCP Bridge plugin
 
 ### IPC Tools (5)
 

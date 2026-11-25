@@ -98,7 +98,7 @@ await driver_session({ action: "stop", appIdentifier: 9223 })
 await driver_session({ action: "stop" })
 ```
 
-## Available Tools (22 total)
+## Available Tools (21 total)
 
 ### Setup & Configuration
 
