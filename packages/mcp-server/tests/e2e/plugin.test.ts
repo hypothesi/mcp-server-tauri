@@ -9,6 +9,7 @@ import {
    executeIPCCommand,
 } from '../../src/driver/plugin-commands';
 import { manageDriverSession } from '../../src/driver/session-manager';
+import { TOOL_MAP } from '../../src/tools-registry';
 import { getTestAppPort } from '../test-utils';
 
 /**
@@ -75,7 +76,7 @@ describe('MCP Bridge Plugin E2E Tests', () => {
       await startIPCMonitoring();
 
       // Execute a test command to generate IPC traffic
-      await executeIPCCommand('greet', { name: 'Test' });
+      await executeIPCCommand({ command: 'greet', args: { name: 'Test' } });
 
       // Small delay to ensure event is captured
       await new Promise((resolve) => { return setTimeout(resolve, 500); });
@@ -98,12 +99,34 @@ describe('MCP Bridge Plugin E2E Tests', () => {
       expect(result).toContain('emitted successfully');
    }, TIMEOUT);
 
-   it('should execute IPC commands via plugin', async () => {
-      const result = await executeIPCCommand('add_numbers', { a: 5, b: 3 });
+   describe('ipc_execute_command arguments', () => {
+      const ARGS = { a: 5, b: 3 },
+            EXPECTED = { success: true, result: 8 };
 
-      const parsed = JSON.parse(result);
+      async function callTool(args: unknown): Promise<unknown> {
+         const tool = TOOL_MAP.get('ipc_execute_command');
 
-      // Check if it succeeded or returned expected structure
-      expect(parsed).toBeTruthy();
-   }, TIMEOUT);
+         if (!tool) {
+            throw new Error('ipc_execute_command is not registered');
+         }
+
+         return JSON.parse(String(await tool.handler({ command: 'add_numbers', args })));
+      }
+
+      it('passes an args object to the command', async () => {
+         const result = await callTool(ARGS);
+
+         expect(result).toEqual(EXPECTED);
+      }, TIMEOUT);
+
+      it('passes args that a client sent as a JSON string', async () => {
+         const result = await callTool(JSON.stringify(ARGS));
+
+         expect(result).toEqual(EXPECTED);
+      }, TIMEOUT);
+
+      it('rejects args that are not an object', async () => {
+         await expect(callTool('not json')).rejects.toThrow('args must be a JSON object');
+      }, TIMEOUT);
+   });
 });
