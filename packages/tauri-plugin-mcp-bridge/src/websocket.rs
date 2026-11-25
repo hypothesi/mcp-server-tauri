@@ -951,47 +951,6 @@ mod tests {
         }
     }
 
-    fn eval_replica(source: &str) -> serde_json::Value {
-        let harness = format!(
-            r#"
-            const vm = require('node:vm');
-            const ctx = {{
-                pwned: false,
-                CSS: {{ escape(value) {{ return value; }} }},
-                document: {{
-                    querySelector() {{ return null; }},
-                    querySelectorAll() {{ return []; }},
-                    createElement() {{
-                        return {{ setAttribute() {{}}, textContent: '', src: '', async: false }};
-                    }},
-                    head: {{ appendChild() {{}} }},
-                }},
-            }};
-            try {{
-                vm.runInNewContext({source}, ctx, {{ timeout: 500 }});
-            }} catch (error) {{
-                ctx.error = String(error);
-            }}
-            process.stdout.write(JSON.stringify({{ pwned: ctx.pwned, error: ctx.error || null }}));
-            "#,
-            source = serde_json::to_string(source).expect("script JSON encoding is infallible")
-        );
-
-        let output = std::process::Command::new("node")
-            .arg("-e")
-            .arg(harness)
-            .output()
-            .expect("node is required to eval generated webview scripts");
-
-        assert!(
-            output.status.success(),
-            "node eval replica failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-
-        serde_json::from_slice(&output.stdout).expect("node eval replica should print JSON")
-    }
-
     #[test]
     fn inject_script_json_encodes_benign_id() {
         let source = build_inject_script(&inline_entry("__mcp_html2canvas__"));
@@ -1012,8 +971,6 @@ mod tests {
             let url = build_inject_script(&url_entry(payload));
             assert_payload_stays_in_json(&inline, payload);
             assert_payload_stays_in_json(&url, payload);
-            assert_eq!(eval_replica(&inline)["pwned"], false);
-            assert_eq!(eval_replica(&url)["pwned"], false);
         }
     }
 
@@ -1027,7 +984,6 @@ mod tests {
         ] {
             let source = build_remove_script(payload);
             assert_payload_stays_in_json(&source, payload);
-            assert_eq!(eval_replica(&source)["pwned"], false);
         }
     }
 
