@@ -62,7 +62,7 @@ This skill deliberately covers the entire CLI surface so agents do not need to c
 - Keep-alive daemon management (`daemon start/stop/restart/status`)
 - Webview UI interaction (`webview-interact`, `webview-keyboard`, `webview-wait-for`)
 - Screenshots and JS execution (`webview-screenshot`, `webview-execute-js`)
-- Element inspection and styles (`webview-find-element`, `webview-get-styles`)
+- Element inspection and styles (`webview-find-element` with `--properties`)
 - Log capture (`read-logs`)
 - Window management (`manage-window`)
 - IPC command execution and monitoring (`ipc-execute-command`, `ipc-monitor`, `ipc-get-captured`, `ipc-emit-event`, `ipc-get-backend-state`)

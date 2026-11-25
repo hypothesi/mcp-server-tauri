@@ -382,7 +382,7 @@ Each element includes a `ref` attribute (e.g., `[ref=e0]`) that can be used with
 { "tool": "webview_keyboard", "action": "type", "selector": "ref=e6", "text": "hello" }
 ```
 
-Refs work with: `webview_interact`, `webview_keyboard`, `webview_get_styles`, `webview_find_element`, and `webview_wait_for`.
+Refs work with: `webview_interact`, `webview_keyboard`, `webview_find_element`, and `webview_wait_for`.
 
 ::: warning
 Refs are regenerated each time you call `webview_dom_snapshot`. If the DOM changes significantly, run a new snapshot to get updated refs.

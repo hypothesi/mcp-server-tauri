@@ -252,7 +252,7 @@ Alt+Shift+Click is available on desktop only. On mobile devices, use the agent-i
 
 - **Custom timeouts** — If you need time to navigate to the right screen before picking, the picker supports timeouts up to 120 seconds (default is 60 seconds).
 
-- **Use selectors with other tools** — The CSS selector returned by the picker works with `webview_interact`, `webview_get_styles`, `webview_find_element`, and other webview tools for follow-up actions.
+- **Use selectors with other tools** — The CSS selector returned by the picker works with `webview_interact`, `webview_find_element`, and other webview tools for follow-up actions.
 
 ## Troubleshooting
 

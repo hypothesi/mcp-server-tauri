@@ -261,33 +261,6 @@ If you want to return a value from a function, use an IIFE: `(() => { return 5; 
 
 Returns the result of the JavaScript execution as a JSON string. Non-serializable values (like functions or DOM elements) will return `null`.
 
-## webview_get_styles
-
-Get computed CSS styles for elements.
-
-### Parameters
-
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| `selector` | string | Yes | CSS selector or ref ID (e.g., `ref=e3`) for element(s) to get styles from |
-| `properties` | string[] | No | Specific CSS properties to retrieve (if omitted, returns all) |
-| `multiple` | boolean | No | Get styles for all matching elements (default: false) |
-
-### Example
-
-```javascript
-// Get specific styles
-{
-  "tool": "webview_get_styles",
-  "selector": "#my-element",
-  "properties": ["color", "background-color", "font-size"]
-}
-```
-
-### Response
-
-Returns a JSON string with the computed styles.
-
 ## Common Patterns
 
 ### Dismissing the Keyboard

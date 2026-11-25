@@ -102,7 +102,7 @@ await driver_session({ action: "stop", appIdentifier: 9223 })
 await driver_session({ action: "stop" })
 ```
 
-## Available Tools (20 total)
+## Available Tools (19 total)
 
 ### Setup & Configuration
 
@@ -121,7 +121,6 @@ await driver_session({ action: "stop" })
 | `webview_screenshot` | Capture webview screenshots (JPEG default) |
 | `webview_keyboard` | Type text or send key events |
 | `webview_wait_for` | Wait for elements, text, or events |
-| `webview_get_styles` | Get computed CSS styles |
 | `webview_execute_js` | Execute JavaScript in webview |
 | `webview_dom_snapshot` | Get structured DOM snapshot (accessibility or structure) |
 | `webview_select_element` | Visual element picker — user clicks an element, returns metadata + screenshot |
