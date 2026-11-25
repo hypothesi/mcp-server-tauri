@@ -94,7 +94,7 @@ tauri-mcp webview-execute-js --script "(() => { return document.querySelectorAll
 
 # Find elements and inspect styles
 tauri-mcp webview-find-element --selector "#hero"
-tauri-mcp webview-get-styles --selector "#hero" --properties '["color","font-size"]'
+tauri-mcp webview-find-element --selector "#hero" --properties color,font-size
 
 # Read logs and inspect windows
 tauri-mcp read-logs --source console --filter "error" --lines 100

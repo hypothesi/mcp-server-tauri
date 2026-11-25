@@ -49,7 +49,11 @@ Use [aix](https://aix.a1st.dev/cli/add/#aix-add-mcp) to add the server to your A
 npx -y @a1st/aix add mcp tauri --command 'npx @hypothesi/tauri-mcp-server' --user
 ```
 
-Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
+Supported editors: `claude-code`, `cursor`, `windsurf`, `copilot`, `zed`, `codex`, `opencode`, `antigravity`, `grok`, `devin`.
+To configure only one editor, add `--target <editor>`, for example `--target opencode`.
+
+The first argument (`tauri`) is the server name. Codex rejects a server name that contains characters other than
+letters, digits, `_`, and `-`, so do not use the package name `@hypothesi/tauri-mcp-server` as the server name.
 
 > [!TIP]
 > `aix` automatically detects your installed AI assistants and configures them.
@@ -103,7 +107,7 @@ Just type the command in your AI assistant to start a guided workflow.
 
 ---
 
-## 🧰 Available Tools (21 total)
+## 🧰 Available Tools (19 total)
 
 <details>
 <summary><strong>Setup & Configuration</strong></summary>
@@ -126,7 +130,6 @@ Just type the command in your AI assistant to start a guided workflow.
 | `webview_screenshot` | Capture webview screenshots |
 | `webview_keyboard` | Type text or send key events |
 | `webview_wait_for` | Wait for elements, text, or events |
-| `webview_get_styles` | Get computed CSS styles |
 | `webview_execute_js` | Execute JavaScript in webview |
 | `webview_dom_snapshot` | Get structured accessibility tree snapshot |
 | `webview_select_element` | Visual element picker — user clicks an element, returns metadata + screenshot |

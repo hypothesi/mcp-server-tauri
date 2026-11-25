@@ -125,7 +125,11 @@ Use [aix](https://aix.a1st.dev/cli/add/#aix-add-mcp) to add the server to your A
 npx -y @a1st/aix add mcp tauri --command 'npx @hypothesi/tauri-mcp-server' --user
 ```
 
-Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
+Supported editors: `claude-code`, `cursor`, `windsurf`, `copilot`, `zed`, `codex`, `opencode`, `antigravity`, `grok`, `devin`.
+To configure only one editor, add `--target <editor>`, for example `--target opencode`.
+
+The first argument (`tauri`) is the server name. Codex rejects a server name that contains characters other than
+letters, digits, `_`, and `-`, so do not use the package name `@hypothesi/tauri-mcp-server` as the server name.
 
 <details>
   <summary>Manual Configuration</summary>
@@ -179,7 +183,7 @@ The server provides **slash commands** ([prompts](https://modelcontextprotocol.i
 
 [Learn more about prompts →](/api/prompts)
 
-## 21 Powerful Tools
+## 19 Powerful Tools
 
 The server exposes tools across 4 categories:
 
@@ -190,7 +194,7 @@ The server exposes tools across 4 categories:
    </div>
    <div class="tool-category">
       <Target :size="20" :stroke-width="2" class="category-icon" />
-      <strong>UI Automation & WebView</strong> (14 tools) - Gestures, screenshots, DOM snapshots, JS execution, element picking, logs
+      <strong>UI Automation & WebView</strong> (12 tools) - Gestures, screenshots, DOM snapshots, JS execution, element picking, logs
    </div>
    <div class="tool-category">
       <Zap :size="20" :stroke-width="2" class="category-icon" />

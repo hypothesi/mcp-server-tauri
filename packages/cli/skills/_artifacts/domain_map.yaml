@@ -39,7 +39,7 @@ skills:
       - 'driver-session start/stop/status'
       - 'daemon start/stop/restart/status'
       - 'webview-interact, webview-keyboard, webview-wait-for'
-      - 'webview-screenshot, webview-execute-js, webview-find-element, webview-get-styles'
+      - 'webview-screenshot, webview-execute-js, webview-find-element'
       - 'read-logs, manage-window'
       - 'ipc-execute-command, ipc-monitor, ipc-get-captured, ipc-emit-event, ipc-get-backend-state'
       - 'list-devices and remote/mobile connection workflows'
