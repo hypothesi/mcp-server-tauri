@@ -99,7 +99,11 @@ First, add the MCP server to your AI assistant using [aix](https://aix.a1st.dev/
 npx -y @a1st/aix add mcp tauri --command 'npx @hypothesi/tauri-mcp-server' --user
 ```
 
-Supported clients: `claude-code`, `cursor`, `windsurf`, `vscode`, `cline`, `roo-cline`, `claude`, `zed`, `goose`, `warp`, `codex`
+Supported editors: `claude-code`, `cursor`, `windsurf`, `copilot`, `zed`, `codex`, `opencode`, `antigravity`, `grok`, `devin`.
+To configure only one editor, add `--target <editor>`, for example `--target opencode`.
+
+The first argument (`tauri`) is the server name. Codex rejects a server name that contains characters other than
+letters, digits, `_`, and `-`, so do not use the package name `@hypothesi/tauri-mcp-server` as the server name.
 
 If you want a direct terminal workflow instead, install the companion CLI:
 
