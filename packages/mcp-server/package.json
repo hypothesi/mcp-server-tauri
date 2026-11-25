@@ -17,7 +17,7 @@
   },
   "scripts": {
     "prebuild": "tsx scripts/bundle-aria-api.ts",
-    "build": "tsc && cp -r src/driver/scripts/*.js dist/driver/scripts/ && chmod +x dist/index.js",
+    "build": "tsc && node ../../scripts/prepare-node-dist.js --copy-js-from src/driver/scripts --copy-js-to dist/driver/scripts --executable dist/index.js",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:unit": "vitest run --config vitest.config.unit.ts",
