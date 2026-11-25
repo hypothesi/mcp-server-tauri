@@ -53,7 +53,7 @@
    "devDependencies": {
       "@tanstack/intent": "^0.0.14",
       "@types/node": "22.19.1",
-      "vitest": "4.0.13"
+      "vitest": "4.1.12"
    },
    "publishConfig": {
       "access": "public"

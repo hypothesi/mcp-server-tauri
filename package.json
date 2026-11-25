@@ -49,5 +49,10 @@
       "vitepress": "1.6.4",
       "vitepress-plugin-llms": "1.9.3",
       "vue": "3.5.25"
+   },
+   "overrides": {
+      "vitest": {
+         "vite": "7.3.8"
+      }
    }
 }
