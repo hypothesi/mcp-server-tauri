@@ -102,8 +102,8 @@ export async function manageIPCMonitoring(action: 'start' | 'stop', appIdentifie
 /**
  * Pull the bridge's interception status out of an `execute_js` response.
  *
- * `window.__MCP_START_IPC_MONITOR__()` returns one of `active:internals`,
- * `active:global`, `inactive`, or an `unavailable:*` reason.
+ * `window.__MCP_START_IPC_MONITOR__()` returns `active:global` or an
+ * `unavailable:*` reason. An older plugin returns nothing.
  */
 function extractInterceptionStatus(response: { success?: boolean; data?: unknown }): string | null {
    if (!response || response.success !== true) {
@@ -145,8 +145,7 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
          console.error('Failed to start JS-side IPC interception:', jsResponse.error);
       }
 
-      // The webview is the only place invoke() can be intercepted. If no seam was
-      // available, say so: otherwise ipc_get_captured silently returns [] forever.
+      // Without a warning, ipc_get_captured returns an empty list and gives no reason.
       const interception = extractInterceptionStatus(jsResponse);
 
       if (interception && interception.startsWith('unavailable')) {
@@ -154,15 +153,13 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
             status: parsed.result,
             interception,
             warning:
-               'IPC interception is NOT active, so ipc_get_captured will stay empty. '
-               + 'Tauri defines window.__TAURI_INTERNALS__.invoke as non-writable and '
-               + 'non-configurable, and this app does not expose window.__TAURI__ '
-               + '(withGlobalTauri is off). Set "withGlobalTauri": true in tauri.conf.json '
-               + 'and use window.__TAURI__.core.invoke() to capture calls.',
+               'IPC interception is not active, so ipc_get_captured stays empty. '
+               + 'This app does not expose window.__TAURI__. Set "withGlobalTauri": true in '
+               + 'tauri.conf.json and call window.__TAURI__.core.invoke() to capture calls.',
          });
       }
 
-      return JSON.stringify({ status: parsed.result, interception });
+      return JSON.stringify(parsed.result);
    } catch(error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 

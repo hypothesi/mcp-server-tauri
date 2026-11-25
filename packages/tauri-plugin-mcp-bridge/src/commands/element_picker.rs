@@ -12,7 +12,7 @@ use tokio::sync::broadcast;
 /// Sets up listeners that forward element picker Tauri events to the WebSocket
 /// broadcast channel.
 ///
-/// The webview JavaScript emits these events via `window.__TAURI__.event.emit()`:
+/// The webview JavaScript emits these events with the `plugin:event|emit` command:
 /// - `__element_picked`: When the user clicks an element in the picker overlay
 /// - `__element_pointed`: When the user Alt+Shift+Clicks an element
 ///

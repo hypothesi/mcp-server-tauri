@@ -228,8 +228,8 @@ In `src-tauri/tauri.conf.json`, add:
 }
 ```
 
-::: warning Required
-Without `withGlobalTauri`, the MCP server cannot communicate with your app's webview.
+::: warning Required for IPC monitoring
+Without `withGlobalTauri`, `ipc_monitor` cannot capture IPC calls. The other tools do not need it.
 :::
 
 #### 4. Add Plugin Permissions

@@ -522,9 +522,8 @@ export const TOOLS: ToolDefinition[] = [
       name: 'ipc_monitor',
       description:
          '[Tauri Apps Only] Monitor Tauri IPC calls between frontend and Rust backend. ' +
-         'Requires active driver_session. Captures invoke() calls by wrapping ' +
-         'window.__TAURI_INTERNALS__.invoke, the primitive that @tauri-apps/api uses, ' +
-         'so calls are captured whether or not the app sets withGlobalTauri. ' +
+         'Requires active driver_session. Captures invoke() calls made through window.__TAURI__.core, ' +
+         'which exists only when the app sets withGlobalTauri: true. ' +
          'Bridge-internal commands (plugin:mcp-bridge|*) are excluded from capture. ' +
          'This is Tauri-specific; for browser network monitoring, use Chrome DevTools MCP.',
       category: TOOL_CATEGORIES.IPC_PLUGIN,
