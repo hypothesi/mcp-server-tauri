@@ -128,11 +128,7 @@ describe('Native dialog tools', () => {
          .toThrow('only supported on Windows');
    });
 
-   it('rejects unbounded timeouts and missing setValue data', () => {
-      function parseMissingValue(): unknown {
-         return NativeDialogInteractSchema.parse({ action: 'setValue', elementRef: 'native_ref' });
-      }
-
+   it('rejects unbounded timeouts and missing setValue data', async () => {
       function parseMissingPaths(): unknown {
          return NativeDialogInteractSchema.parse({
             action: 'setPaths',
@@ -144,7 +140,13 @@ describe('Native dialog tools', () => {
       expect(() => { return NativeDialogSnapshotSchema.parse({ timeoutMs: 10001 }); })
          .toThrow();
 
-      expect(parseMissingValue).toThrow();
       expect(parseMissingPaths).toThrow();
+      await expect(interactWithNativeDialog({ action: 'setValue', elementRef: 'native_ref' }))
+         .rejects
+         .toThrow('requires value');
+      await expect(interactWithNativeDialog({ action: 'setPaths', elementRef: 'native_ref' }))
+         .rejects
+         .toThrow('requires paths');
+      expect(sendCommand).not.toHaveBeenCalled();
    });
 });

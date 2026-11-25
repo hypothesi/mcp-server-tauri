@@ -21,36 +21,30 @@ export const NativeDialogSnapshotSchema = z.object({
    ),
 });
 
-const InteractionTargetSchema = {
-   elementRef: z.string().min(1).describe('Opaque elementRef from the latest native_dialog_snapshot'),
-   ...TargetSchema,
-} as const;
+const MAX_PATH_LENGTH = 32767,
+      MAX_PATHS = 100;
 
 /**
  * Schema for invoking UI Automation patterns on a discovered native dialog element.
+ *
+ * A tool input schema must be a single object schema: the MCP SDK client rejects a
+ * tool list that contains a union at the top level.
  */
-export const NativeDialogInteractSchema = z.discriminatedUnion('action', [
-   z.object({
-      action: z.literal('invoke').describe('Invoke a button through UI Automation InvokePattern'),
-      ...InteractionTargetSchema,
-   }),
-   z.object({
-      action: z.literal('setValue').describe('Set an editable filename/path through UI Automation ValuePattern'),
-      value: z.string().min(1).max(32767).describe('Complete absolute filename/path; the value is never logged'),
-      ...InteractionTargetSchema,
-   }),
-   z.object({
-      action: z.literal('setPaths').describe('Set one or more existing files in a multi-select Open dialog'),
-      paths: z.array(z.string().min(1).max(32767)).min(1).max(100).describe(
-         'Complete absolute file paths for a multi-file Open dialog; path values are never logged'
-      ),
-      ...InteractionTargetSchema,
-   }),
-   z.object({
-      action: z.literal('select').describe('Select a control through UI Automation SelectionItemPattern'),
-      ...InteractionTargetSchema,
-   }),
-]);
+export const NativeDialogInteractSchema = z.object({
+   action: z.enum([ 'invoke', 'setValue', 'setPaths', 'select' ]).describe(
+      'invoke: press a button. setValue: set a file or folder path (requires value). ' +
+      'setPaths: set the files of a multi-select Open dialog (requires paths). ' +
+      'select: select a navigation or file-system control'
+   ),
+   elementRef: z.string().min(1).describe('Opaque elementRef from the latest native_dialog_snapshot'),
+   value: z.string().min(1).max(MAX_PATH_LENGTH).optional().describe(
+      'Complete absolute file or folder path for setValue; the value is never logged'
+   ),
+   paths: z.array(z.string().min(1).max(MAX_PATH_LENGTH)).min(1).max(MAX_PATHS).optional().describe(
+      'Complete absolute file paths for setPaths; path values are never logged'
+   ),
+   ...TargetSchema,
+});
 
 export type NativeDialogSnapshotOptions = z.input<typeof NativeDialogSnapshotSchema>;
 export type NativeDialogInteractOptions = z.input<typeof NativeDialogInteractSchema>;
@@ -68,6 +62,15 @@ function getSessionScope(client: PluginClient): string {
 
    sessionScopes.set(client, scope);
    return scope;
+}
+
+function describeFailure(error: string | undefined, fallback: string): string {
+   if (error && error.includes('Unknown command')) {
+      return 'Native dialog tools need a newer tauri-plugin-mcp-bridge than the connected app runs. ' +
+         'Update the plugin in Cargo.toml and rebuild the app.';
+   }
+
+   return error || fallback;
 }
 
 function resultAsJSON(data: unknown): string {
@@ -90,7 +93,7 @@ export async function snapshotNativeDialog(options: NativeDialogSnapshotOptions)
    }, parsed.timeoutMs + 1500);
 
    if (!response.success) {
-      throw new Error(response.error || 'Native dialog snapshot failed');
+      throw new Error(describeFailure(response.error, 'Native dialog snapshot failed'));
    }
 
    return resultAsJSON(response.data);
@@ -98,8 +101,17 @@ export async function snapshotNativeDialog(options: NativeDialogSnapshotOptions)
 
 /** Interact with a native dialog element using its advertised UI Automation pattern. */
 export async function interactWithNativeDialog(options: NativeDialogInteractOptions): Promise<string> {
-   const parsed = NativeDialogInteractSchema.parse(options),
-         client = await ensureSessionAndConnect(parsed.appIdentifier);
+   const parsed = NativeDialogInteractSchema.parse(options);
+
+   if (parsed.action === 'setValue' && parsed.value === undefined) {
+      throw new Error('native_dialog_interact action "setValue" requires value');
+   }
+
+   if (parsed.action === 'setPaths' && parsed.paths === undefined) {
+      throw new Error('native_dialog_interact action "setPaths" requires paths');
+   }
+
+   const client = await ensureSessionAndConnect(parsed.appIdentifier);
 
    const response = await client.sendCommand({
       command: 'native_dialog_interact',
@@ -115,7 +127,7 @@ export async function interactWithNativeDialog(options: NativeDialogInteractOpti
    }, parsed.timeoutMs + 1500);
 
    if (!response.success) {
-      throw new Error(response.error || 'Native dialog interaction failed');
+      throw new Error(describeFailure(response.error, 'Native dialog interaction failed'));
    }
 
    return resultAsJSON(response.data);
