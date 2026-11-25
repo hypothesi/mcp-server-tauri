@@ -20,7 +20,7 @@ Execute any Tauri IPC command directly.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `command` | string | Yes | IPC command name to execute |
-| `args` | any | No | Command arguments |
+| `args` | object | No | Command arguments, keyed by parameter name. A JSON string of the object is also accepted |
 
 ### Example
 

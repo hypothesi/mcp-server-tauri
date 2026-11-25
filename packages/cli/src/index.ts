@@ -38,7 +38,7 @@ interface WrittenImage {
 
 type DaemonAction = 'status' | 'stop' | 'start' | 'restart';
 type PrimitiveSchemaKind = 'string' | 'number' | 'boolean';
-type SchemaKind = PrimitiveSchemaKind | 'array' | 'string-or-number';
+type SchemaKind = PrimitiveSchemaKind | 'array' | 'json' | 'string-or-number';
 
 const TOOL_DEFINITIONS = getCliToolDefinitions();
 
@@ -156,6 +156,8 @@ function addSchemaOptionsWithExclusions(command: Command, schema: JsonSchemaDefi
          option.argParser(createArrayParser(typeInfo.itemKind));
       } else if (typeInfo.kind === 'string-or-number') {
          option.argParser(parseStringOrNumber);
+      } else if (typeInfo.kind === 'json') {
+         option.argParser(parseJSONOrString);
       }
 
       if (typeInfo.choices.length > 0) {
@@ -333,6 +335,18 @@ function getSchemaTypeInfo(schema: JsonSchemaProperty): {
       }
    }
 
+   const declaredTypes = [ schema, ...variants ].flatMap((candidate) => {
+      return normalizeTypeList(candidate.type);
+   });
+
+   // A property with no declared type accepts any JSON value.
+   if (declaredTypes.includes('object') || (declaredTypes.length === 0 && !schema.enum)) {
+      return {
+         kind: 'json',
+         choices: [],
+      };
+   }
+
    const [ firstType = 'string' ] = normalizeTypeList(schema.type);
 
    if (firstType === 'number' || firstType === 'integer') {
@@ -437,6 +451,14 @@ function parseStringOrNumber(value: string): string | number {
    const numericValue = Number(value);
 
    return Number.isNaN(numericValue) ? value : numericValue;
+}
+
+function parseJSONOrString(value: string): unknown {
+   try {
+      return JSON.parse(value);
+   } catch{
+      return value;
+   }
 }
 
 function createArrayParser(itemKind: PrimitiveSchemaKind | undefined): (value: string) => unknown[] {

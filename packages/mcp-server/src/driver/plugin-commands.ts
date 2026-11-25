@@ -4,9 +4,33 @@ import { executeInWebview } from './webview-executor.js';
 
 const BRIDGE_COMMAND_PREFIX = 'plugin:mcp-bridge|';
 
+const INVOKE_ARGS_ERROR = 'args must be a JSON object such as {"name": "World"}, or an array of byte values';
+
+// Tauri reads an object as named command arguments and an array as a raw byte payload.
+const InvokeArgsSchema = z.union([ z.record(z.unknown()), z.array(z.number()) ], {
+   errorMap: () => { return { message: INVOKE_ARGS_ERROR }; },
+});
+
+/**
+ * Language models often serialize an object argument to a JSON string. Tauri reads a
+ * string payload as a command call with no arguments, so parse the string first.
+ */
+function parseJSONString(value: unknown): unknown {
+   if (typeof value !== 'string') {
+      return value;
+   }
+
+   try {
+      return JSON.parse(value);
+   } catch{
+      return value;
+   }
+}
+
 export const ExecuteIPCCommandSchema = z.object({
    command: z.string(),
-   args: z.unknown().optional(),
+   args: z.preprocess(parseJSONString, InvokeArgsSchema.optional())
+      .describe('Command arguments as an object, for example {"name": "World"}'),
    windowId: z.string().optional().describe('Window label to target (defaults to "main") for app commands'),
    appIdentifier: z.union([ z.string(), z.number() ]).optional().describe(
       'App port or bundle ID to target. Defaults to the only connected app or the default app if multiple are connected.'

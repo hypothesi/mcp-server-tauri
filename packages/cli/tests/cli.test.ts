@@ -40,6 +40,29 @@ describe('tauri-mcp CLI', () => {
       await runCli([ 'driver-session', 'stop' ]);
    });
 
+   it('passes JSON flag values to the tool as objects', async () => {
+      const port = getTestAppPort(),
+            probe = 'window.__cliPayloadProbe';
+
+      await runCli([ 'driver-session', 'start', '--port', String(port) ]);
+
+      const sum = await runCli([ 'ipc-execute-command', '--command', 'add_numbers', '--args', '{"a":5,"b":3}' ]);
+
+      await runCli([
+         'webview-execute-js',
+         '--script',
+         `window.__TAURI__.event.listen('cli-probe', (event) => { ${probe} = event.payload; }); return true;`,
+      ]);
+      await runCli([ 'ipc-emit-event', '--event-name', 'cli-probe', '--payload', '{"action":"clicked"}' ]);
+
+      const payload = await runCli([ 'webview-execute-js', '--script', `return ${probe} && ${probe}.action;` ]);
+
+      expect(sum.stdout).toContain('"result":8');
+      expect(payload.stdout).toContain('clicked');
+
+      await runCli([ 'driver-session', 'stop' ]);
+   });
+
    it('writes screenshot output to disk and reports the path in JSON mode', async () => {
       const port = getTestAppPort(),
             outputPath = path.resolve(process.cwd(), 'tmp', 'cli-screenshot-test.png');
