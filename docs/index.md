@@ -190,7 +190,7 @@ The server exposes tools across 4 categories:
    </div>
    <div class="tool-category">
       <Target :size="20" :stroke-width="2" class="category-icon" />
-      <strong>UI Automation & WebView</strong> (14 tools) - Gestures, screenshots, DOM snapshots, JS execution, element picking, logs
+      <strong>UI Automation & WebView</strong> (14 tools) - Webview and native Windows dialog automation, screenshots, DOM snapshots, element picking, logs
    </div>
    <div class="tool-category">
       <Zap :size="20" :stroke-width="2" class="category-icon" />

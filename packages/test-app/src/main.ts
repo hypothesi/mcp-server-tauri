@@ -56,6 +56,22 @@ window.addEventListener('DOMContentLoaded', () => {
          });
    });
 
+   document.querySelector('#dialog-open-multiple')?.addEventListener('click', () => {
+      open({ multiple: true, directory: false })
+         .then((files) => {
+            const result = Array.isArray(files) ? files.join('|') : files;
+
+            showDialogResult(dialogResult, `Multiple open result: ${result ?? 'Cancelled'}`);
+         });
+   });
+
+   document.querySelector('#dialog-folder')?.addEventListener('click', () => {
+      open({ multiple: false, directory: true })
+         .then((folder) => {
+            showDialogResult(dialogResult, `Folder result: ${folder ?? 'Cancelled'}`);
+         });
+   });
+
    document.querySelector('#dialog-save')?.addEventListener('click', () => {
       save({ defaultPath: 'untitled.txt' })
          .then((path) => {
