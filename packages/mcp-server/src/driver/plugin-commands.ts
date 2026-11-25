@@ -123,6 +123,22 @@ export async function manageIPCMonitoring(action: 'start' | 'stop', appIdentifie
    return stopIPCMonitoring(appIdentifier);
 }
 
+/**
+ * Pull the bridge's interception status out of an `execute_js` response.
+ *
+ * `window.__MCP_START_IPC_MONITOR__()` returns `active:global` or an
+ * `unavailable:*` reason. An older plugin returns nothing.
+ */
+function extractInterceptionStatus(response: { success?: boolean; data?: unknown }): string | null {
+   if (!response || response.success !== true) {
+      return null;
+   }
+
+   const { data } = response;
+
+   return typeof data === 'string' && data.length > 0 ? data : null;
+}
+
 export async function startIPCMonitoring(appIdentifier?: string | number): Promise<string> {
    try {
       // Start the Rust-side monitor state
@@ -140,7 +156,10 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
       const jsResponse = await client.sendCommand({
          command: 'execute_js',
          args: {
-            script: 'window.__MCP_START_IPC_MONITOR__ && window.__MCP_START_IPC_MONITOR__(); true;',
+            script:
+               'window.__MCP_START_IPC_MONITOR__ '
+               + '? String(window.__MCP_START_IPC_MONITOR__()) '
+               + ': "unavailable:bridge-not-injected";',
             windowLabel: 'main',
          },
       }, 5000);
@@ -148,6 +167,20 @@ export async function startIPCMonitoring(appIdentifier?: string | number): Promi
       if (!jsResponse.success) {
          // Log but don't fail - Rust-side monitoring is still active
          console.error('Failed to start JS-side IPC interception:', jsResponse.error);
+      }
+
+      // Without a warning, ipc_get_captured returns an empty list and gives no reason.
+      const interception = extractInterceptionStatus(jsResponse);
+
+      if (interception && interception.startsWith('unavailable')) {
+         return JSON.stringify({
+            status: parsed.result,
+            interception,
+            warning:
+               'IPC interception is not active, so ipc_get_captured stays empty. '
+               + 'This app does not expose window.__TAURI__. Set "withGlobalTauri": true in '
+               + 'tauri.conf.json and call window.__TAURI__.core.invoke() to capture calls.',
+         });
       }
 
       return JSON.stringify(parsed.result);

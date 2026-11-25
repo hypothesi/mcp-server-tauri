@@ -132,8 +132,8 @@ export function buildKeyEventScript(
 ): string {
    return `
       (function() {
-         const action = '${action}';
-         const key = '${key}';
+         const action = ${JSON.stringify(action)};
+         const key = ${JSON.stringify(key)};
          const modifiers = ${JSON.stringify(modifiers)};
 
          const eventOptions = {

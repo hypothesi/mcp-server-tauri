@@ -99,8 +99,8 @@ fn main() {
 }
 ```
 
-::: warning Required Configuration
-You **must** enable `withGlobalTauri` in your `tauri.conf.json`:
+::: warning Recommended Configuration
+Enable `withGlobalTauri` in your `tauri.conf.json`. Without it, `ipc_monitor` cannot capture IPC calls:
 
 ```json
 {
@@ -110,7 +110,7 @@ You **must** enable `withGlobalTauri` in your `tauri.conf.json`:
 }
 ```
 
-This exposes `window.__TAURI__` which the MCP bridge plugin requires to communicate with your app.
+This exposes `window.__TAURI__`, which `ipc_monitor` wraps to record IPC calls. The other tools do not need it.
 :::
 
 ::: tip Optional: TypeScript Bindings

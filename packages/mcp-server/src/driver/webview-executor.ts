@@ -361,48 +361,61 @@ export async function getConsoleLogs(options: {
 } = {}): Promise<string> {
    const { filter, since, lines = 50, windowId, appIdentifier, level, maxChars = 20000, maxCharsPerEntry = 2000 } = options;
 
-   const resolvedLines = lines,
-         resolvedMaxChars = maxChars,
-         resolvedMaxCharsPerEntry = maxCharsPerEntry,
-         resolvedLevel = level ?? '',
-         filterStr = filter ? filter.replace(/'/g, '\\\'') : '',
-         levelStr = resolvedLevel;
+   const script = buildConsoleLogsScript({ filter, since, lines, level, maxChars, maxCharsPerEntry });
 
-   const sinceStr = since || '';
+   return executeInWebview(script, windowId, appIdentifier);
+}
 
-   const script = `
+/**
+ * Build the webview script that reads captured console logs.
+ */
+export function buildConsoleLogsScript(options: {
+   filter?: string;
+   since?: string;
+   lines?: number;
+   level?: string;
+   maxChars?: number;
+   maxCharsPerEntry?: number;
+} = {}): string {
+   const { filter, since, lines = 50, level, maxChars = 20000, maxCharsPerEntry = 2000 } = options;
+
+   return `
       const logs = window.__MCP_CONSOLE_LOGS__ || [];
       let filtered = logs;
 
-      if ('${sinceStr}') {
-         const sinceTime = new Date('${sinceStr}').getTime();
+      const sinceStr = ${JSON.stringify(since ?? '')};
+      const levelStr = ${JSON.stringify(level ?? '')};
+      const filterStr = ${JSON.stringify(filter ?? '')};
+
+      if (sinceStr) {
+         const sinceTime = new Date(sinceStr).getTime();
          filtered = filtered.filter(l => l.timestamp > sinceTime);
       }
 
-      if ('${levelStr}') {
-         filtered = filtered.filter(l => l.level === '${levelStr}');
+      if (levelStr) {
+         filtered = filtered.filter(l => l.level === levelStr);
       }
 
-      if ('${filterStr}') {
+      if (filterStr) {
          try {
-            const regex = new RegExp('${filterStr}', 'i');
+            const regex = new RegExp(filterStr, 'i');
             filtered = filtered.filter(l => regex.test(l.message));
          } catch(e) {
             throw new Error('Invalid filter regex: ' + e.message);
          }
       }
 
-      filtered = filtered.slice(-${resolvedLines});
+      filtered = filtered.slice(-${JSON.stringify(lines)});
 
-      var budget = ${resolvedMaxChars};
+      var budget = ${JSON.stringify(maxChars)};
       var dropped = 0;
       var out = [];
 
       for (var i = filtered.length - 1; i >= 0; i--) {
          var entry = filtered[i],
-             excess = entry.message.length - ${resolvedMaxCharsPerEntry},
-             message = entry.message.length > ${resolvedMaxCharsPerEntry}
-                ? entry.message.slice(0, ${resolvedMaxCharsPerEntry}) + '…[' + excess + ' more chars]'
+             excess = entry.message.length - ${JSON.stringify(maxCharsPerEntry)},
+             message = entry.message.length > ${JSON.stringify(maxCharsPerEntry)}
+                ? entry.message.slice(0, ${JSON.stringify(maxCharsPerEntry)}) + '…[' + excess + ' more chars]'
                 : entry.message,
              prefix = '[ ' + new Date(entry.timestamp).toISOString() + ' ] [ ' + entry.level.toUpperCase() + ' ] ',
              line = prefix + message;
@@ -414,15 +427,13 @@ export async function getConsoleLogs(options: {
 
       if (dropped > 0) {
          out.unshift(
-            '[ ' + dropped + ' older entries dropped to fit maxChars=' + ${resolvedMaxChars} +
+            '[ ' + dropped + ' older entries dropped to fit maxChars=' + ${JSON.stringify(maxChars)} +
             '. Narrow with level, filter, or since. ]'
          );
       }
 
       return out.join('\\n');
    `;
-
-   return executeInWebview(script, windowId, appIdentifier);
 }
 
 /**

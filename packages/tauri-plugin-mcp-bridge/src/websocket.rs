@@ -590,6 +590,10 @@ async fn dispatch_command<R: Runtime>(app: &AppHandle<R>, command: &Value) -> Va
             }
         }
         "list_windows" => handle_list_windows(app, id).await,
+        "get_backend_state" => match commands::get_backend_state(app.clone()).await {
+            Ok(data) => success_response(id, data),
+            Err(e) => error_response(id, e),
+        },
         "get_window_info" => handle_get_window_info(app, id, command).await,
         "execute_js" => {
             if let Some(args) = args {
@@ -738,51 +742,75 @@ struct ScriptOperationResult {
     window_context: WindowContext,
 }
 
+/// JSON-encode a string for interpolation into a JavaScript template.
+fn json_js_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+/// Builds the webview eval script that injects a registry entry.
+fn build_inject_script(entry: &ScriptEntry) -> String {
+    let script_id = json_js_string(&entry.id);
+    let content = json_js_string(&entry.content);
+
+    match entry.script_type {
+        ScriptType::Inline => format!(
+            r#"
+            (function() {{
+                var scriptId = {script_id};
+                var existing = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
+                if (existing) {{
+                    existing.remove();
+                }}
+                var script = document.createElement('script');
+                script.setAttribute('data-mcp-script-id', scriptId);
+                script.textContent = {content};
+                document.head.appendChild(script);
+            }})();
+            "#
+        ),
+        ScriptType::Url => format!(
+            r#"
+            (function() {{
+                var scriptId = {script_id};
+                var existing = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
+                if (existing) {{
+                    existing.remove();
+                }}
+                var script = document.createElement('script');
+                script.setAttribute('data-mcp-script-id', scriptId);
+                script.src = {content};
+                script.async = true;
+                document.head.appendChild(script);
+            }})();
+            "#
+        ),
+    }
+}
+
+/// Builds the webview eval script that removes a registry entry from the DOM.
+fn build_remove_script(script_id: &str) -> String {
+    let script_id = json_js_string(script_id);
+
+    format!(
+        r#"
+        (function() {{
+            var scriptId = {script_id};
+            var script = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
+            if (script) {{
+                script.remove();
+            }}
+        }})();
+        "#
+    )
+}
+
 /// Injects a script into a specific webview window.
 fn inject_script_to_window<R: Runtime>(
     window: &WebviewWindow<R>,
     entry: &ScriptEntry,
 ) -> Result<(), String> {
-    let script = match entry.script_type {
-        ScriptType::Inline => format!(
-            r#"
-            (function() {{
-                var existing = document.querySelector('script[data-mcp-script-id="{}"]');
-                if (existing) {{
-                    existing.remove();
-                }}
-                var script = document.createElement('script');
-                script.setAttribute('data-mcp-script-id', '{}');
-                script.textContent = {};
-                document.head.appendChild(script);
-            }})();
-            "#,
-            entry.id,
-            entry.id,
-            serde_json::to_string(&entry.content).unwrap_or_else(|_| "''".to_string())
-        ),
-        ScriptType::Url => format!(
-            r#"
-            (function() {{
-                var existing = document.querySelector('script[data-mcp-script-id="{}"]');
-                if (existing) {{
-                    existing.remove();
-                }}
-                var script = document.createElement('script');
-                script.setAttribute('data-mcp-script-id', '{}');
-                script.src = {};
-                script.async = true;
-                document.head.appendChild(script);
-            }})();
-            "#,
-            entry.id,
-            entry.id,
-            serde_json::to_string(&entry.content).unwrap_or_else(|_| "''".to_string())
-        ),
-    };
-
     window
-        .eval(&script)
+        .eval(build_inject_script(entry))
         .map_err(|e| format!("Failed to inject script: {e}"))
 }
 
@@ -808,19 +836,8 @@ fn remove_script_from_window<R: Runtime>(
     window: &WebviewWindow<R>,
     script_id: &str,
 ) -> Result<(), String> {
-    let script = format!(
-        r#"
-        (function() {{
-            var script = document.querySelector('script[data-mcp-script-id="{script_id}"]');
-            if (script) {{
-                script.remove();
-            }}
-        }})();
-        "#
-    );
-
     window
-        .eval(&script)
+        .eval(build_remove_script(script_id))
         .map_err(|e| format!("Failed to remove script: {e}"))
 }
 
@@ -888,4 +905,102 @@ pub fn inject_all_scripts<R: Runtime>(
     }
 
     Ok(scripts.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_inject_script, build_remove_script};
+    use crate::script_registry::{ScriptEntry, ScriptType};
+
+    const CONCAT_PAYLOAD: &str = "'+(pwned=true)+'";
+    const COMMENT_PAYLOAD: &str = "';pwned=true;//";
+    const SCRIPT_ID_PAYLOAD: &str = "x']');pwned=true;//";
+    const SCRIPT_ID_DOUBLE_QUOTE_PAYLOAD: &str = "x\"]');pwned=true;//";
+
+    fn assert_payload_stays_in_json(source: &str, payload: &str) {
+        let encoded = serde_json::to_string(payload).expect("string JSON encoding is infallible");
+        assert!(
+            source.contains(&encoded),
+            "generated script should JSON-encode {payload:?}:\n{source}"
+        );
+
+        let stripped = source.replace(&encoded, "\"ENCODED\"");
+        assert!(
+            !stripped.contains("pwned=true"),
+            "attacker statement escaped JSON string context:\n{stripped}"
+        );
+        assert!(
+            !stripped.contains(payload),
+            "raw payload interpolated outside JSON string context:\n{stripped}"
+        );
+    }
+
+    fn inline_entry(id: &str) -> ScriptEntry {
+        ScriptEntry {
+            id: id.to_string(),
+            script_type: ScriptType::Inline,
+            content: "1".to_string(),
+        }
+    }
+
+    fn url_entry(id: &str) -> ScriptEntry {
+        ScriptEntry {
+            id: id.to_string(),
+            script_type: ScriptType::Url,
+            content: "https://example.com/script.js".to_string(),
+        }
+    }
+
+    #[test]
+    fn inject_script_json_encodes_benign_id() {
+        let source = build_inject_script(&inline_entry("__mcp_html2canvas__"));
+        assert!(source.contains(r#""__mcp_html2canvas__""#));
+        assert!(source.contains("script.textContent = \"1\""));
+        assert!(source.contains("CSS.escape(scriptId)"));
+    }
+
+    #[test]
+    fn inject_script_json_encodes_quote_breakout_ids() {
+        for payload in [
+            SCRIPT_ID_PAYLOAD,
+            SCRIPT_ID_DOUBLE_QUOTE_PAYLOAD,
+            CONCAT_PAYLOAD,
+            COMMENT_PAYLOAD,
+        ] {
+            let inline = build_inject_script(&inline_entry(payload));
+            let url = build_inject_script(&url_entry(payload));
+            assert_payload_stays_in_json(&inline, payload);
+            assert_payload_stays_in_json(&url, payload);
+        }
+    }
+
+    #[test]
+    fn remove_script_json_encodes_quote_breakout_ids() {
+        for payload in [
+            SCRIPT_ID_PAYLOAD,
+            SCRIPT_ID_DOUBLE_QUOTE_PAYLOAD,
+            CONCAT_PAYLOAD,
+            COMMENT_PAYLOAD,
+        ] {
+            let source = build_remove_script(payload);
+            assert_payload_stays_in_json(&source, payload);
+        }
+    }
+
+    #[test]
+    fn inject_script_json_encodes_content_and_url() {
+        let inline = ScriptEntry {
+            id: "ok".to_string(),
+            script_type: ScriptType::Inline,
+            content: CONCAT_PAYLOAD.to_string(),
+        };
+        let url = ScriptEntry {
+            id: "ok".to_string(),
+            script_type: ScriptType::Url,
+            content: COMMENT_PAYLOAD.to_string(),
+        };
+
+        assert_payload_stays_in_json(&build_inject_script(&inline), CONCAT_PAYLOAD);
+        assert_payload_stays_in_json(&build_inject_script(&url), COMMENT_PAYLOAD);
+    }
 }

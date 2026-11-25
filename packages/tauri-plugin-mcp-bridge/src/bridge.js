@@ -93,9 +93,51 @@
       bridgeLogger.info('Console capture initialized');
    }
 
+   // -------------------------------------------------------------------------
+   // Tauri IPC access
+   //
+   // `window.__TAURI__` only exists when the app sets `withGlobalTauri: true`,
+   // which is NOT the default. `window.__TAURI_INTERNALS__` is always injected
+   // by Tauri v2 and is what `@tauri-apps/api` itself calls underneath
+   // (`invoke()` -> `__TAURI_INTERNALS__.invoke`, `emit()` ->
+   // `invoke('plugin:event|emit', ...)`). Prefer internals so the bridge works
+   // regardless of `withGlobalTauri`.
+   // -------------------------------------------------------------------------
+
+   function rawInvoke() {
+      if (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === 'function') {
+         return function(cmd, args) {
+            return window.__TAURI_INTERNALS__.invoke(cmd, args);
+         };
+      }
+      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+         return function(cmd, args) {
+            return window.__TAURI__.core.invoke(cmd, args);
+         };
+      }
+      return null;
+   }
+
+   function mcpInvoke(cmd, args) {
+      var fn = rawInvoke();
+
+      if (!fn) {
+         return Promise.reject(new Error('Tauri IPC is not available in this webview'));
+      }
+      return fn(cmd, args);
+   }
+
+   function mcpEmit(event, payload) {
+      return mcpInvoke('plugin:event|emit', { event: event, payload: payload });
+   }
+
+   function tauriReady() {
+      return rawInvoke() !== null;
+   }
+
    // Wait for Tauri API to be available
    function waitForTauri(callback) {
-      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+      if (tauriReady()) {
          // eslint-disable-next-line callback-return
          callback();
       } else {
@@ -159,26 +201,33 @@
       var originalCore, wrappedInvoke;
 
       if (ipcMonitorEnabled) {
-         return;
+         return window.__MCP_IPC_MONITOR_STATUS__;
       }
 
-      if (!window.__TAURI__ || !window.__TAURI__.core || !window.__TAURI__.core.invoke) {
-         bridgeLogger.error('Cannot start IPC monitor: Tauri API not available');
-         return;
+      // Tauri defines `__TAURI_INTERNALS__.invoke` as non-writable and
+      // non-configurable, so only the global API object can be wrapped. It exists
+      // only with `withGlobalTauri: true`, and it does not see a call that the app
+      // makes with `import { invoke } from '@tauri-apps/api/core'`.
+      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+         originalCore = window.__TAURI__.core;
+         originalInvoke = originalCore.invoke;
+         ipcMonitorEnabled = true;
+
+         wrappedInvoke = function(cmd, args) {
+            return reportAround(originalInvoke, this, cmd, args);
+         };
+
+         // Create a new core object with all original properties plus wrapped invoke
+         window.__TAURI__.core = Object.assign({}, originalCore, { invoke: wrappedInvoke });
+
+         window.__MCP_IPC_MONITOR_STATUS__ = 'active:global';
+         bridgeLogger.info('IPC monitoring started');
+         return window.__MCP_IPC_MONITOR_STATUS__;
       }
 
-      originalCore = window.__TAURI__.core;
-      originalInvoke = originalCore.invoke;
-      ipcMonitorEnabled = true;
-
-      wrappedInvoke = function(cmd, args) {
-         return reportAround(originalInvoke, this, cmd, args);
-      };
-
-      // Create a new core object with all original properties plus wrapped invoke
-      window.__TAURI__.core = Object.assign({}, originalCore, { invoke: wrappedInvoke });
-
-      bridgeLogger.info('IPC monitoring started');
+      window.__MCP_IPC_MONITOR_STATUS__ = 'unavailable:no-interceptable-invoke';
+      bridgeLogger.error('Cannot start IPC monitor: window.__TAURI__ is absent (withGlobalTauri is off)');
+      return window.__MCP_IPC_MONITOR_STATUS__;
    };
 
    /**
@@ -187,7 +236,8 @@
      */
    window.__MCP_STOP_IPC_MONITOR__ = function() {
       if (!ipcMonitorEnabled || !originalInvoke) {
-         return;
+         window.__MCP_IPC_MONITOR_STATUS__ = 'inactive';
+         return window.__MCP_IPC_MONITOR_STATUS__;
       }
 
       // Restore original invoke by creating a new core object
@@ -195,8 +245,10 @@
       originalInvoke = null;
 
       ipcMonitorEnabled = false;
+      window.__MCP_IPC_MONITOR_STATUS__ = 'inactive';
 
       bridgeLogger.info('IPC monitoring stopped');
+      return window.__MCP_IPC_MONITOR_STATUS__;
    };
 
    // =========================================================================
@@ -529,9 +581,9 @@
          }, 1500);
 
          // Emit Tauri event for the Rust forwarder
-         if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.emit) {
-            window.__TAURI__.event.emit('__element_pointed', metadata);
-         }
+         mcpEmit('__element_pointed', metadata).catch(function(emitErr) {
+            bridgeLogger.error('Failed to emit __element_pointed:', emitErr);
+         });
 
          bridgeLogger.info('Element pointed via Alt+Shift+Click:', metadata.cssSelector);
       }, true);
@@ -543,8 +595,8 @@
          bridgeLogger.info('Received request:', request);
 
          try {
-            // Forward to Tauri IPC using the global API
-            const result = await window.__TAURI__.core.invoke(
+            // Forward to Tauri IPC (internals-first, works without withGlobalTauri)
+            const result = await mcpInvoke(
                request.command,
                request.args
             );
@@ -604,7 +656,7 @@
          }
 
          // Check if script already exists
-         if (document.querySelector('script[data-mcp-script-id="' + entry.id + '"]')) {
+         if (document.querySelector('script[data-mcp-script-id="' + CSS.escape(entry.id) + '"]')) {
             bridgeLogger.info('Script already exists:', entry.id);
             return;
          }
@@ -637,7 +689,7 @@
     * @param {string} scriptId
     */
    window.__MCP_REMOVE_SCRIPT__ = function(scriptId) {
-      var script = document.querySelector('script[data-mcp-script-id="' + scriptId + '"]');
+      var script = document.querySelector('script[data-mcp-script-id="' + CSS.escape(scriptId) + '"]');
 
       if (script) {
          script.remove();
@@ -664,8 +716,8 @@
    function notifyPageLoaded() {
       // Use Tauri's invoke to request script re-injection.
       // The plugin responds by calling __MCP_INJECT_SCRIPTS__ with registered scripts.
-      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
-         window.__TAURI__.core.invoke('plugin:mcp-bridge|request_script_injection')
+      if (tauriReady()) {
+         mcpInvoke('plugin:mcp-bridge|request_script_injection')
             .catch(function(err) {
                // This command may not exist in older versions, which is fine
                bridgeLogger.warn('Script injection request:', err.message || 'not available');

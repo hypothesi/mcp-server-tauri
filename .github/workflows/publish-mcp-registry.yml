@@ -32,10 +32,17 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           node scripts/update-server-json-version.js "$VERSION"
 
+      # Pin mcp-publisher v1.8.1 (linux/amd64). Bump tag, URL, and sha256 together.
       - name: Install mcp-publisher
         working-directory: packages/mcp-server
+        env:
+          MCP_PUBLISHER_URL: https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          curl -fsSL --proto '=https' --tlsv1.2 -o mcp-publisher.tar.gz "$MCP_PUBLISHER_URL"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar -xzf mcp-publisher.tar.gz mcp-publisher
+          rm -f mcp-publisher.tar.gz
 
       - name: Authenticate to MCP Registry
         working-directory: packages/mcp-server

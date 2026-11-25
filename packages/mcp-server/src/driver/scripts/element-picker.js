@@ -14,14 +14,32 @@
    var mode = params.mode;
    var pickerId = params.pickerId;
 
+   // `window.__TAURI__` only exists with `withGlobalTauri: true`, which is not
+   // the default. `window.__TAURI_INTERNALS__` is always injected by Tauri v2,
+   // and `emit()` is just `invoke('plugin:event|emit', ...)` underneath.
+   function mcpEmitEvent(name, payload) {
+      try {
+         if (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === 'function') {
+            return window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
+               event: name,
+               payload: payload,
+            });
+         }
+         if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.emit) {
+            return window.__TAURI__.event.emit(name, payload);
+         }
+      } catch(e) {
+         // fall through
+      }
+      return undefined;
+   }
+
    // Duplicate-activation guard
    if (window.__MCP_PICKER_ACTIVE__) {
       // Cancel the previous picker
       var prevId = window.__MCP_PICKER_ACTIVE__;
       cleanup();
-      if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.emit) {
-         window.__TAURI__.event.emit('__element_picked', { pickerId: prevId, cancelled: true });
-      }
+      mcpEmitEvent('__element_picked', { pickerId: prevId, cancelled: true });
    }
    window.__MCP_PICKER_ACTIVE__ = pickerId;
 
@@ -220,9 +238,7 @@
       removeListeners();
 
       // Emit Tauri event
-      if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.emit) {
-         window.__TAURI__.event.emit('__element_picked', { pickerId: pickerId, element: metadata });
-      }
+      mcpEmitEvent('__element_picked', { pickerId: pickerId, element: metadata });
 
       window.__MCP_PICKER_ACTIVE__ = null;
       return 'Element selected: ' + metadata.tag + (metadata.id ? '#' + metadata.id : '');
@@ -231,9 +247,7 @@
    // ── Cancellation ──────────────────────────────────────────────────────
    function cancelPicker() {
       cleanup();
-      if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.emit) {
-         window.__TAURI__.event.emit('__element_picked', { pickerId: pickerId, cancelled: true });
-      }
+      mcpEmitEvent('__element_picked', { pickerId: pickerId, cancelled: true });
       window.__MCP_PICKER_ACTIVE__ = null;
    }
 

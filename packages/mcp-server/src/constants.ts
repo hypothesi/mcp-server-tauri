@@ -39,7 +39,7 @@ Check \`src-tauri/src/lib.rs\` or \`src-tauri/src/main.rs\` for plugin registrat
 
 ### 3. Global Tauri Setting
 Check \`src-tauri/tauri.conf.json\` for \`withGlobalTauri: true\` under the \`app\` section.
-**This is required** - without it, the MCP bridge cannot communicate with the webview.
+Without it, \`ipc_monitor\` cannot capture IPC calls. The other tools do not need it.
 
 ### 4. Plugin Permissions
 Check \`src-tauri/capabilities/default.json\` (or similar) for \`"mcp-bridge:default"\` permission.
